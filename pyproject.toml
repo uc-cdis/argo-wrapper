@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "argo-wrapper"
+version = "1.0.0"
+description = "argo wrapper for va workflow"
+authors = ["UchicagoZchen138 <zchen138@uchicago.edu>"]
+repository = "https://github.com/uc-cdis/argo-wrapper"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+fastapi = "^0.71.0"
+uvicorn = "^0.16.0"
+gunicorn = "^20.1.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.5"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
