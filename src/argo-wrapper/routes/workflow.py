@@ -1,35 +1,37 @@
 from fastapi import APIRouter
 
-from engine.argo_engine import ArgoEngine
+from ..engine import ArgoEngine
 
 router = APIRouter()
+argo_engine = ArgoEngine(dry_run=True)
 
-#submit argo workflow 
+
+@router.get("/test")
+def test():
+    return {"message": "test"}
+
+
+# submit argo workflow
 @router.post("/submit")
 def submit_workflow():
-    #authenticate()
-    #ArgoEngine.submit_workflow({})
-    return {"message": "submit"}
+    # authenticate()
+    message = argo_engine.submit_workflow({})
+    return {"message": message}
 
-    
 
-#get status
+# get status
 @router.get("/status/{workflow_name}")
 def get_workflow_status(workflow_name: str):
-    #is_authorized = authenticate()
-    #if not is_authorized:
+    # is_authorized = authenticate()
+    # if not is_authorized:
     #    raise HTTPException(status_code=404, detail="user not authorized access to workflow status")
-    #ArgoEngine.get_workflow_status(workflow_name)
-    return {"message": "status"}
-    
+    message = argo_engine.get_workflow_status(workflow_name)
+    return {"message": message}
 
-    
-#cancel workflow 
+
+# cancel workflow
 @router.post("/cancel/{workflow_name}")
 def cancel_workflow(workflow_name: str):
-    #authenticate()
-    #ArgoEngine.cancel_workflow(workflow_name)
-    return {"message": "cancel"}
-
-def init_app(app):
-    app.include_router(router)
+    # authenticate()
+    message = argo_engine.cancel_workflow(workflow_name)
+    return {"message": message}

@@ -16,7 +16,7 @@ importlib-metadata = "^4.10.0"
 pytest = "^6.2.5"
 
 [tool.poetry.plugins."argo-wrapper.modules"]
-"workflow" = "argo-wrapper.routes.workflow"
+workflow = "argo-wrapper.routes.workflow"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
