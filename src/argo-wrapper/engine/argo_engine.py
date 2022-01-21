@@ -20,8 +20,8 @@ class ArgoEngine(object):
     def __generate_argo_token(self) -> str:
 
         argo_command = "argo auth token"
-        token = subprocess.check_output(argo_command.split(" "))
-        return token
+        # token = subprocess.check_output(argo_command.split(" "))
+        return "token"
 
     def __generate_workflow_name(self) -> str:
         return "test"
@@ -34,9 +34,14 @@ class ArgoEngine(object):
         self.dry_run = dry_run
         self.argo_token = argo_token
 
+        """
         configuration = argo_workflows.Configuration(
             host=ARGO_HOST, access_token=argo_token
         )
+
+        """
+
+        configuration = argo_workflows.Configuration(host=ARGO_HOST)
         configuration.verify_ssl = False
 
         api_client = argo_workflows.ApiClient(configuration)
@@ -54,19 +59,23 @@ class ArgoEngine(object):
         self.api_instance.delete_workflow(namespace="argo", name=workflow_name)
         status = self.get_workflow_status(workflow_name)
         logging.info(status)
-        return status == ""
+        return status
 
     def submit_workflow(self, parameters: Dict[str, str]) -> str:
         if self.dry_run:
             return "submit workflow"
         # try with argo cli
+        print("hello this is just a test")
         workflow_name = self.__generate_workflow_name()
-        test_wf_path = pathlib.Path(__file__).parent.absolute().joinpath(TEST_WF_PATH)
+        test_wf_path = pathlib.Path(__file__).parents[1]
+        print(f"here is the test workflow dir {test_wf_path}")
+        test_wf_path = test_wf_path.joinpath(TEST_WF_PATH)
+        print(test_wf_path)
 
         with open(test_wf_path, "r") as stream:
             try:
                 manifest = yaml.safe_load(stream)
-                logging.info(manifest)
+                print(manifest)
                 api_response = self.api_instance.create_workflow(
                     namespace="argo",
                     body=IoArgoprojWorkflowV1alpha1WorkflowCreateRequest(

@@ -3,7 +3,7 @@ from fastapi import APIRouter
 from ..engine import ArgoEngine
 
 router = APIRouter()
-argo_engine = ArgoEngine(dry_run=True)
+argo_engine = ArgoEngine()
 
 
 @router.get("/test")
