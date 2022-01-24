@@ -15,6 +15,7 @@ def test():
 @router.post("/submit")
 def submit_workflow():
     # authenticate()
+    print(f"we are hitting the submit endpoint")
     message = argo_engine.submit_workflow({})
     return {"message": message}
 

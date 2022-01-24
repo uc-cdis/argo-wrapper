@@ -1,3 +1,4 @@
+from http.client import REQUEST_TIMEOUT
 from os import name
 from enum import Enum
 from typing import Dict, types
@@ -36,7 +37,7 @@ class ArgoEngine(object):
 
         """
         configuration = argo_workflows.Configuration(
-            host=ARGO_HOST, access_token=argo_token
+            host=ARGO_HOST, access_token=ACCESS_TOKEN
         )
 
         """
@@ -50,7 +51,10 @@ class ArgoEngine(object):
     def get_workflow_status(self, workflow_name: str) -> str:
         if self.dry_run:
             return "workflow status"
-        result = self.api_instance.get_workflow(namespace="argo", name=workflow_name)
+        print(f"workflow name {workflow_name}")
+        result = self.api_instance.get_workflow(
+            namespace="argo", name=workflow_name, _request_timeout=10
+        )
         return result
 
     def cancel_workflow(self, workflow_name: str) -> bool:
@@ -84,6 +88,7 @@ class ArgoEngine(object):
                         _check_return_type=False,
                         _check_type=False,
                     ),
+                    _request_timeout=10,
                 )
                 logging.info(api_response)
             except:

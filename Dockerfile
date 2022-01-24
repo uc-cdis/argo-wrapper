@@ -13,7 +13,7 @@ RUN apk add --no-cache postgresql-libs
 COPY --from=builder /env /env
 COPY --from=builder /src /src
 WORKDIR /src
-CMD ["/env/bin/gunicorn", "src.argo-wrapper.asgi:app", "-b", "0.0.0.0:8000", "-k", "uvicorn.workers.UvicornWorker"]
 ENV PYTHONUNBUFFERED=1 \
     PYTHONIOENCODING=UTF-8
+CMD ["/env/bin/gunicorn", "src.argo-wrapper.asgi:app", "-b", "0.0.0.0:8000", "-k", "uvicorn.workers.UvicornWorker"]
 #CMD ["sleep", "100000"]

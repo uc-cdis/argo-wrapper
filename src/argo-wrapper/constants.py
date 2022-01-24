@@ -8,5 +8,6 @@ class WorkflowStatus(Enum):
 
 
 WORKFLOW_LOCATION = "/home/vhdcprod/argo-setup/hello-world.yaml"
-ARGO_HOST = "https://127.0.0.1:2746"
+ARGO_HOST = "http://argo-server.argo.svc.cluster.local:2746"
+ACCESS_TOKEN = "temp"
 TEST_WF_PATH = "argo_workflows/test.yaml"
