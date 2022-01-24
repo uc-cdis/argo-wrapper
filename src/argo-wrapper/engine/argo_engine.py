@@ -52,9 +52,7 @@ class ArgoEngine(object):
         if self.dry_run:
             return "workflow status"
         print(f"workflow name {workflow_name}")
-        result = self.api_instance.get_workflow(
-            namespace="argo", name=workflow_name, _request_timeout=10
-        )
+        result = self.api_instance.get_workflow(namespace="argo", name=workflow_name)
         return result
 
     def cancel_workflow(self, workflow_name: str) -> bool:
@@ -88,7 +86,7 @@ class ArgoEngine(object):
                         _check_return_type=False,
                         _check_type=False,
                     ),
-                    _request_timeout=10,
+                    # _request_timeout=10,
                 )
                 logging.info(api_response)
             except:
