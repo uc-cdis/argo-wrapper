@@ -1,13 +1,12 @@
-from http.client import REQUEST_TIMEOUT
-from os import name
 from enum import Enum
+import pprint
 from typing import Dict, types
 from ..constants import *
-import subprocess
 import pathlib
 import yaml
 import logging
-
+import string
+import random
 
 import argo_workflows
 
@@ -25,7 +24,8 @@ class ArgoEngine(object):
         return "token"
 
     def __generate_workflow_name(self) -> str:
-        return "test"
+        ending_id = "".join(random.choices(string.digits, k=10))
+        return "test-workflow-" + ending_id
 
     def __repr__(self) -> str:
         return f"token={self.argo_token} dry_run={self.dry_run}"
@@ -35,58 +35,69 @@ class ArgoEngine(object):
         self.dry_run = dry_run
         self.argo_token = argo_token
 
-        """
         configuration = argo_workflows.Configuration(
-            host=ARGO_HOST, access_token=ACCESS_TOKEN
+            host=ARGO_HOST,
+            api_key={"BearerToken": ACCESS_TOKEN},
+            api_key_prefix={"BearerToken": "Bearer"},
         )
-
-        """
-
-        configuration = argo_workflows.Configuration(host=ARGO_HOST)
         configuration.verify_ssl = False
 
         api_client = argo_workflows.ApiClient(configuration)
         self.api_instance = workflow_service_api.WorkflowServiceApi(api_client)
 
+    def _get_all_workflows(self):
+        return self.api_instance.list_workflows(namespace="argo").to_str()
+
+    def _parse_status(self, status_dict: Dict[str, any]):
+        return status_dict["status"]["phase"]
+
     def get_workflow_status(self, workflow_name: str) -> str:
         if self.dry_run:
             return "workflow status"
         print(f"workflow name {workflow_name}")
-        result = self.api_instance.get_workflow(namespace="argo", name=workflow_name)
+
+        result = self.api_instance.get_workflow(
+            namespace="argo", name=workflow_name
+        ).to_dict()
+        result = self._parse_status(result)
+
         return result
 
     def cancel_workflow(self, workflow_name: str) -> bool:
         if self.dry_run:
             return "canceled workflow"
-        self.api_instance.delete_workflow(namespace="argo", name=workflow_name)
-        status = self.get_workflow_status(workflow_name)
-        logging.info(status)
-        return status
+        try:
+            response = self.api_instance.delete_workflow(
+                namespace="argo", name=workflow_name
+            )
+        except:
+            logging.info(f"the workflow with name {workflow_name} does not exist")
+            print("workflow {workflow_name} does not exist")
+            return False
+        print(response)
+
+        return True
 
     def submit_workflow(self, parameters: Dict[str, str]) -> str:
         if self.dry_run:
             return "submit workflow"
-        # try with argo cli
-        print("hello this is just a test")
+
         workflow_name = self.__generate_workflow_name()
         test_wf_path = pathlib.Path(__file__).parents[1]
-        print(f"here is the test workflow dir {test_wf_path}")
         test_wf_path = test_wf_path.joinpath(TEST_WF_PATH)
-        print(test_wf_path)
 
         with open(test_wf_path, "r") as stream:
             try:
                 manifest = yaml.safe_load(stream)
-                print(manifest)
+                del manifest["metadata"]["generateName"]
+                manifest["metadata"]["name"] = workflow_name
                 api_response = self.api_instance.create_workflow(
                     namespace="argo",
                     body=IoArgoprojWorkflowV1alpha1WorkflowCreateRequest(
                         workflow=manifest,
-                        name=workflow_name,
                         _check_return_type=False,
                         _check_type=False,
                     ),
-                    # _request_timeout=10,
                 )
                 logging.info(api_response)
             except:

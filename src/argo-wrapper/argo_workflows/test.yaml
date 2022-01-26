@@ -15,4 +15,4 @@ spec:
     container:
       image: docker/whalesay:latest
       command: [cowsay]
-      args: ["hello world"]
+      args: ["sleep 100"]
