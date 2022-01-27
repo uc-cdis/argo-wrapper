@@ -17,23 +17,15 @@ from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_create_request 
 
 
 class ArgoEngine(object):
-    def __generate_argo_token(self) -> str:
-
-        argo_command = "argo auth token"
-        # token = subprocess.check_output(argo_command.split(" "))
-        return "token"
-
     def __generate_workflow_name(self) -> str:
         ending_id = "".join(random.choices(string.digits, k=10))
         return "test-workflow-" + ending_id
 
     def __repr__(self) -> str:
-        return f"token={self.argo_token} dry_run={self.dry_run}"
+        return f"dry_run={self.dry_run}"
 
     def __init__(self, dry_run=False):
-        argo_token = "token" if dry_run else self.__generate_argo_token()
         self.dry_run = dry_run
-        self.argo_token = argo_token
 
         configuration = argo_workflows.Configuration(
             host=ARGO_HOST,
@@ -51,15 +43,22 @@ class ArgoEngine(object):
     def _parse_status(self, status_dict: Dict[str, any]):
         return status_dict["status"]["phase"]
 
+    def _get_workflow_status_dict(self, workflow_name: str) -> Dict:
+        return self.api_instance.get_workflow(
+            namespace="argo", name=workflow_name
+        ).to_dict()
+
     def get_workflow_status(self, workflow_name: str) -> str:
         if self.dry_run:
             return "workflow status"
         print(f"workflow name {workflow_name}")
 
-        result = self.api_instance.get_workflow(
-            namespace="argo", name=workflow_name
-        ).to_dict()
-        result = self._parse_status(result)
+        try:
+            result = self._get_workflow_status_dict(workflow_name)
+            result = self._parse_status(result)
+        except:
+            logging.info("workflow {workflow_name} does not exist")
+            return ""
 
         return result
 
@@ -102,5 +101,6 @@ class ArgoEngine(object):
                 logging.info(api_response)
             except:
                 logging.info("could not submit workflow")
+                return ""
 
         return workflow_name
