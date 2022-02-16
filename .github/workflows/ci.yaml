@@ -31,4 +31,4 @@ jobs:
         python -m pip install --upgrade pip
     - name: Test with pytest
       run: |
-        $HOME/.poetry/bin/poetry run pytest test/test.py
+        $HOME/.poetry/bin/poetry run pytest test
