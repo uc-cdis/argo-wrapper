@@ -1,9 +1,27 @@
-from fastapi import APIRouter
-
+from fastapi import APIRouter, Header
+from argowrapper.auth import Auth
 from argowrapper.engine import ArgoEngine
+from fastapi.responses import HTMLResponse
+from argowrapper import logger
 
 router = APIRouter()
 argo_engine = ArgoEngine()
+auth = Auth()
+
+
+def auth_helper(token):
+    if token == "":
+        return HTMLResponse(
+            content="authentication token required",
+            status_code=401,
+        )
+    if not auth.authenticate(token=token):
+        return HTMLResponse(
+            content="token is not authorized, out of date, or malformed",
+            status_code=401,
+        )
+
+    return None
 
 
 @router.get("/test")
@@ -14,36 +32,43 @@ def test():
 
 # submit argo workflow
 @router.post("/submit")
-def submit_workflow():
+def submit_workflow(Authorization: str = Header(None)):
     """route to submit workflow"""
-    # authenticate()
+    if (auth_res := auth_helper(Authorization)) :
+        return auth_res
+
     message = argo_engine.submit_workflow({})
     return {"message": message}
 
 
 # get status
 @router.get("/status/{workflow_name}")
-def get_workflow_status(workflow_name: str):
+def get_workflow_status(workflow_name: str, Authorization: str = Header(None)):
     """returns current status of a workflow"""
-    # is_authorized = authenticate()
-    # if not is_authorized:
-    #    raise HTTPException(status_code=404, detail="user not authorized access to workflow status")
+    if (auth_res := auth_helper(Authorization)) :
+        return auth_res
+
     message = argo_engine.get_workflow_status(workflow_name)
     return {"message": message}
 
 
 # cancel workflow
 @router.post("/cancel/{workflow_name}")
-def cancel_workflow(workflow_name: str):
+def cancel_workflow(workflow_name: str, Authorization: str = Header(None)):
     """cancels a currently running workflow"""
-    # authenticate()
+    if (auth_res := auth_helper(Authorization)) :
+        return auth_res
+
     message = argo_engine.cancel_workflow(workflow_name)
     return {"message": message}
 
 
 # get workflows
 @router.get("/workflows/{user_name}")
-def get_workflows(user_name: str):
+def get_workflows(user_name: str, Authorization: str = Header(None)):
     """returns the list of workflows the user has ran"""
+    if (auth_res := auth_helper(Authorization)) :
+        return auth_res
+
     message = argo_engine.get_workfows_for_user(user_name)
     return {"message": message}
