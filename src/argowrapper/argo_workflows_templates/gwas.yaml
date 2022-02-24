@@ -1,0 +1,814 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: vadc-gwas-
+  namespace: argo
+  annotations:
+    workflows.argoproj.io/version: ">= 3.1.0"
+spec:
+  entrypoint: null-model
+  podGC:
+    strategy: OnWorkflowSuccess
+  arguments:
+    parameters:
+      - name: pheno_csv_key
+        value: 5k.prod_height_pheno.csv
+      - name: n_pcs
+        default: 0
+        value: 10
+      - name: covariates
+        value: gender age Hare
+      - name: out_prefix
+        default: genesis_vadc
+        value: 5k_vhdcprod_height
+      - name: outcome
+        value: Height
+      - name: outcome_is_binary
+        enum:
+          - "TRUE"
+          - "FALSE"
+        default: "FALSE"
+        value: "FALSE"
+      - name: pca_file
+        value: /commons-data/pcs.RData
+      - name: relatedness_matrix_file
+        value: /commons-data/KINGmatDeg3.RData
+      - name: genome_build
+        enum:
+          - "hg38"
+          - "hg19"
+        default: "hg19"
+        value: "hg19"
+      - name: n_segments
+        value: 0
+      - name: segment_length
+        default: 10000
+        value: 10000
+      - name: variant_block_size
+        default: 1024
+        value: 1024
+      - name: mac_threshold
+        value: 0
+      - name: maf_threshold
+        value: 0.01
+      - name: imputation_score_cutoff
+        value: 0.3
+      - name: gds_files
+        value: |-
+          [
+            "/commons-data/gds/chr22.merged.vcf.gz.gds"
+          ]
+
+  volumes:
+    - name: gateway
+      persistentVolumeClaim:
+        claimName: va-input-nfs-pvc
+    - name: workdir
+      emptyDir:
+        sizeLimit: "10Gi"
+  templates:
+    - name: null-model
+      dag:
+        tasks:
+          - name: run-impute-score-filter
+            template: impute-score-filter
+            arguments:
+              parameters:
+                - name: impute_cutoff
+                  value: "{{workflow.parameters.imputation_score_cutoff}}"
+                - name: gds_file
+                  value: "{{item}}"
+            withParam: "{{=toJson(map(jsonpath(workflow.parameters.gds_files, '$'), {#}))}}"
+
+          - name: generate-pheno
+            template: generate-pheno
+            arguments:
+              artifacts:
+                - name: pheno_csv
+                  s3:
+                    key: "{{workflow.parameters.pheno_csv_key}}"
+
+          - name: run-null-model
+            template: run-null-model
+            dependencies: [generate-pheno]
+            arguments:
+              parameters:
+                - name: n_pcs
+                  value: "{{workflow.parameters.n_pcs}}"
+                - name: covariates
+                  value: "{{workflow.parameters.covariates}}"
+                - name: out_prefix
+                  value: "{{workflow.parameters.out_prefix}}_null_model"
+                - name: outcome
+                  value: "{{workflow.parameters.outcome}}"
+                - name: outcome_is_binary
+                  value: "{{workflow.parameters.outcome_is_binary}}"
+                - name: pca_file
+                  value: "{{workflow.parameters.pca_file}}"
+                - name: relatedness_matrix_file
+                  value: "{{workflow.parameters.relatedness_matrix_file}}"
+              artifacts:
+                - name: phenotype_file
+                  from: "{{tasks.generate-pheno.outputs.artifacts.phenotype_file}}"
+
+          - name: define-segments
+            template: define-segments
+            arguments:
+              parameters:
+                - name: genome_build
+                  value: "{{workflow.parameters.genome_build}}"
+                - name: n_segments
+                  value: "{{workflow.parameters.n_segments}}"
+                - name: segment_length
+                  value: "{{workflow.parameters.segment_length}}"
+
+          - name: split-filename
+            template: split-filename
+            arguments:
+              parameters:
+                - name: gds_file
+                  value: "{{=map(jsonpath(workflow.parameters.gds_files, '$'), {#})[0]}}"
+
+          - name: filter-segments
+            template: filter-segments
+            dependencies: [define-segments, split-filename]
+            arguments:
+              parameters:
+                - name: file_prefix
+                  value: "{{=jsonpath(tasks['split-filename'].outputs.result, '$.file_prefix')}}"
+                - name: file_suffix
+                  value: "{{=jsonpath(tasks['split-filename'].outputs.result, '$.file_suffix')}}"
+                - name: gds_filenames
+                  value: "{{workflow.parameters.gds_files}}"
+              artifacts:
+                - name: segment_file
+                  from: "{{tasks.define-segments.outputs.artifacts.segment_file}}"
+
+          - name: run-single-assoc
+            template: run-single-assoc
+            dependencies: [run-null-model, filter-segments, split-filename, run-impute-score-filter]
+            arguments:
+              parameters:
+                - name: file_prefix
+                  value: "{{=jsonpath(tasks['split-filename'].outputs.result, '$.file_prefix')}}"
+                - name: file_suffix
+                  value: "{{=jsonpath(tasks['split-filename'].outputs.result, '$.file_suffix')}}"
+                - name: gds_files
+                  value: "{{workflow.parameters.gds_files}}"
+                - name: genome_build
+                  value: "{{workflow.parameters.genome_build}}"
+                - name: out_prefix
+                  value: "{{workflow.parameters.out_prefix}}"
+                - name: variant_block_size
+                  value: "{{workflow.parameters.variant_block_size}}"
+                - name: outcome_is_binary
+                  value: "{{workflow.parameters.outcome_is_binary}}"
+                - name: mac_threshold
+                  value: "{{workflow.parameters.mac_threshold}}"
+                - name: maf_threshold
+                  value: "{{workflow.parameters.maf_threshold}}"
+                - name: segment
+                  value: "{{item}}"
+              artifacts:
+                - name: segment_file
+                  from: "{{tasks.define-segments.outputs.artifacts.segment_file}}"
+                - name: phenotype_file
+                  from: "{{tasks.run-null-model.outputs.artifacts.null_model_phenotype}}"
+                - name: null_model_results
+                  from: "{{tasks.run-null-model.outputs.artifacts.null_model_directory}}"
+                - name: variant_list_dir
+                  s3:
+                    key: "{{workflow.name}}/variant_lists"
+            withParam: "{{=toJson(jsonpath(tasks['filter-segments'].outputs.result, '$.segments'))}}"
+
+          - name: combine-shards
+            template: combine-shards
+            dependencies: [run-single-assoc]
+            arguments:
+              parameters:
+                - name: chromosome
+                  value: "{{item}}"
+                - name: out_prefix
+                  value: "{{workflow.parameters.out_prefix}}"
+              artifacts:
+                - name: file_shards
+                  s3:
+                    key: "{{workflow.name}}/single_assoc_chunks"
+            withParam: "{{=toJson(jsonpath(tasks['filter-segments'].outputs.result, '$.chromosomes'))}}"
+
+          - name: run-plots
+            template: run-plots
+            dependencies: [combine-shards]
+            arguments:
+              parameters:
+                - name: chromosomes
+                  value: "{{=sprig.join(' ', jsonpath(tasks['filter-segments'].outputs.result, '$.chromosomes'))}}"
+                - name: out_prefix
+                  value: "{{workflow.parameters.out_prefix}}"
+              artifacts:
+                - name: combined
+                  s3:
+                    key: "{{workflow.name}}/single_assoc_combined"
+
+          - name: annotate-statistics
+            template: run-annotate
+            dependencies: [combine-shards]
+            arguments:
+              parameters:
+                - name: chromosome
+                  value: "{{item}}"
+                - name: out_prefix
+                  value: "{{workflow.parameters.out_prefix}}"
+              artifacts:
+                - name: raw_stats
+                  s3:
+                    key: "{{workflow.name}}/single_assoc_combined/{{workflow.parameters.out_prefix}}_chr{{item}}.RData"
+            withParam: "{{=toJson(jsonpath(tasks['filter-segments'].outputs.result, '$.chromosomes'))}}"
+
+    - name: impute-score-filter
+      inputs:
+        parameters:
+          - name: impute_cutoff
+          - name: gds_file
+      retryStrategy:
+        limit: "3"
+        retryPolicy: "Always"
+      script:
+        image: uwgac/topmed-master:2.12.0
+        imagePullPolicy: IfNotPresent
+        command: [Rscript]
+        source: |
+          library(SeqVarTools)
+
+          gdsFile <- "{{inputs.parameters.gds_file}}"
+          imputation.cutoff <- {{inputs.parameters.impute_cutoff}}
+          chrom <- gsub("(.*)(chr[0-9X]+)(.*)", "\\2", basename(gdsFile))
+          cat("gds:", gdsFile, "chromosome:", chrom, "\n")
+
+          dir.create("/mnt/vol/variant_lists")
+          outFile <- file.path("/mnt/vol/variant_lists", paste0(chrom, ".selected_variants.RData"))
+
+          gds <- seqOpen(gdsFile)
+
+          all.variant.ids <- seqGetData(gds, "variant.id")
+          imputation.fit <- seqGetData(gds, "annotation/info/R2")
+          sel <- imputation.fit >= imputation.cutoff | is.na(imputation.fit)
+          variant.ids <- all.variant.ids[sel]
+          save(variant.ids, file=outFile)
+          seqClose(gds)
+
+          cat("Total variants:", length(all.variant.ids),
+              "\nDropped variants:", length(all.variant.ids) - length(variant.ids),
+              "\nRemaining variants (%):", length(variant.ids),
+                  paste0("(", round(100*(length(variant.ids)/length(all.variant.ids)), 2), "%)"), "\n")
+
+        volumeMounts:
+          - name: workdir
+            mountPath: /mnt/vol
+          - name: gateway
+            mountPath: /commons-data
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+      outputs:
+        artifacts:
+          - name: variant_list_dir
+            path: "/mnt/vol/variant_lists"
+            archive:
+              none: {}
+            s3:
+              key: "{{workflow.name}}/variant_lists"
+
+    - name: generate-pheno
+      inputs:
+        artifacts:
+          - name: pheno_csv
+            mode: 0777
+            path: "/mnt/vol/phenotypes.csv"
+      retryStrategy:
+        limit: "3"
+        retryPolicy: "Always"
+      script:
+        image: uwgac/topmed-master:2.12.0
+        imagePullPolicy: IfNotPresent
+        command: [Rscript]
+        source: |
+          library(Biobase)
+
+          dat.csv <- read.csv("{{inputs.artifacts.pheno_csv.path}}", stringsAsFactors=FALSE)
+          dat.csv$sample.id <- as.character(dat.csv$sample.id)
+          annot <- AnnotatedDataFrame(dat.csv)
+          stopifnot("sample.id" %in% varLabels(annot))
+          save(annot, file="/mnt/vol/phenotypes.Rdata")
+
+        volumeMounts:
+          - name: workdir
+            mountPath: /mnt/vol
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+      outputs:
+        artifacts:
+          - name: phenotype_file
+            path: "/mnt/vol/phenotypes.Rdata"
+            archive:
+              none: {}
+            s3:
+              key: "{{workflow.name}}/{{pod.name}}/phenotypes.Rdata"
+
+    - name: run-null-model
+      inputs:
+        parameters:
+          - name: n_pcs
+          - name: covariates
+          - name: out_prefix
+          - name: outcome
+          - name: outcome_is_binary
+          - name: pca_file
+          - name: relatedness_matrix_file
+        artifacts:
+          - name: phenotype_file
+            mode: 0777
+            path: "/mnt/vol/phenotypes.Rdata"
+      retryStrategy:
+        limit: "3"
+        retryPolicy: "Always"
+
+      script:
+        image: uwgac/topmed-master:2.12.0
+        imagePullPolicy: IfNotPresent
+        command: [bash]
+        source: |
+          export NSLOTS=2
+          cd /mnt/vol
+
+
+          echo "out_prefix {{inputs.parameters.out_prefix}}" > null_model.config
+          echo "phenotype_file {{inputs.artifacts.phenotype_file.path}}" >> null_model.config
+          echo "outcome {{inputs.parameters.outcome}}" >> null_model.config
+          if [[ "{{inputs.parameters.outcome_is_binary}}" == "TRUE" ]]; then
+                echo "family \"binomial\"" >> null_model.config
+          else
+                echo "family \"gaussian\"" >> null_model.config
+          fi
+          echo "n_pcs {{inputs.parameters.n_pcs}}" >> null_model.config
+          echo "pca_file {{inputs.parameters.pca_file}}" >> null_model.config
+          echo "relatedness_matrix_file {{inputs.parameters.relatedness_matrix_file}}" >> null_model.config
+          echo "covars \"{{inputs.parameters.covariates}}\"" >> null_model.config
+          echo "out_phenotype_file {{inputs.parameters.out_prefix}}_phenotypes.Rdata" >> null_model.config
+
+          set -xe
+          cat null_model.config
+
+          Rscript /usr/local/analysis_pipeline/R/null_model.R null_model.config
+          Rscript /usr/local/analysis_pipeline/R/null_model_report.R null_model.config --version 2.12.0
+          ls -al
+
+          DATADIR={{inputs.parameters.out_prefix}}_datadir
+          mkdir $DATADIR
+          mv {{inputs.parameters.out_prefix}}*.RData $DATADIR/
+
+          REPORTDIR={{inputs.parameters.out_prefix}}_reports
+          mkdir $REPORTDIR
+          mv *.html $REPORTDIR/
+          mv *.Rmd $REPORTDIR/
+
+        volumeMounts:
+          - name: workdir
+            mountPath: /mnt/vol
+          - name: gateway
+            mountPath: /commons-data
+
+        resources:
+          requests:
+            cpu: 2500m
+            memory: 2Gi
+
+      outputs:
+        artifacts:
+          - name: null_model_directory
+            path: "/mnt/vol/{{inputs.parameters.out_prefix}}_datadir"
+            globalName: null_model_results_directory
+            archive:
+              none: {}
+            s3:
+              key: "{{workflow.name}}/{{pod.name}}/{{inputs.parameters.out_prefix}}_datadir"
+          - name: null_model_phenotype
+            path: "/mnt/vol/{{inputs.parameters.out_prefix}}_phenotypes.Rdata"
+            archive:
+              none: {}
+            s3:
+              key: "{{workflow.name}}/{{pod.name}}/{{inputs.parameters.out_prefix}}_phenotypes.Rdata"
+          - name: null_model_report_directory
+            globalName: null_model_reports_directory
+            path: "/mnt/vol/{{inputs.parameters.out_prefix}}_reports"
+            archive:
+              none: {}
+            s3:
+              key: "{{workflow.name}}/{{pod.name}}/{{inputs.parameters.out_prefix}}_reports"
+
+    - name: define-segments
+      inputs:
+        parameters:
+          - name: genome_build
+          - name: n_segments
+          - name: segment_length
+      retryStrategy:
+        limit: "3"
+        retryPolicy: "Always"
+
+      script:
+        image: uwgac/topmed-master:2.12.0
+        imagePullPolicy: IfNotPresent
+        command: [bash]
+        source: |
+          cd /mnt/vol
+          echo "genome_build {{inputs.parameters.genome_build}}" > define_segments.config
+          echo "out_file segments.txt" >> define_segments.config
+
+          if [[ "{{inputs.parameters.n_segments}}" == "0" ]]; then
+              NSEG=""
+          else
+              NSEG=" --n_segments {{inputs.parameters.n_segments}}"
+          fi
+
+          Rscript /usr/local/analysis_pipeline/R/define_segments.R \
+          define_segments.config \
+          --segment_length {{inputs.parameters.segment_length}}${NSEG}
+
+        volumeMounts:
+          - name: workdir
+            mountPath: /mnt/vol
+
+        resources:
+          requests:
+            cpu: 256m
+            memory: 512Mi
+
+      outputs:
+        artifacts:
+          - name: segment_file
+            path: "/mnt/vol/segments.txt"
+            archive:
+              none: {}
+            s3:
+              key: "{{workflow.name}}/{{pod.name}}/segments.txt"
+
+    - name: split-filename
+      inputs:
+        parameters:
+          - name: gds_file
+      retryStrategy:
+        limit: "3"
+        retryPolicy: "Always"
+
+      script:
+        image: python:3.7
+        imagePullPolicy: IfNotPresent
+        command: [python3]
+        source: |
+          import json
+          import os
+          import sys
+
+          gds_file = "{{inputs.parameters.gds_file}}"
+          bname = os.path.basename(gds_file)
+          pfx = bname.split("chr")[0] + 'chr'
+          sfx = "." + ".".join(bname.split("chr")[1].split(".")[1:])
+          dat = {"file_prefix": pfx, "file_suffix": sfx}
+          json.dump(dat, sys.stdout)
+
+        resources:
+          requests:
+            cpu: 50m
+            memory: 50Mi
+
+    - name: filter-segments
+      inputs:
+        parameters:
+          - name: gds_filenames
+          - name: file_prefix
+          - name: file_suffix
+        artifacts:
+          - name: segment_file
+            path: "/mnt/vol/segments.txt"
+      retryStrategy:
+        limit: "3"
+        retryPolicy: "Always"
+
+      script:
+        image: python:3.7
+        imagePullPolicy: IfNotPresent
+        command: [python3]
+        source: |
+          import json
+          import os
+          import sys
+
+          gds_files = set([os.path.basename(i) for i in {{inputs.parameters.gds_filenames}}])
+          file_prefix = "{{inputs.parameters.file_prefix}}"
+          file_suffix = "{{inputs.parameters.file_suffix}}"
+          segments_file = "{{inputs.artifacts.segment_file.path}}"
+
+          chromosomes_present = set()
+          segments = []
+          with open(segments_file, "rt") as f:
+              for n, line in enumerate(f.readlines()):
+                  chrom = line.split()[0]
+                  if file_prefix + chrom + file_suffix in gds_files:
+                      chromosomes_present.add(chrom)
+                      segments += [n]
+
+          dat = {
+            "chromosomes": list(chromosomes_present),
+            "segments": segments
+          }
+          json.dump(dat, sys.stdout)
+
+        volumeMounts:
+          - name: workdir
+            mountPath: /mnt/vol
+        resources:
+          requests:
+            cpu: 50m
+            memory: 50Mi
+
+    - name: run-single-assoc
+      inputs:
+        parameters:
+          - name: gds_files
+          - name: out_prefix
+          - name: genome_build
+          - name: file_prefix
+          - name: file_suffix
+          - name: segment
+          - name: variant_block_size
+          - name: mac_threshold
+          - name: maf_threshold
+          - name: outcome_is_binary
+        artifacts:
+          - name: segment_file
+            mode: 0777
+            path: "/mnt/vol/segments.txt"
+          - name: null_model_results
+            mode: 0777
+            path: "/mnt/vol/null_model_results"
+          - name: phenotype_file
+            mode: 0777
+            path: "/mnt/vol/phenotypes.RData"
+          - name: variant_list_dir
+            mode: 0777
+            path: "/mnt/vol/variant_lists"
+      retryStrategy:
+        limit: "5"
+        retryPolicy: "Always"
+
+      script:
+        image: uwgac/topmed-master:2.12.0
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 0
+        command: [bash]
+        source: |
+          cd /mnt/vol
+          for fil in {{=sprig.join(" ", map(jsonpath(inputs.parameters.gds_files, '$'), {#}))}}; do
+              ln -s $fil .
+          done
+
+          set -xe
+          CHROM="$(awk 'NR=={{=asInt(inputs.parameters.segment) + 1}} {print $1}' {{inputs.artifacts.segment_file.path}})"
+          echo $CHROM
+
+          echo "out_prefix {{inputs.parameters.out_prefix}}" > assoc_single.config
+          echo "genome_build {{inputs.parameters.genome_build}}" >> assoc_single.config
+          echo "gds_file \"{{inputs.parameters.file_prefix}} {{inputs.parameters.file_suffix}}\"" >> assoc_single.config
+          echo "phenotype_file {{inputs.artifacts.phenotype_file.path}}" >> assoc_single.config
+          echo "segment_file {{inputs.artifacts.segment_file.path}}" >> assoc_single.config
+          echo "variant_block_size {{inputs.parameters.variant_block_size}}" >> assoc_single.config
+          echo "variant_include_file {{inputs.artifacts.variant_list_dir.path}}/chr${CHROM}.selected_variants.RData" >> assoc_single.config
+          if [[ "{{inputs.parameters.outcome_is_binary}}" == "TRUE" ]]; then
+                echo "null_model_file {{inputs.artifacts.null_model_results.path}}/{{inputs.parameters.out_prefix}}_null_model.RData" >> assoc_single.config
+                echo "test_type \"score.spa\"" >> null_model.config
+          else
+                echo "null_model_file {{inputs.artifacts.null_model_results.path}}/{{inputs.parameters.out_prefix}}_null_model_invnorm.RData" >> assoc_single.config
+          fi
+
+          if [[ "{{inputs.parameters.mac_threshold}}" == "0" ]]; then
+              echo "mac_threshold NA" >> assoc_single.config
+              echo "maf_threshold {{inputs.parameters.maf_threshold}}" >> assoc_single.config
+          else
+              echo "mac_threshold {{inputs.parameters.mac_threshold}}" >> assoc_single.config
+          fi
+
+          cat assoc_single.config
+          ls -al
+
+          Rscript /usr/local/analysis_pipeline/R/assoc_single.R assoc_single.config --chromosome $CHROM \
+          --segment {{inputs.parameters.segment}} \
+          --num_cores 2
+
+          SEGOUT="{{inputs.parameters.out_prefix}}_chr${CHROM}_seg{{inputs.parameters.segment}}.RData"
+          mkdir single_assoc_chunks
+
+          if [[ -f $SEGOUT ]]; then
+                mv $SEGOUT single_assoc_chunks/
+          else
+                echo "No outputs for segment... skipping..."
+          fi
+
+        volumeMounts:
+          - name: workdir
+            mountPath: /mnt/vol
+          - name: gateway
+            mountPath: /commons-data
+
+        resources:
+          requests:
+            cpu: 2000m
+            memory: 12000Mi
+      outputs:
+        artifacts:
+          - name: single_assoc_segment_output
+            path: "/mnt/vol/single_assoc_chunks"
+            archive:
+              none: {}
+            s3:
+              key: "{{workflow.name}}/single_assoc_chunks"
+
+    - name: combine-shards
+      inputs:
+        parameters:
+          - name: chromosome
+          - name: out_prefix
+        artifacts:
+          - name: file_shards
+            mode: 0777
+            path: "/mnt/vol/file_shards"
+      retryStrategy:
+        limit: "4"
+        retryPolicy: "Always"
+
+      script:
+        image: uwgac/topmed-master:2.12.0
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 0
+        command: [bash]
+        source: |
+          cd {{inputs.artifacts.file_shards.path}}
+
+          echo "out_prefix {{inputs.parameters.out_prefix}}" > assoc_combine.config
+          echo "assoc_type \"single\"" >> assoc_combine.config
+
+          cat assoc_combine.config
+          ls -al
+
+          set -xe
+          Rscript /usr/local/analysis_pipeline/R/assoc_combine.R \
+          assoc_combine.config \
+          --chromosome {{inputs.parameters.chromosome}}
+          mkdir single_assoc_combined
+          mv {{inputs.parameters.out_prefix}}_chr{{inputs.parameters.chromosome}}.RData single_assoc_combined/
+
+        volumeMounts:
+          - name: workdir
+            mountPath: /mnt/vol
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 2000Mi
+      outputs:
+        artifacts:
+          - name: single_assoc_combined
+            path: "{{inputs.artifacts.file_shards.path}}/single_assoc_combined"
+            archive:
+              none: {}
+            s3:
+              key: "{{workflow.name}}/single_assoc_combined"
+
+    - name: run-plots
+      inputs:
+        parameters:
+          - name: chromosomes
+          - name: out_prefix
+        artifacts:
+          - name: combined
+            mode: 0777
+            path: "/mnt/vol/combined"
+      retryStrategy:
+        limit: "3"
+        retryPolicy: "Always"
+
+      script:
+        image: uwgac/topmed-master:2.12.0
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 0
+        command: [bash]
+        source: |
+          cd {{inputs.artifacts.combined.path}}
+
+          echo "assoc_type \"single\"" > plots.config
+          echo "thin \"TRUE\"" >> plots.config
+          echo "assoc_file \"{{inputs.parameters.out_prefix}}_chr .RData\"" >> plots.config
+          echo "chromosomes \"{{inputs.parameters.chromosomes}}\"" >> plots.config
+          echo "out_file_manh \"{{inputs.parameters.out_prefix}}_manhattan.png\"" >> plots.config
+          echo "out_file_qq \"{{inputs.parameters.out_prefix}}_qq.png\"" >> plots.config
+
+          cat plots.config
+          ls -al
+
+          set -xe
+          Rscript /usr/local/analysis_pipeline/R/assoc_plots.R plots.config
+
+        volumeMounts:
+          - name: workdir
+            mountPath: /mnt/vol
+        resources:
+          requests:
+            cpu: 256m
+            memory: 1000Mi
+      outputs:
+        artifacts:
+          - name: manhattan_plot
+            globalName: gwas_manhattan_plot
+            path: "{{inputs.artifacts.combined.path}}/{{inputs.parameters.out_prefix}}_manhattan.png"
+            archive:
+              none: {}
+            s3:
+              key: "{{workflow.name}}/gwas_plots/{{inputs.parameters.out_prefix}}_manhattan.png"
+          - name: qq_plot
+            globalName: gwas_qq_plot
+            path: "{{inputs.artifacts.combined.path}}/{{inputs.parameters.out_prefix}}_qq.png"
+            archive:
+              none: {}
+            s3:
+              key: "{{workflow.name}}/gwas_plots/{{inputs.parameters.out_prefix}}_qq.png"
+
+    - name: run-annotate
+      inputs:
+        parameters:
+          - name: chromosome
+          - name: out_prefix
+        artifacts:
+          - name: raw_stats
+            mode: 0777
+            path: "/mnt/vol/raw_stats.RData"
+      retryStrategy:
+        limit: "3"
+        retryPolicy: "Always"
+
+      script:
+        image: uwgac/topmed-master:2.12.0
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 0
+        command: [Rscript]
+        source: |
+          library(dplyr)
+
+          # Load summary stats
+          load("{{inputs.artifacts.raw_stats.path}}")
+
+          # Load RSID meta
+          anno.df <- read.delim("/commons-data/kmhernan/marker_metadata/vadc_mvp_marker_annotation.chr{{inputs.parameters.chromosome}}.rsids.tsv.gz",
+                                header=TRUE,
+                                stringsAsFactors=FALSE,
+                                sep="\t")
+
+          # Load var meta
+          varmeta.df <- read.csv("/commons-data/kmhernan/marker_metadata/vadc_mvp_marker_annotation.chr{{inputs.parameters.chromosome}}.var_meta.csv.gz",
+                                 stringsAsFactors=FALSE) %>%
+            mutate(chr=as.character(chr))
+
+          # Make annotated df
+          annotated.summary.df <- varmeta.df %>%
+            left_join(anno.df, by=c("variant.name"="variant.name")) %>%
+            inner_join(assoc, by=c("variant.id"="variant.id", "chr"="chr", "pos"="pos")) %>%
+            mutate(chr=paste0("chr", chr))
+
+          # Write new CSV
+          write.csv(annotated.summary.df,
+            file=gzfile("/mnt/vol/{{inputs.parameters.out_prefix}}_chr{{inputs.parameters.chromosome}}.annotated_summary.csv.gz"),
+            row.names=FALSE,
+            na="")
+
+        volumeMounts:
+          - name: workdir
+            mountPath: /mnt/vol
+          - name: gateway
+            mountPath: /commons-data
+        resources:
+          requests:
+            cpu: 256m
+            memory: 1000Mi
+      outputs:
+        artifacts:
+          - name: annotated_stats_csv
+            path: "/mnt/vol/{{inputs.parameters.out_prefix}}_chr{{inputs.parameters.chromosome}}.annotated_summary.csv.gz"
+            archive:
+              none: {}
+            s3:
+              key: "{{workflow.name}}/annotated_csvs/{{inputs.parameters.out_prefix}}_chr{{inputs.parameters.chromosome}}.annotated_summary.csv.gz"

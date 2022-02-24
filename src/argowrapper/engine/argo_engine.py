@@ -10,8 +10,15 @@ from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_create_request 
     IoArgoprojWorkflowV1alpha1WorkflowCreateRequest,
 )
 
+try:
+    import importlib.resources as pkg_resources
+except ImportError:
+    # Try backported to PY<37 `importlib_resources`.
+    import importlib_resources as pkg_resources
+
 from argowrapper import logger
 from argowrapper.constants import *
+from argowrapper import argo_workflows_templates
 
 
 class ArgoEngine(object):
@@ -26,7 +33,7 @@ class ArgoEngine(object):
 
     def __generate_workflow_name(self) -> str:
         ending_id = "".join(random.choices(string.digits, k=10))
-        return "test-workflow-" + ending_id
+        return "argo-wrapper-workflow-" + ending_id
 
     def __repr__(self) -> str:
         return f"dry_run={self.dry_run}"
@@ -35,9 +42,8 @@ class ArgoEngine(object):
         self.dry_run = dry_run
 
         configuration = argo_workflows.Configuration(
-            host=ARGO_HOST,
-            api_key={"BearerToken": ACCESS_TOKEN},
-            api_key_prefix={"BearerToken": "Bearer"},
+            host=QA_HOST,
+            # host=PROD_HOST,
         )
         configuration.verify_ssl = False
 
@@ -113,26 +119,25 @@ class ArgoEngine(object):
             return "submit workflow"
 
         workflow_name = self.__generate_workflow_name()
-        test_wf_path = pathlib.Path(__file__).parents[1]
-        test_wf_path = test_wf_path.joinpath(TEST_WF_PATH)
+        stream = pkg_resources.open_text(argo_workflows_templates, TEST_WF)
 
-        with open(test_wf_path, "r") as stream:
-            try:
-                manifest = yaml.safe_load(stream)
-                del manifest["metadata"]["generateName"]
-                manifest["metadata"]["name"] = workflow_name
-                api_response = self.api_instance.create_workflow(
-                    namespace="argo",
-                    body=IoArgoprojWorkflowV1alpha1WorkflowCreateRequest(
-                        workflow=manifest,
-                        _check_return_type=False,
-                        _check_type=False,
-                    ),
-                )
-                logger.info(api_response)
-            except:
-                logger.info("could not submit workflow")
-                return ""
+        try:
+            manifest = yaml.safe_load(stream)
+            del manifest["metadata"]["generateName"]
+            manifest["metadata"]["name"] = workflow_name
+            api_response = self.api_instance.create_workflow(
+                namespace="argo",
+                body=IoArgoprojWorkflowV1alpha1WorkflowCreateRequest(
+                    workflow=manifest,
+                    _check_return_type=False,
+                    _check_type=False,
+                ),
+            )
+            logger.info(api_response)
+        except Exception as e:
+            logger.error(e)
+            logger.info("error while submitting workflow")
+            return ""
 
         return workflow_name
 

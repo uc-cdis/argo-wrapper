@@ -17,6 +17,7 @@ pytest-mock = "^3.6.1"
 cdislogging = "^1.1.1"
 argo-workflows = "6.3.0rc2"
 gen3authz = "^1.5.0"
+importlib-resources = "^5.4.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
