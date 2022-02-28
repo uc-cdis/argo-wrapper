@@ -61,7 +61,9 @@ class ArgoEngine(object):
 
     def _get_workflow_status_dict(self, workflow_name: str) -> Dict:
         return self.api_instance.get_workflow(
-            namespace="argo", name=workflow_name
+            namespace="argo",
+            name=workflow_name,
+            _check_return_type=False,
         ).to_dict()
 
     def get_workflow_status(self, workflow_name: str) -> str:
@@ -78,7 +80,8 @@ class ArgoEngine(object):
             return "workflow status"
         try:
             result = self._get_workflow_status_dict(workflow_name)
-            result = self._parse_status(result)
+            print(result)
+            # result = self._parse_status(result)
         except Exception as e:
             logger.info(f"getting workflow status for {workflow_name} due to {e}")
             return ""

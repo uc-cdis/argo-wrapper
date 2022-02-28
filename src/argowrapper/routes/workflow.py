@@ -45,8 +45,8 @@ def submit_workflow(Authorization: str = Header(None)):
 @router.get("/status/{workflow_name}")
 def get_workflow_status(workflow_name: str, Authorization: str = Header(None)):
     """returns current status of a workflow"""
-    if (auth_res := auth_helper(Authorization)) :
-        return auth_res
+    # if (auth_res := auth_helper(Authorization)) :
+    #    return auth_res
 
     message = argo_engine.get_workflow_status(workflow_name)
     return {"message": message}
