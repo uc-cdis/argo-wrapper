@@ -2,11 +2,21 @@ from fastapi import APIRouter, Header
 from argowrapper.auth import Auth
 from argowrapper.engine import ArgoEngine
 from fastapi.responses import HTMLResponse
-from argowrapper import logger
+from pydantic import BaseModel
 
 router = APIRouter()
 argo_engine = ArgoEngine()
 auth = Auth()
+
+
+class WorkflowParameters(BaseModel):
+    n_pcs: int
+    covariantes: str
+    out_prefix: str
+    outcome: str
+    outcome_is_binary: str
+    maf_threshold: float
+    imputation_score_cutoff: float
 
 
 def auth_helper(token):
@@ -32,12 +42,14 @@ def test():
 
 # submit argo workflow
 @router.post("/submit")
-def submit_workflow(Authorization: str = Header(None)):
+def submit_workflow(
+    workflowParameters: WorkflowParameters, Authorization: str = Header(None)
+):
     """route to submit workflow"""
     if (auth_res := auth_helper(Authorization)) :
         return auth_res
 
-    message = argo_engine.submit_workflow({})
+    message = argo_engine.submit_workflow(workflowParameters.dict())
     return {"message": message}
 
 
@@ -45,8 +57,8 @@ def submit_workflow(Authorization: str = Header(None)):
 @router.get("/status/{workflow_name}")
 def get_workflow_status(workflow_name: str, Authorization: str = Header(None)):
     """returns current status of a workflow"""
-    # if (auth_res := auth_helper(Authorization)) :
-    #    return auth_res
+    if (auth_res := auth_helper(Authorization)) :
+        return auth_res
 
     message = argo_engine.get_workflow_status(workflow_name)
     return {"message": message}

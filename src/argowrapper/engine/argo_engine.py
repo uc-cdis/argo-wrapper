@@ -1,4 +1,3 @@
-import pathlib
 import random
 import string
 from typing import Dict, List
@@ -10,15 +9,14 @@ from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_create_request 
     IoArgoprojWorkflowV1alpha1WorkflowCreateRequest,
 )
 
-try:
-    import importlib.resources as pkg_resources
-except ImportError:
-    # Try backported to PY<37 `importlib_resources`.
-    import importlib_resources as pkg_resources
+import importlib.resources as pkg_resources
+
 
 from argowrapper import logger
 from argowrapper.constants import *
 from argowrapper import argo_workflows_templates
+
+import traceback
 
 
 class ArgoEngine(object):
@@ -42,8 +40,7 @@ class ArgoEngine(object):
         self.dry_run = dry_run
 
         configuration = argo_workflows.Configuration(
-            host=QA_HOST,
-            # host=PROD_HOST,
+            host=ARGO_HOST,
         )
         configuration.verify_ssl = False
 
@@ -63,8 +60,22 @@ class ArgoEngine(object):
         return self.api_instance.get_workflow(
             namespace="argo",
             name=workflow_name,
+            # Note that _check_return_type=False avoids an existing issue with OpenAPI generator.
             _check_return_type=False,
         ).to_dict()
+
+    def _add_name_to_workflow(self, workflow: Dict) -> str:
+        workflow_name = self.__generate_workflow_name()
+        del workflow["metadata"]["generateName"]
+        workflow["metadata"]["name"] = workflow_name
+        return workflow_name
+
+    def _add_parameters_to_gwas_workflow(
+        self, parameters: Dict[str, any], workflow: Dict
+    ) -> None:
+        for dict in workflow["spec"]["arguments"]["parameters"]:
+            if (param_name := dict["name"]) in parameters:
+                dict["value"] = parameters[param_name]
 
     def get_workflow_status(self, workflow_name: str) -> str:
         """
@@ -80,9 +91,9 @@ class ArgoEngine(object):
             return "workflow status"
         try:
             result = self._get_workflow_status_dict(workflow_name)
-            print(result)
-            # result = self._parse_status(result)
+            result = self._parse_status(result)
         except Exception as e:
+            logger.error(traceback.format_exc())
             logger.info(f"getting workflow status for {workflow_name} due to {e}")
             return ""
 
@@ -103,6 +114,7 @@ class ArgoEngine(object):
         try:
             self.api_instance.delete_workflow(namespace="argo", name=workflow_name)
         except Exception as e:
+            logger.error(traceback.format_exc())
             logger.info(f"the workflow with name {workflow_name} does not exist")
             return False
 
@@ -118,27 +130,32 @@ class ArgoEngine(object):
         Returns:
             str: workflow name of the submitted workflow if sucess, empty string if fail
         """
-        if self.dry_run:
-            return "submit workflow"
 
-        workflow_name = self.__generate_workflow_name()
         stream = pkg_resources.open_text(argo_workflows_templates, TEST_WF)
 
         try:
-            manifest = yaml.safe_load(stream)
-            del manifest["metadata"]["generateName"]
-            manifest["metadata"]["name"] = workflow_name
-            api_response = self.api_instance.create_workflow(
+            workflow_yaml = yaml.safe_load(stream)
+            self._add_parameters_to_gwas_workflow(parameters, workflow_yaml)
+            workflow_name = self._add_name_to_workflow(workflow_yaml)
+            if self.dry_run:
+                logger.info("dry run of workflow submission")
+                logger.info(f"workflow being submitted {workflow_yaml}")
+                logger.info(f"workflow name {workflow_name}")
+                return workflow_name
+
+            response = self.api_instance.create_workflow(
                 namespace="argo",
                 body=IoArgoprojWorkflowV1alpha1WorkflowCreateRequest(
-                    workflow=manifest,
+                    workflow=workflow_yaml,
                     _check_return_type=False,
                     _check_type=False,
                 ),
+                _check_return_type=False,
             )
-            logger.info(api_response)
-        except Exception as e:
-            logger.error(e)
+
+            logger.debug(response)
+        except Exception:
+            logger.error(traceback.format_exc())
             logger.info("error while submitting workflow")
             return ""
 
@@ -179,6 +196,6 @@ class ArgoEngine(object):
 
             return list(set(names + archived_names))
 
-        except Exception as e:
-            logger.info(e)
+        except Exception:
+            logger.error(traceback.format_exc())
             return "failed to get workflow for user"
