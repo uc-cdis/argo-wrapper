@@ -1,5 +1,4 @@
 import os
-import sys
 import yaml
 
 from argowrapper.app import get_app
