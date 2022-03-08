@@ -1,6 +1,11 @@
 import unittest.mock as mock
+from argowrapper.engine.argo_engine import *
+from argowrapper import argo_workflows_templates
+from argowrapper.constants import *
+import yaml
 
-from argowrapper.engine.argo_engine import ArgoEngine
+
+import importlib.resources as pkg_resources
 
 
 class WorkFlow:
@@ -16,7 +21,9 @@ def test_argo_engine_submit_succeeded():
     with mock.patch.object(
         engine, "_ArgoEngine__generate_workflow_name", return_value=workflow_name
     ):
-        result = engine.submit_workflow({})
+
+        parameters = {"pheno_csv_key": "test_replace_value", "n_pcs": 100}
+        result = engine.submit_workflow(parameters)
         assert result == workflow_name
 
 
@@ -103,3 +110,31 @@ def test_argo_engine_get_workflow_for_user_failed():
 
     result = engine.get_workfows_for_user("test")
     assert result == "failed to get workflow for user"
+
+
+def test_argo_engine_add_parameters_to_gwas_workflow():
+    engine = ArgoEngine()
+    stream = pkg_resources.open_text(argo_workflows_templates, TEST_WF)
+
+    parameters = {"pheno_csv_key": "test_replace_value", "n_pcs": 100}
+    workflow_yaml = yaml.safe_load(stream)
+    engine._add_parameters_to_gwas_workflow(parameters, workflow_yaml)
+
+    parameter_dicts = [
+        parameter_dict
+        for parameter_dict in workflow_yaml["spec"]["arguments"]["parameters"]
+    ]
+    for dict in parameter_dicts:
+        if (param_name := dict["name"]) in parameters:
+            assert dict["value"] == parameters[param_name]
+
+
+def test_argo_engine_submit_yaml_succeeded():
+    engine = ArgoEngine()
+    engine.api_instance.create_workflow = mock.MagicMock()
+    input_parameters = {"pheno_csv_key": "test_replace_value", "n_pcs": 100}
+    engine.submit_workflow(input_parameters)
+    args = engine.api_instance.create_workflow.call_args_list
+    for parameter in args[0][1]["body"]["workflow"]["spec"]["arguments"]["parameters"]:
+        if (param_name := parameter["name"]) in input_parameters:
+            assert parameter["value"] == input_parameters[param_name]

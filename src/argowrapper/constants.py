@@ -7,8 +7,7 @@ class WorkflowStatus(Enum):
     FAILED = "failed"
 
 
-QA_HOST = "https://argo-server.argo.svc.cluster.local:2746"
-PROD_HOST = "http://argo-argo-workflows-server.argo.svc.cluster.local:2746"
+ARGO_HOST = "http://argo-argo-workflows-server.argo.svc.cluster.local:2746"
 TEST_WF = "test.yaml"
 GWAS_WF = "gwas.yaml"
 TOKEN_REGEX = r"[Bb]earer"
