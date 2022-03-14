@@ -1,10 +1,15 @@
+from argparse import Namespace
 import random
 import string
 from typing import Dict, List
 
 import argo_workflows
 import yaml
-from argo_workflows.api import archived_workflow_service_api, workflow_service_api
+from argo_workflows.api import (
+    archived_workflow_service_api,
+    workflow_service_api,
+    workflow_template_service_api,
+)
 from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_create_request import (
     IoArgoprojWorkflowV1alpha1WorkflowCreateRequest,
 )
@@ -49,6 +54,9 @@ class ArgoEngine(object):
         self.archeive_api_instance = (
             archived_workflow_service_api.ArchivedWorkflowServiceApi(api_client)
         )
+        self.template_api_instance = (
+            workflow_template_service_api.WorkflowTemplateServiceApi(api_client)
+        )
 
     def _get_all_workflows(self):
         return self.api_instance.list_workflows(namespace="argo").to_str()
@@ -66,7 +74,7 @@ class ArgoEngine(object):
 
     def _add_name_to_workflow(self, workflow: Dict) -> str:
         workflow_name = self.__generate_workflow_name()
-        del workflow["metadata"]["generateName"]
+        workflow["metadata"].pop("generateName", None)
         workflow["metadata"]["name"] = workflow_name
         return workflow_name
 
@@ -76,6 +84,17 @@ class ArgoEngine(object):
         for dict in workflow["spec"]["arguments"]["parameters"]:
             if (param_name := dict["name"]) in parameters:
                 dict["value"] = parameters[param_name]
+
+    def _get_workflow_template(self, template_name: str) -> dict:
+        try:
+            return self.template_api_instance.get_workflow_template(
+                namespace="argo", name=template_name
+            ).to_dict()
+
+        except Exception as e:
+            logger.error(traceback.format_exc())
+            logger.error(f"could not get workflow template {template_name} due to {e}")
+            raise e
 
     def get_workflow_status(self, workflow_name: str) -> str:
         """
@@ -91,15 +110,14 @@ class ArgoEngine(object):
             return "workflow status"
         try:
             result = self._get_workflow_status_dict(workflow_name)
-            result = self._parse_status(result)
+            return self._parse_status(result)
+
         except Exception as e:
             logger.error(traceback.format_exc())
-            logger.info(f"getting workflow status for {workflow_name} due to {e}")
-            return ""
+            logger.error(f"getting workflow status for {workflow_name} due to {e}")
+            raise e
 
-        return result
-
-    def cancel_workflow(self, workflow_name: str) -> bool:
+    def cancel_workflow(self, workflow_name: str) -> string:
         """
         Cancels a workflow that's running, this will delete the workflow
 
@@ -110,15 +128,16 @@ class ArgoEngine(object):
             bool : True if workflow was sucessfully canceled, else False
         """
         if self.dry_run:
-            return "canceled workflow"
+            logger.info(f"dry run for canceling {workflow_name}")
+            return f"{workflow_name} canceled sucessfully"
         try:
             self.api_instance.delete_workflow(namespace="argo", name=workflow_name)
+            return f"{workflow_name} canceled sucessfully"
+
         except Exception as e:
             logger.error(traceback.format_exc())
-            logger.info(f"the workflow with name {workflow_name} does not exist")
-            return False
-
-        return True
+            logger.error(f"could not cancel {workflow_name}, failed with error {e}")
+            raise e
 
     def submit_workflow(self, parameters: Dict[str, str]) -> str:
         """
@@ -131,12 +150,16 @@ class ArgoEngine(object):
             str: workflow name of the submitted workflow if sucess, empty string if fail
         """
 
-        stream = pkg_resources.open_text(argo_workflows_templates, TEST_WF)
-
         try:
-            workflow_yaml = yaml.safe_load(stream)
+            workflow_yaml = self._get_workflow_template(parameters["template_version"])
+            workflow_yaml["kind"] = "Workflow"
             self._add_parameters_to_gwas_workflow(parameters, workflow_yaml)
             workflow_name = self._add_name_to_workflow(workflow_yaml)
+
+            logger.debug(
+                f"the workflow {workflow_name} being submitted is {workflow_yaml}"
+            )
+
             if self.dry_run:
                 logger.info("dry run of workflow submission")
                 logger.info(f"workflow being submitted {workflow_yaml}")
@@ -152,14 +175,13 @@ class ArgoEngine(object):
                 ),
                 _check_return_type=False,
             )
-
             logger.debug(response)
-        except Exception:
-            logger.error(traceback.format_exc())
-            logger.info("error while submitting workflow")
-            return ""
+            return workflow_name
 
-        return workflow_name
+        except Exception as e:
+            logger.error(traceback.format_exc())
+            logger.error(f"failed to submit workflow, failed with error {e}")
+            raise e
 
     def get_workfows_for_user(self, username: str) -> List[str]:
         """
@@ -196,6 +218,9 @@ class ArgoEngine(object):
 
             return list(set(names + archived_names))
 
-        except Exception:
+        except Exception as e:
             logger.error(traceback.format_exc())
-            return "failed to get workflow for user"
+            logger.error(
+                f"could not get workflows for {username}, failed with error {e}"
+            )
+            raise e

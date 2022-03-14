@@ -3,7 +3,7 @@ from argowrapper.engine.argo_engine import *
 from argowrapper import argo_workflows_templates
 from argowrapper.constants import *
 import yaml
-
+import pytest
 
 import importlib.resources as pkg_resources
 
@@ -18,11 +18,18 @@ def test_argo_engine_submit_succeeded():
     workflow_name = "wf_name"
     engine = ArgoEngine()
     engine.api_instance.create_workflow = mock.MagicMock(return_value=workflow_name)
+    stream = pkg_resources.open_text(argo_workflows_templates, TEST_WF)
+    workflow_yaml = yaml.safe_load(stream)
+    engine._get_workflow_template = mock.MagicMock(return_value=workflow_yaml)
     with mock.patch.object(
         engine, "_ArgoEngine__generate_workflow_name", return_value=workflow_name
     ):
 
-        parameters = {"pheno_csv_key": "test_replace_value", "n_pcs": 100}
+        parameters = {
+            "pheno_csv_key": "test_replace_value",
+            "n_pcs": 100,
+            "template_version": "test",
+        }
         result = engine.submit_workflow(parameters)
         assert result == workflow_name
 
@@ -36,9 +43,13 @@ def test_argo_engine_submit_failed():
     )
     with mock.patch.object(
         engine, "_ArgoEngine__generate_workflow_name", return_value=workflow_name
-    ):
-        result = engine.submit_workflow({})
-        assert result == ""
+    ), pytest.raises(Exception):
+        parameters = {
+            "pheno_csv_key": "test_replace_value",
+            "n_pcs": 100,
+            "template_version": "test",
+        }
+        engine.submit_workflow(parameters)
 
 
 def test_argo_engine_cancel_succeeded():
@@ -46,7 +57,7 @@ def test_argo_engine_cancel_succeeded():
     engine = ArgoEngine()
     engine.api_instance.delete_workflow = mock.MagicMock(return_value=None)
     result = engine.cancel_workflow("wf_name")
-    assert result == True
+    assert result == "wf_name canceled sucessfully"
 
 
 def test_argo_engine_cancel_failed():
@@ -55,8 +66,8 @@ def test_argo_engine_cancel_failed():
     engine.api_instance.delete_workflow = mock.MagicMock(
         side_effect=Exception("workflow does not exist")
     )
-    result = engine.cancel_workflow("wf_name")
-    assert result == False
+    with pytest.raises(Exception):
+        engine.cancel_workflow("wf_name")
 
 
 def test_argo_engine_get_status_succeeded():
@@ -75,8 +86,8 @@ def test_argo_engine_get_status_failed():
     engine._get_workflow_status_dict = mock.MagicMock(
         side_effect=Exception("workflow does not exist")
     )
-    result = engine.get_workflow_status("test_wf")
-    assert result == ""
+    with pytest.raises(Exception):
+        engine.get_workflow_status("test_wf")
 
 
 def test_argo_engine_get_workflow_for_user_suceeded():
@@ -107,9 +118,8 @@ def test_argo_engine_get_workflow_for_user_failed():
     engine.api_instance.list_workflows = mock.MagicMock(
         side_effect=Exception("user does not exist")
     )
-
-    result = engine.get_workfows_for_user("test")
-    assert result == "failed to get workflow for user"
+    with pytest.raises(Exception):
+        engine.get_workfows_for_user("test")
 
 
 def test_argo_engine_add_parameters_to_gwas_workflow():
@@ -132,7 +142,14 @@ def test_argo_engine_add_parameters_to_gwas_workflow():
 def test_argo_engine_submit_yaml_succeeded():
     engine = ArgoEngine()
     engine.api_instance.create_workflow = mock.MagicMock()
-    input_parameters = {"pheno_csv_key": "test_replace_value", "n_pcs": 100}
+    stream = pkg_resources.open_text(argo_workflows_templates, TEST_WF)
+    workflow_yaml = yaml.safe_load(stream)
+    engine._get_workflow_template = mock.MagicMock(return_value=workflow_yaml)
+    input_parameters = {
+        "pheno_csv_key": "test_replace_value",
+        "n_pcs": 100,
+        "template_version": "test",
+    }
     engine.submit_workflow(input_parameters)
     args = engine.api_instance.create_workflow.call_args_list
     for parameter in args[0][1]["body"]["workflow"]["spec"]["arguments"]["parameters"]:

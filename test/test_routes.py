@@ -40,6 +40,7 @@ def test_submit_workflow(client):
         "outcome_is_binary": "TRUE",
         "maf_threshold": 1.01,
         "imputation_score_cutoff": 2.02,
+        "template_version": "test",
     }
     with patch("argowrapper.routes.workflow.auth.authenticate") as mock_auth, patch(
         "argowrapper.routes.workflow.argo_engine.submit_workflow"
@@ -55,4 +56,4 @@ def test_submit_workflow(client):
             },
         )
         assert response.status_code == 200
-        assert response.json()["message"] == "workflow_123"
+        assert response.content.decode("utf-8") == '"workflow_123"'
