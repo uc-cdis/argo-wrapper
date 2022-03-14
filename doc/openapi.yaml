@@ -1,0 +1,203 @@
+components:
+  schemas:
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    ValidationError:
+      properties:
+        loc:
+          items:
+            type: string
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+    WorkflowParameters:
+      properties:
+        covariantes:
+          title: Covariantes
+          type: string
+        imputation_score_cutoff:
+          title: Imputation Score Cutoff
+          type: number
+        maf_threshold:
+          title: Maf Threshold
+          type: number
+        n_pcs:
+          title: N Pcs
+          type: integer
+        out_prefix:
+          title: Out Prefix
+          type: string
+        outcome:
+          title: Outcome
+          type: string
+        outcome_is_binary:
+          title: Outcome Is Binary
+          type: string
+        template_version:
+          title: Template Version
+          type: string
+      required:
+      - n_pcs
+      - covariantes
+      - out_prefix
+      - outcome
+      - outcome_is_binary
+      - maf_threshold
+      - imputation_score_cutoff
+      - template_version
+      title: WorkflowParameters
+      type: object
+info:
+  title: argo wrapper
+  version: 0.1.0
+openapi: 3.0.2
+paths:
+  /cancel/{workflow_name}:
+    post:
+      description: cancels a currently running workflow
+      operationId: cancel_workflow_cancel__workflow_name__post
+      parameters:
+      - in: path
+        name: workflow_name
+        required: true
+        schema:
+          title: Workflow Name
+          type: string
+      - in: header
+        name: Authorization
+        required: false
+        schema:
+          title: Authorization
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Cancel Workflow
+  /status/{workflow_name}:
+    get:
+      description: returns current status of a workflow
+      operationId: get_workflow_status_status__workflow_name__get
+      parameters:
+      - in: path
+        name: workflow_name
+        required: true
+        schema:
+          title: Workflow Name
+          type: string
+      - in: header
+        name: Authorization
+        required: false
+        schema:
+          title: Authorization
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Workflow Status
+  /submit:
+    post:
+      description: route to submit workflow
+      operationId: submit_workflow_submit_post
+      parameters:
+      - in: header
+        name: Authorization
+        required: false
+        schema:
+          title: Authorization
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowParameters'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Submit Workflow
+  /test:
+    get:
+      description: route to test that the argo-workflow is correctly running
+      operationId: test_test_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Test
+  /workflows/{user_name}:
+    get:
+      description: returns the list of workflows the user has ran
+      operationId: get_workflows_workflows__user_name__get
+      parameters:
+      - in: path
+        name: user_name
+        required: true
+        schema:
+          title: User Name
+          type: string
+      - in: header
+        name: Authorization
+        required: false
+        schema:
+          title: Authorization
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Workflows
