@@ -1,10 +1,9 @@
-from argparse import Namespace
 import random
 import string
+import traceback
 from typing import Dict, List
 
 import argo_workflows
-import yaml
 from argo_workflows.api import (
     archived_workflow_service_api,
     workflow_service_api,
@@ -14,24 +13,20 @@ from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_create_request 
     IoArgoprojWorkflowV1alpha1WorkflowCreateRequest,
 )
 
-import importlib.resources as pkg_resources
-
 
 from argowrapper import logger
-from argowrapper.constants import *
-from argowrapper import argo_workflows_templates
-
-import traceback
+from argowrapper.constants import ARGO_HOST
 
 
-class ArgoEngine(object):
+class ArgoEngine:
     """
     A class to interact with argo engine
 
     Attributes:
         dry_run (bool): is dry run
-        api_instance (WorkFlowServiceAPi): api client to interact with non-archived workflows
-        archive_api_instance (ArchivedWorkflowServiceApi): api client to interact with archived workflows
+        api_instance (WorkFlowServiceAPi): api client to interact with
+        non-archived workflows archive_api_instance (ArchivedWorkflowServiceApi):
+        api client to interact with archived workflows
     """
 
     def __generate_workflow_name(self) -> str:
@@ -91,10 +86,12 @@ class ArgoEngine(object):
                 namespace="argo", name=template_name
             ).to_dict()
 
-        except Exception as e:
+        except Exception as exception:
             logger.error(traceback.format_exc())
-            logger.error(f"could not get workflow template {template_name} due to {e}")
-            raise e
+            logger.error(
+                f"could not get workflow template {template_name} due to {exception}"
+            )
+            raise exception
 
     def get_workflow_status(self, workflow_name: str) -> str:
         """
@@ -112,10 +109,12 @@ class ArgoEngine(object):
             result = self._get_workflow_status_dict(workflow_name)
             return self._parse_status(result)
 
-        except Exception as e:
+        except Exception as exception:
             logger.error(traceback.format_exc())
-            logger.error(f"getting workflow status for {workflow_name} due to {e}")
-            raise e
+            logger.error(
+                f"getting workflow status for {workflow_name} due to {exception}"
+            )
+            raise exception
 
     def cancel_workflow(self, workflow_name: str) -> string:
         """
@@ -134,10 +133,12 @@ class ArgoEngine(object):
             self.api_instance.delete_workflow(namespace="argo", name=workflow_name)
             return f"{workflow_name} canceled sucessfully"
 
-        except Exception as e:
+        except Exception as exception:
             logger.error(traceback.format_exc())
-            logger.error(f"could not cancel {workflow_name}, failed with error {e}")
-            raise e
+            logger.error(
+                f"could not cancel {workflow_name}, failed with error {exception}"
+            )
+            raise exception
 
     def submit_workflow(self, parameters: Dict[str, str]) -> str:
         """
@@ -178,10 +179,10 @@ class ArgoEngine(object):
             logger.debug(response)
             return workflow_name
 
-        except Exception as e:
+        except Exception as exception:
             logger.error(traceback.format_exc())
-            logger.error(f"failed to submit workflow, failed with error {e}")
-            raise e
+            logger.error(f"failed to submit workflow, failed with error {exception}")
+            raise exception
 
     def get_workfows_for_user(self, username: str) -> List[str]:
         """
@@ -191,7 +192,8 @@ class ArgoEngine(object):
             username (str): name of the user whose workflows we are returning
 
         Returns:
-            List[str]: List of workflow names that the user has ran if sucess, error message if fails
+            List[str]: List of workflow names that the user
+            has ran if sucess, error message if fails
 
         """
         label_selector = f"custom-username={username}"
@@ -218,9 +220,9 @@ class ArgoEngine(object):
 
             return list(set(names + archived_names))
 
-        except Exception as e:
+        except Exception as exception:
             logger.error(traceback.format_exc())
             logger.error(
-                f"could not get workflows for {username}, failed with error {e}"
+                f"could not get workflows for {username}, failed with error {exception}"
             )
-            raise e
+            raise exception

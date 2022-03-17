@@ -2,20 +2,27 @@ import re
 from gen3authz.client.arborist.client import ArboristClient
 from gen3authz.client.arborist.errors import ArboristError
 from argowrapper import logger
-from argowrapper.constants import *
+from argowrapper.constants import (
+    TOKEN_REGEX,
+    ARGO_ACCESS_SERVICE,
+    ARGO_ACCESS_RESOURCES,
+    ARGO_ACCESS_METHOD,
+)
 
 
 class Auth:
+    """
+
+    A class to interact with arborist for authentication
+
+    """
+
     def __init__(self):
         self.arborist_client = ArboristClient(logger=logger)
 
     def _parse_jwt(self, token: str) -> str:
-        try:
-            parsed_token = re.sub(TOKEN_REGEX, "", token)
-        except Exception as e:
-            logger.error("could not parse jwt token")
-            return ""
 
+        parsed_token = re.sub(TOKEN_REGEX, "", token)
         parsed_token = parsed_token.replace(" ", "")
         if len(parsed_token.split(".")) != 3:
             logger.error("malformed token")
@@ -45,8 +52,8 @@ class Auth:
                 resources=ARGO_ACCESS_RESOURCES,
             )
 
-        except ArboristError as e:
-            logger.error(f"error while talking to arborist with error {e}")
+        except ArboristError as exception:
+            logger.error(f"error while talking to arborist with error {exception}")
             authorized = False
 
         logger.info(f"here is the authorized {authorized}")
