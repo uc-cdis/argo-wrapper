@@ -1,4 +1,3 @@
-import random
 import string
 import traceback
 from typing import Dict, List
@@ -16,6 +15,7 @@ from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_create_request 
 
 from argowrapper import logger
 from argowrapper.constants import ARGO_HOST
+from argowrapper.engine.helpers import argo_engine_helper
 
 
 class ArgoEngine:
@@ -28,10 +28,6 @@ class ArgoEngine:
         non-archived workflows archive_api_instance (ArchivedWorkflowServiceApi):
         api client to interact with archived workflows
     """
-
-    def __generate_workflow_name(self) -> str:
-        ending_id = "".join(random.choices(string.digits, k=10))
-        return "argo-wrapper-workflow-" + ending_id
 
     def __repr__(self) -> str:
         return f"dry_run={self.dry_run}"
@@ -56,9 +52,6 @@ class ArgoEngine:
     def _get_all_workflows(self):
         return self.api_instance.list_workflows(namespace="argo").to_str()
 
-    def _parse_status(self, status_dict: Dict[str, any]):
-        return status_dict["status"]["phase"]
-
     def _get_workflow_status_dict(self, workflow_name: str) -> Dict:
         return self.api_instance.get_workflow(
             namespace="argo",
@@ -66,19 +59,6 @@ class ArgoEngine:
             # Note that _check_return_type=False avoids an existing issue with OpenAPI generator.
             _check_return_type=False,
         ).to_dict()
-
-    def _add_name_to_workflow(self, workflow: Dict) -> str:
-        workflow_name = self.__generate_workflow_name()
-        workflow["metadata"].pop("generateName", None)
-        workflow["metadata"]["name"] = workflow_name
-        return workflow_name
-
-    def _add_parameters_to_gwas_workflow(
-        self, parameters: Dict[str, any], workflow: Dict
-    ) -> None:
-        for dict in workflow["spec"]["arguments"]["parameters"]:
-            if (param_name := dict["name"]) in parameters:
-                dict["value"] = parameters[param_name]
 
     def _get_workflow_template(self, template_name: str) -> dict:
         try:
@@ -107,7 +87,7 @@ class ArgoEngine:
             return "workflow status"
         try:
             result = self._get_workflow_status_dict(workflow_name)
-            return self._parse_status(result)
+            return argo_engine_helper.parse_status(result)
 
         except Exception as exception:
             logger.error(traceback.format_exc())
@@ -153,9 +133,15 @@ class ArgoEngine:
 
         try:
             workflow_yaml = self._get_workflow_template(parameters["template_version"])
+            logger.info(workflow_yaml)
             workflow_yaml["kind"] = "Workflow"
-            self._add_parameters_to_gwas_workflow(parameters, workflow_yaml)
-            workflow_name = self._add_name_to_workflow(workflow_yaml)
+            argo_engine_helper.add_parameters_to_gwas_workflow(
+                parameters, workflow_yaml
+            )
+            argo_engine_helper.add_scaling_groups(
+                parameters["gen3_user_name"], workflow_yaml
+            )
+            workflow_name = argo_engine_helper.add_name_to_workflow(workflow_yaml)
 
             logger.debug(
                 f"the workflow {workflow_name} being submitted is {workflow_yaml}"

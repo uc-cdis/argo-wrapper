@@ -21,14 +21,18 @@ def test_argo_engine_submit_succeeded():
     stream = pkg_resources.open_text(argo_workflows_templates, TEST_WF)
     workflow_yaml = yaml.safe_load(stream)
     engine._get_workflow_template = mock.MagicMock(return_value=workflow_yaml)
-    with mock.patch.object(
-        engine, "_ArgoEngine__generate_workflow_name", return_value=workflow_name
-    ):
 
+    with mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper.add_name_to_workflow"
+    ) as add_name, mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper.add_scaling_groups"
+    ):
+        add_name.return_value = workflow_name
         parameters = {
             "pheno_csv_key": "test_replace_value",
             "n_pcs": 100,
             "template_version": "test",
+            "gen3_user_name": "test_user",
         }
         result = engine.submit_workflow(parameters)
         assert result == workflow_name
@@ -41,9 +45,13 @@ def test_argo_engine_submit_failed():
     engine.api_instance.create_workflow = mock.MagicMock(
         side_effect=Exception("bad input")
     )
-    with mock.patch.object(
-        engine, "_ArgoEngine__generate_workflow_name", return_value=workflow_name
-    ), pytest.raises(Exception):
+    with mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper.add_name_to_workflow"
+    ) as add_name, mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper.add_scaling_groups"
+    ), pytest.raises(
+        Exception
+    ):
         parameters = {
             "pheno_csv_key": "test_replace_value",
             "n_pcs": 100,
@@ -122,23 +130,6 @@ def test_argo_engine_get_workflow_for_user_failed():
         engine.get_workfows_for_user("test")
 
 
-def test_argo_engine_add_parameters_to_gwas_workflow():
-    engine = ArgoEngine()
-    stream = pkg_resources.open_text(argo_workflows_templates, TEST_WF)
-
-    parameters = {"pheno_csv_key": "test_replace_value", "n_pcs": 100}
-    workflow_yaml = yaml.safe_load(stream)
-    engine._add_parameters_to_gwas_workflow(parameters, workflow_yaml)
-
-    parameter_dicts = [
-        parameter_dict
-        for parameter_dict in workflow_yaml["spec"]["arguments"]["parameters"]
-    ]
-    for dict in parameter_dicts:
-        if (param_name := dict["name"]) in parameters:
-            assert dict["value"] == parameters[param_name]
-
-
 def test_argo_engine_submit_yaml_succeeded():
     engine = ArgoEngine()
     engine.api_instance.create_workflow = mock.MagicMock()
@@ -149,9 +140,17 @@ def test_argo_engine_submit_yaml_succeeded():
         "pheno_csv_key": "test_replace_value",
         "n_pcs": 100,
         "template_version": "test",
+        "gen3_user_name": "test_user",
     }
-    engine.submit_workflow(input_parameters)
-    args = engine.api_instance.create_workflow.call_args_list
-    for parameter in args[0][1]["body"]["workflow"]["spec"]["arguments"]["parameters"]:
-        if (param_name := parameter["name"]) in input_parameters:
-            assert parameter["value"] == input_parameters[param_name]
+    with mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper.add_name_to_workflow"
+    ) as add_name, mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper.add_scaling_groups"
+    ):
+        engine.submit_workflow(input_parameters)
+        args = engine.api_instance.create_workflow.call_args_list
+        for parameter in args[0][1]["body"]["workflow"]["spec"]["arguments"][
+            "parameters"
+        ]:
+            if (param_name := parameter["name"]) in input_parameters:
+                assert parameter["value"] == input_parameters[param_name]
