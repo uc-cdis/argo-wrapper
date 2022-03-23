@@ -41,6 +41,7 @@ def test_submit_workflow(client):
         "maf_threshold": 1.01,
         "imputation_score_cutoff": 2.02,
         "template_version": "test",
+        "gen3_user_name": "test_user",
     }
     with patch("argowrapper.routes.workflow.auth.authenticate") as mock_auth, patch(
         "argowrapper.routes.workflow.argo_engine.submit_workflow"
@@ -57,3 +58,37 @@ def test_submit_workflow(client):
         )
         assert response.status_code == 200
         assert response.content.decode("utf-8") == '"workflow_123"'
+
+
+def test_get_workflow_status(client):
+    with patch("argowrapper.routes.workflow.auth.authenticate") as mock_auth, patch(
+        "argowrapper.routes.workflow.argo_engine.get_workflow_status"
+    ) as mock_engine:
+        mock_auth.return_value = True
+        mock_engine.return_value = "running"
+        response = client.get(
+            "/status/workflow_123",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": "bearer 1234",
+            },
+        )
+        assert response.status_code == 200
+        assert response.content.decode("utf-8") == '"running"'
+
+
+def test_cancel_workflow(client):
+    with patch("argowrapper.routes.workflow.auth.authenticate") as mock_auth, patch(
+        "argowrapper.routes.workflow.argo_engine.cancel_workflow"
+    ) as mock_engine:
+        mock_auth.return_value = True
+        mock_engine.return_value = "workflow_123 canceled sucessfully"
+        response = client.post(
+            "/cancel/workflow_123",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": "bearer 1234",
+            },
+        )
+        assert response.status_code == 200
+        assert response.content.decode("utf-8") == '"workflow_123 canceled sucessfully"'

@@ -10,6 +10,13 @@ metadata:
       You can also run it in Python: https://couler-proj.github.io/couler/examples/#hello-world
 spec:
   entrypoint: whalesay
+  node_selector:
+    role: "workflow"
+  tolerations:
+    - key: "role"
+      operator: "Equal"
+      value: "workflow"
+      effect: "NoSchedule"
   arguments:
     parameters:
       - name: pheno_csv_key

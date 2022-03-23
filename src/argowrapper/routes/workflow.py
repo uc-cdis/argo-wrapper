@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Header
+from functools import wraps
+from typing import List
+from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from starlette.status import (
@@ -27,21 +29,29 @@ class WorkflowParameters(BaseModel):  # pylint: disable=too-few-public-methods
     maf_threshold: float
     imputation_score_cutoff: float
     template_version: str
+    gen3_user_name: str
 
 
-def auth_helper(token):
-    if token == "":
-        return HTMLResponse(
-            content="authentication token required",
-            status_code=HTTP_401_UNAUTHORIZED,
-        )
-    if not auth.authenticate(token=token):
-        return HTMLResponse(
-            content="token is not authorized, out of date, or malformed",
-            status_code=HTTP_401_UNAUTHORIZED,
-        )
+def check_auth(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        request = kwargs["request"]
+        token = request.headers.get("Authorization")
+        if not token:
+            return HTMLResponse(
+                content="authentication token required",
+                status_code=HTTP_401_UNAUTHORIZED,
+            )
 
-    return None
+        if not auth.authenticate(token=token):
+            return HTMLResponse(
+                content="token is not authorized, out of date, or malformed",
+                status_code=HTTP_401_UNAUTHORIZED,
+            )
+
+        return fn(*args, **kwargs)
+
+    return wrapper
 
 
 @router.get("/test")
@@ -52,13 +62,12 @@ def test():
 
 # submit argo workflow
 @router.post("/submit", status_code=HTTP_200_OK)
+@check_auth
 def submit_workflow(
     workflow_parameters: WorkflowParameters,
-    Authorization: str = Header(None),  # pylint: disable=invalid-name
+    request: Request,  # pylint: disable=unused-argument
 ) -> str:
     """route to submit workflow"""
-    if (auth_res := auth_helper(Authorization)) :
-        return auth_res
 
     try:
         return argo_engine.submit_workflow(workflow_parameters.dict())
@@ -72,12 +81,12 @@ def submit_workflow(
 
 # get status
 @router.get("/status/{workflow_name}", status_code=HTTP_200_OK)
+@check_auth
 def get_workflow_status(
-    workflow_name: str, Authorization: str = Header(None)
-) -> str:  # pylint: disable=invalid-name
+    workflow_name: str,
+    request: Request,  # pylint: disable=unused-argument
+) -> str:
     """returns current status of a workflow"""
-    if (auth_res := auth_helper(Authorization)) :
-        return auth_res
 
     try:
         return argo_engine.get_workflow_status(workflow_name)
@@ -91,12 +100,12 @@ def get_workflow_status(
 
 # cancel workflow
 @router.post("/cancel/{workflow_name}", status_code=HTTP_200_OK)
+@check_auth
 def cancel_workflow(
-    workflow_name: str, Authorization: str = Header(None)
-) -> str:  # pylint: disable=invalid-name
+    workflow_name: str,
+    request: Request,  # pylint: disable=unused-argument
+) -> str:
     """cancels a currently running workflow"""
-    if (auth_res := auth_helper(Authorization)) :
-        return auth_res
 
     try:
         return argo_engine.cancel_workflow(workflow_name)
@@ -110,12 +119,12 @@ def cancel_workflow(
 
 # get workflows
 @router.get("/workflows/{user_name}", status_code=HTTP_200_OK)
+@check_auth
 def get_workflows(
-    user_name: str, Authorization: str = Header(None)
-) -> str:  # pylint: disable=invalid-name
+    user_name: str,
+    request: Request,  # pylint: disable=unused-argument
+) -> List[str]:
     """returns the list of workflows the user has ran"""
-    if (auth_res := auth_helper(Authorization)) :
-        return auth_res
 
     try:
         return argo_engine.get_workfows_for_user(user_name)
