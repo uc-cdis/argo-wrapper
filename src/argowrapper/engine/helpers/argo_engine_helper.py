@@ -25,8 +25,16 @@ def add_name_to_workflow(workflow: Dict) -> str:
     return workflow_name
 
 
-def parse_status(status_dict: Dict[str, any]) -> str:
-    return status_dict["status"]["phase"]
+def parse_status(status_dict: Dict[str, any]) -> Dict[str, any]:
+    return {
+        "name": status_dict["metadata"].get("name"),
+        "arguments": status_dict["spec"].get("arguments"),
+        "phase": status_dict["status"].get("phase"),
+        "progress": status_dict["status"].get("progress"),
+        "startedAt": status_dict["status"].get("startedAt"),
+        "finishedAt": status_dict["status"].get("finishedAt"),
+        "outputs": status_dict["status"].get("outputs", {}),
+    }
 
 
 def _get_argo_config_dict() -> Dict:

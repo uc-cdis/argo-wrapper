@@ -81,11 +81,26 @@ def test_argo_engine_cancel_failed():
 def test_argo_engine_get_status_succeeded():
     """returns "running" for a running workflow if workflow get status suceeds"""
     engine = ArgoEngine()
-    engine._get_workflow_status_dict = mock.MagicMock(
-        return_value={"status": {"phase": "running"}}
-    )
+    mock_return = {
+        "metadata": {"name": "hello-world-mwnw5"},
+        "spec": {"arguments": {}},
+        "status": {
+            "finishedAt": None,
+            "phase": "Running",
+            "progress": "0/1",
+            "startedAt": "2022-03-22T18:56:48Z",
+        },
+        "outputs": {},
+    }
+    engine._get_workflow_status_dict = mock.MagicMock(return_value=mock_return)
     result = engine.get_workflow_status("test_wf")
-    assert result == "running"
+    assert result["name"] == "hello-world-mwnw5"
+    assert result["arguments"] == {}
+    assert result["phase"] == "Running"
+    assert result["progress"] == "0/1"
+    assert result["startedAt"] == "2022-03-22T18:56:48Z"
+    assert result["finishedAt"] == None
+    assert result["outputs"] == {}
 
 
 def test_argo_engine_get_status_failed():

@@ -12,7 +12,6 @@ from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_create_request 
     IoArgoprojWorkflowV1alpha1WorkflowCreateRequest,
 )
 
-
 from argowrapper import logger
 from argowrapper.constants import ARGO_HOST
 from argowrapper.engine.helpers import argo_engine_helper
@@ -53,9 +52,11 @@ class ArgoEngine:
         return self.api_instance.list_workflows(namespace="argo").to_str()
 
     def _get_workflow_status_dict(self, workflow_name: str) -> Dict:
+
         return self.api_instance.get_workflow(
             namespace="argo",
             name=workflow_name,
+            fields="metadata.name,spec.arguments,status.phase,status.progress,status.startedAt,status.finishedAt,status.outputs",
             # Note that _check_return_type=False avoids an existing issue with OpenAPI generator.
             _check_return_type=False,
         ).to_dict()
@@ -71,9 +72,9 @@ class ArgoEngine:
             logger.error(
                 f"could not get workflow template {template_name} due to {exception}"
             )
-            raise exception
+            raise Exception(f"workflow template {template_name} does not exist")
 
-    def get_workflow_status(self, workflow_name: str) -> str:
+    def get_workflow_status(self, workflow_name: str) -> Dict[str, any]:
         """
         Gets the workflow status
 
@@ -81,7 +82,16 @@ class ArgoEngine:
             workflow_name (str): name of workflow to get status of
 
         Returns:
-            str: "running" or "failed" or "suceeded" if success. empty string if failed
+            Dict[str, any]: returns a dict that looks like the below
+                            {
+                                "name": {workflow_name},
+                                "arguments": {workflow_arguments},
+                                "phase": {workflow_status} can be running, failed, succeded,
+                                "progress": {x/total_steps}, tracks which step the workflow is on
+                                "startedAt": {workflow_start_time},
+                                "finishedAt": {workflow_end_time},
+                                "outputs": {workflow_outputs}
+                            }
         """
         if self.dry_run:
             return "workflow status"
@@ -94,7 +104,9 @@ class ArgoEngine:
             logger.error(
                 f"getting workflow status for {workflow_name} due to {exception}"
             )
-            raise exception
+            raise Exception(
+                f"could not get status of {workflow_name}, workflow does not exist"
+            )
 
     def cancel_workflow(self, workflow_name: str) -> string:
         """
@@ -118,7 +130,9 @@ class ArgoEngine:
             logger.error(
                 f"could not cancel {workflow_name}, failed with error {exception}"
             )
-            raise exception
+            raise Exception(
+                f"could not cancel {workflow_name} because workflow not found"
+            )
 
     def submit_workflow(self, parameters: Dict[str, str]) -> str:
         """
