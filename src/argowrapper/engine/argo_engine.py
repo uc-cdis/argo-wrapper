@@ -141,6 +141,9 @@ class ArgoEngine:
             argo_engine_helper.add_scaling_groups(
                 parameters["gen3_user_name"], workflow_yaml
             )
+            argo_engine_helper.add_gen3user_label(
+                parameters["gen3_user_name"], workflow_yaml
+            )
             workflow_name = argo_engine_helper.add_name_to_workflow(workflow_yaml)
 
             logger.debug(
@@ -182,7 +185,8 @@ class ArgoEngine:
             has ran if sucess, error message if fails
 
         """
-        label_selector = f"custom-username={username}"
+        user_label = argo_engine_helper.convert_gen3username_to_label(username)
+        label_selector = f"gen3username={user_label}"
 
         try:
             running_workflows = self.api_instance.list_workflows(
