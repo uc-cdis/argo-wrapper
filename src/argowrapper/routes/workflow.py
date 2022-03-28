@@ -1,5 +1,5 @@
 from functools import wraps
-from typing import List
+from typing import List, Dict
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
@@ -74,7 +74,7 @@ def submit_workflow(
 
     except Exception as exception:
         return HTMLResponse(
-            content=exception,
+            content=str(exception),
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -85,7 +85,7 @@ def submit_workflow(
 def get_workflow_status(
     workflow_name: str,
     request: Request,  # pylint: disable=unused-argument
-) -> str:
+) -> Dict[str, any]:
     """returns current status of a workflow"""
 
     try:
@@ -93,7 +93,7 @@ def get_workflow_status(
 
     except Exception as exception:
         return HTMLResponse(
-            content=exception,
+            content=str(exception),
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -112,7 +112,7 @@ def cancel_workflow(
 
     except Exception as exception:
         return HTMLResponse(
-            content=exception,
+            content=str(exception),
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
