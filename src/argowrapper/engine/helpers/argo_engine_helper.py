@@ -51,5 +51,9 @@ def add_scaling_groups(gen3_user_name: str, workflow: Dict) -> None:
         raise Exception(f"user {gen3_user_name} is not a part of any scaling group")
 
     # Note: when nodeSelector is returned from argo template, it becomes node_selector
-    workflow["spec"]["node_selector"]["role"] = scaling_group
+    workflow["spec"]["nodeSelector"]["role"] = scaling_group
     workflow["spec"]["tolerations"][0]["value"] = scaling_group
+
+
+def add_argo_template(template_version: str, workflow: Dict) -> None:
+    workflow["spec"]["workflowTemplateRef"]["name"] = template_version

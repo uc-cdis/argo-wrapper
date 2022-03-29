@@ -49,5 +49,5 @@ def test_argo_engine_helper_add_scaling_groups():
     argo_engine_helper._get_argo_config_dict = mock.MagicMock(return_value=config)
     argo_engine_helper.add_scaling_groups("test_user", workflow_yaml)
 
-    assert workflow_yaml["spec"]["node_selector"]["role"] == group
+    assert workflow_yaml["spec"]["nodeSelector"]["role"] == group
     assert workflow_yaml["spec"]["tolerations"][0]["value"] == group

@@ -1,22 +1,24 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
-  generateName: hello-world-
-  labels:
-    workflows.argoproj.io/archive-strategy: "false"
+  generateName: vadc-gwas-
+  namespace: argo
   annotations:
-    workflows.argoproj.io/description: |
-      This is a simple hello world example.
-      You can also run it in Python: https://couler-proj.github.io/couler/examples/#hello-world
+    workflows.argoproj.io/version: ">= 3.1.0"
 spec:
-  entrypoint: whalesay
+  entrypoint: null-model
+  podGC:
+    strategy: OnWorkflowSuccess
   nodeSelector:
-    role: "workflow"
+    role: "test-role"
   tolerations:
     - key: "role"
       operator: "Equal"
-      value: "workflow"
+      value: "test-value"
       effect: "NoSchedule"
+  podMetadata:
+    labels:
+      gen3username: "user-test"
   arguments:
     parameters:
       - name: pheno_csv_key
@@ -54,16 +56,26 @@ spec:
         value: 10000
       - name: variant_block_size
         default: 1024
-        value: 1024
+        value: 100
       - name: mac_threshold
         value: 0
       - name: maf_threshold
         value: 0.01
       - name: imputation_score_cutoff
         value: 0.3
-  templates:
-  - name: whalesay
-    container:
-      image: docker/whalesay:latest
-      command: [cowsay]
-      args: ["{{arguments.parameters.pheno_csv_key}}"]
+      - name: gds_files
+        value: |-
+          [
+            "/commons-data/gds/chr1.merged.vcf.gz.gds"
+          ]
+
+  volumes:
+    - name: gateway
+      persistentVolumeClaim:
+        claimName: va-input-nfs-pvc
+    - name: workdir
+      emptyDir:
+        sizeLimit: "10Gi"
+
+  workflowTemplateRef:
+    name: test-template
