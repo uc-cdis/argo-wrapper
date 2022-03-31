@@ -121,6 +121,9 @@ def add_gen3user_label(username: str, workflow: Dict) -> None:
     ] = convert_gen3username_to_label(username)
 
     workflow["spec"]["podMetadata"] = workflow["spec"].pop("pod_metadata")
+    workflow["metadata"]["labels"]["gen3username"] = convert_gen3username_to_label(
+        username
+    )
 
 
 def get_username_from_token(header: str) -> str:

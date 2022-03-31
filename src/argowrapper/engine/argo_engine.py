@@ -143,7 +143,8 @@ class ArgoEngine:
             )
 
             username = argo_engine_helper.get_username_from_token(jwt_token)
-            argo_engine_helper.add_scaling_groups(username, workflow_yaml)
+            argo_engine_helper.add_gen3user_label(username, workflow_yaml)
+            # argo_engine_helper.add_scaling_groups(username, workflow_yaml)
             workflow_name = argo_engine_helper.add_name_to_workflow(workflow_yaml)
 
             logger.debug(
@@ -173,7 +174,7 @@ class ArgoEngine:
             logger.error(f"failed to submit workflow, failed with error {exception}")
             raise exception
 
-    def get_workfows_for_user(self, username: str) -> List[str]:
+    def get_all_workfows_for_user(self, username) -> List[str]:
         """
         Get a list of all workflow for a new user
 
@@ -209,6 +210,47 @@ class ArgoEngine:
             ]
 
             return list(set(names + archived_names))
+
+        except Exception as exception:
+            logger.error(traceback.format_exc())
+            logger.error(
+                f"could not get workflows for {username}, failed with error {exception}"
+            )
+            raise exception
+
+    def get_workfows_for_user(self, jwt_token: str) -> List[str]:
+        """
+        Get a list of all workflow for a new user
+
+        Args:
+            username (str): name of the user whose workflows we are returning
+
+        Returns:
+            List[str]: List of workflow names that the user
+            has ran if sucess, error message if fails
+
+        """
+        username = argo_engine_helper.get_username_from_token(jwt_token)
+        user_label = argo_engine_helper.convert_gen3username_to_label(username)
+        label_selector = f"gen3username={user_label}"
+
+        try:
+            running_workflows = self.api_instance.list_workflows(
+                namespace="argo",
+                list_options_label_selector=label_selector,
+                _check_return_type=False,
+                fields="items.metadata.name",
+            )
+
+            if not running_workflows:
+                raise Exception("no workflow exists for this user")
+
+            names = [
+                workflow.get("metadata", {}).get("name")
+                for workflow in running_workflows.items
+            ]
+
+            return names
 
         except Exception as exception:
             logger.error(traceback.format_exc())

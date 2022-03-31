@@ -7,10 +7,11 @@ from starlette.status import (
     HTTP_200_OK,
     HTTP_401_UNAUTHORIZED,
     HTTP_500_INTERNAL_SERVER_ERROR,
+    HTTP_400_BAD_REQUEST,
 )
 from argowrapper.auth import Auth
 from argowrapper.engine import ArgoEngine
-from argowrapper.engine.helpers import argo_engine_helper
+from argowrapper import logger
 
 router = APIRouter()
 argo_engine = ArgoEngine()
@@ -94,9 +95,10 @@ def get_workflow_status(
         return argo_engine.get_workflow_status(workflow_name)
 
     except Exception as exception:
+        logger.error("recieved error in getting workflow status")
         return HTMLResponse(
-            content=str(exception),
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
+            content="workflow does not exist",
+            status_code=HTTP_400_BAD_REQUEST,
         )
 
 
@@ -113,26 +115,27 @@ def cancel_workflow(
         return argo_engine.cancel_workflow(workflow_name)
 
     except Exception as exception:
+        logger.error("recieved error in cancel user workflows")
         return HTMLResponse(
-            content=str(exception),
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
+            content="workflow does not exist",
+            status_code=HTTP_400_BAD_REQUEST,
         )
 
 
 # get workflows
-@router.get("/workflows/{user_name}", status_code=HTTP_200_OK)
+@router.get("/workflows", status_code=HTTP_200_OK)
 @check_auth
 def get_workflows(
-    user_name: str,
     request: Request,  # pylint: disable=unused-argument
 ) -> List[str]:
     """returns the list of workflows the user has ran"""
 
     try:
-        return argo_engine.get_workfows_for_user(user_name)
+        return argo_engine.get_workfows_for_user(request.headers.get("Authorization"))
 
     except Exception as exception:
+        logger.error("recieved error in getting user workflows")
         return HTMLResponse(
-            content=exception,
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
+            content="user has no workflows",
+            status_code=HTTP_400_BAD_REQUEST,
         )
