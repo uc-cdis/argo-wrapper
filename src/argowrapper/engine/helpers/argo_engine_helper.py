@@ -4,8 +4,12 @@ from typing import Dict
 import random
 import json
 from argowrapper import logger
+import jwt
 
 from argowrapper.constants import ARGO_CONFIG_PATH
+from argowrapper.auth import Auth
+
+auth = Auth()
 
 
 def generate_workflow_name() -> str:
@@ -114,3 +118,19 @@ def add_gen3user_label(username: str, workflow: Dict) -> None:
     ] = convert_gen3username_to_label(username)
 
     workflow["spec"]["podMetadata"] = workflow["spec"].pop("pod_metadata")
+
+
+def get_username_from_token(header: str) -> str:
+    """
+
+    Args:
+        jwt_token (str): user jwt token
+
+    Returns:
+        str: username
+    """
+    jwt_token = auth._parse_jwt(header)
+    decoded = jwt.decode(jwt_token, options={"verify_signature": False})
+    username = decoded.get("context", {}).get("user", {}).get("name")
+    logger.info(f"{username} is submitting a workflow")
+    return username
