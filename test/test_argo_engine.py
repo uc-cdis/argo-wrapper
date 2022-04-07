@@ -26,6 +26,8 @@ def test_argo_engine_submit_succeeded():
         "argowrapper.engine.argo_engine.argo_engine_helper.add_name_to_workflow"
     ) as add_name, mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.add_scaling_groups"
+    ), mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper.get_username_from_token"
     ):
         add_name.return_value = workflow_name
         parameters = {
@@ -34,7 +36,7 @@ def test_argo_engine_submit_succeeded():
             "template_version": "test",
             "gen3_user_name": "test_user",
         }
-        result = engine.submit_workflow(parameters)
+        result = engine.submit_workflow(parameters, "")
         assert result == workflow_name
 
 
@@ -49,6 +51,8 @@ def test_argo_engine_submit_failed():
         "argowrapper.engine.argo_engine.argo_engine_helper.add_name_to_workflow"
     ) as add_name, mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.add_scaling_groups"
+    ), mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper.get_username_from_token"
     ), pytest.raises(
         Exception
     ):
@@ -57,7 +61,7 @@ def test_argo_engine_submit_failed():
             "n_pcs": 100,
             "template_version": "test",
         }
-        engine.submit_workflow(parameters)
+        engine.submit_workflow(parameters, "")
 
 
 def test_argo_engine_cancel_succeeded():
@@ -159,10 +163,12 @@ def test_argo_engine_submit_yaml_succeeded():
     }
     with mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.add_name_to_workflow"
-    ) as add_name, mock.patch(
+    ), mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.add_scaling_groups"
+    ), mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper.get_username_from_token"
     ):
-        engine.submit_workflow(input_parameters)
+        engine.submit_workflow(input_parameters, "")
         args = engine.api_instance.create_workflow.call_args_list
         for parameter in args[0][1]["body"]["workflow"]["spec"]["arguments"][
             "parameters"
