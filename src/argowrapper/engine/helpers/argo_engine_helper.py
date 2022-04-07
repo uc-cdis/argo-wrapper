@@ -65,8 +65,6 @@ def add_scaling_groups(gen3_user_name: str, workflow: Dict) -> None:
 
 def add_argo_template(template_version: str, workflow: Dict) -> None:
     workflow["spec"]["workflowTemplateRef"]["name"] = template_version
-    # Here we convert back node_selector to original syntax nodeSelector
-    workflow["spec"]["nodeSelector"] = workflow["spec"].pop("node_selector")
 
 
 def _convert_to_hex(special_character_match: str) -> str:
@@ -119,14 +117,9 @@ def convert_username_label_to_gen3username(label: str) -> str:
 
 
 def add_gen3user_label(username: str, workflow: Dict) -> None:
-    workflow["spec"]["pod_metadata"]["labels"][
+    workflow["spec"]["podMetadata"]["labels"][
         "gen3username"
     ] = convert_gen3username_to_label(username)
-
-    workflow["spec"]["podMetadata"] = workflow["spec"].pop("pod_metadata")
-    workflow["metadata"]["labels"]["gen3username"] = convert_gen3username_to_label(
-        username
-    )
 
 
 def get_username_from_token(header: str) -> str:
