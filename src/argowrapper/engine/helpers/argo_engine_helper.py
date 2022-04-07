@@ -56,7 +56,10 @@ def add_scaling_groups(gen3_user_name: str, workflow: Dict) -> None:
     user_to_scaling_groups = _get_argo_config_dict().get("scaling_groups", {})
     scaling_group = user_to_scaling_groups.get(gen3_user_name)
     if not scaling_group:
-        raise Exception(f"user {gen3_user_name} is not a part of any scaling group")
+        logger.error(
+            f"user {gen3_user_name} is not a part of any scaling group, setting it automatically to workflow"
+        )
+        scaling_group = "workflow"
 
     # Note: when nodeSelector is returned from argo template, it becomes node_selector
     workflow["spec"]["nodeSelector"]["role"] = scaling_group
@@ -65,8 +68,6 @@ def add_scaling_groups(gen3_user_name: str, workflow: Dict) -> None:
 
 def add_argo_template(template_version: str, workflow: Dict) -> None:
     workflow["spec"]["workflowTemplateRef"]["name"] = template_version
-    # Here we convert back node_selector to original syntax nodeSelector
-    workflow["spec"]["nodeSelector"] = workflow["spec"].pop("node_selector")
 
 
 def _convert_to_hex(special_character_match: str) -> str:
@@ -119,11 +120,10 @@ def convert_username_label_to_gen3username(label: str) -> str:
 
 
 def add_gen3user_label(username: str, workflow: Dict) -> None:
-    workflow["spec"]["pod_metadata"]["labels"][
+    workflow["spec"]["podMetadata"]["labels"][
         "gen3username"
     ] = convert_gen3username_to_label(username)
 
-    workflow["spec"]["podMetadata"] = workflow["spec"].pop("pod_metadata")
     workflow["metadata"]["labels"]["gen3username"] = convert_gen3username_to_label(
         username
     )
@@ -145,14 +145,35 @@ def get_username_from_token(header: str) -> str:
     return username
 
 
-def _convert_request_body_to_parameter_dict(body: Dict) -> Dict:
-    logger.info(f'here is the type for is_binary {type(body["outcome_is_binary"])}')
+def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
     return {
-        "n_pcs": body.get("n_pcs"),
-        "covariates": (covariates := " ".join(body.get("covariates"))),
-        "outcome": (outcome := body.get("outcome")),
-        "out_prefix": body.get("out_prefix"),
-        "outcome_is_binary": "TRUE" if body.get("outcome_is_binary") else "FALSE",
-        "maf_threshold": body.get("maf_threshold"),
-        "imputation_score_cutoff": body.get("imputation_score_cutoff"),
+        "n_pcs": request_body.get("n_pcs"),
+        "covariates": " ".join(request_body.get("covariates")),
+        "outcome": request_body.get("outcome"),
+        "out_prefix": request_body.get("out_prefix"),
+        "outcome_is_binary": "TRUE"
+        if request_body.get("outcome_is_binary")
+        else "FALSE",
+        "maf_threshold": request_body.get("maf_threshold"),
+        "imputation_score_cutoff": request_body.get("imputation_score_cutoff"),
+        "cohort_definition_id": request_body.get("cohort_definition_id"),
     }
+
+
+def add_cohort_middleware_request(request_body: Dict, workflow: Dict) -> None:
+    for dict in workflow["spec"]["arguments"]["parameters"]:
+        if dict.get("name") == "cohort_middleware_url":
+            dict["value"] = _build_cohort_middleware_url(request_body)
+        if dict.get("name") == "cohort_middleware_body":
+            dict["value"] = _build_cohort_middleware_body(request_body)
+
+
+def _build_cohort_middleware_body(request_body: Dict) -> str:
+    prefixed_concept_ids = (
+        f'[{" ".join(request_body.get("covariates"))} {request_body.get("outcome")}]'
+    )
+    return f'{{"PrefixedConceptIds": {prefixed_concept_ids}}}'
+
+
+def _build_cohort_middleware_url(request_body: Dict) -> str:
+    return f'https://qa-mickey.planx-pla.net/cohort-middleware/cohort-data/by-source-id/{request_body.get("source_id")}/by-cohort-definition-id/{request_body.get("cohort_definition_id")}'
