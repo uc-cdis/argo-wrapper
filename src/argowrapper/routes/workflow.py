@@ -24,13 +24,15 @@ class WorkflowParameters(BaseModel):  # pylint: disable=too-few-public-methods
     """
 
     n_pcs: int
-    covariantes: str
+    covariates: List[str]
     out_prefix: str
     outcome: str
-    outcome_is_binary: str
+    outcome_is_binary: bool
     maf_threshold: float
     imputation_score_cutoff: float
     template_version: str
+    source_id: int
+    cohort_definition_id: int
 
 
 def check_auth(fn):
@@ -139,3 +141,15 @@ def get_workflows(
             content="user has no workflows",
             status_code=HTTP_400_BAD_REQUEST,
         )
+
+
+# submit argo workflow
+@router.post("/test_cohort_middleware", status_code=HTTP_200_OK)
+@check_auth
+def submit_workflow(
+    workflow_parameters: WorkflowParameters,
+    request: Request,  # pylint: disable=unused-argument
+) -> str:
+    """route to submit workflow"""
+    logger.info(workflow_parameters.dict())
+    return "sucess"

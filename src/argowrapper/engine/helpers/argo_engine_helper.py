@@ -17,7 +17,10 @@ def generate_workflow_name() -> str:
     return "argo-wrapper-workflow-" + ending_id
 
 
-def add_parameters_to_gwas_workflow(parameters: Dict[str, any], workflow: Dict) -> None:
+def add_parameters_to_gwas_workflow(
+    request_body: Dict[str, any], workflow: Dict
+) -> None:
+    parameters = _convert_request_body_to_parameter_dict(request_body)
     for dict in workflow["spec"]["arguments"]["parameters"]:
         if (param_name := dict["name"]) in parameters:
             dict["value"] = parameters[param_name]
@@ -140,3 +143,16 @@ def get_username_from_token(header: str) -> str:
     username = decoded.get("context", {}).get("user", {}).get("name")
     logger.info(f"{username} is submitting a workflow")
     return username
+
+
+def _convert_request_body_to_parameter_dict(body: Dict) -> Dict:
+    logger.info(f'here is the type for is_binary {type(body["outcome_is_binary"])}')
+    return {
+        "n_pcs": body.get("n_pcs"),
+        "covariates": (covariates := " ".join(body.get("covariates"))),
+        "outcome": (outcome := body.get("outcome")),
+        "out_prefix": body.get("out_prefix"),
+        "outcome_is_binary": "TRUE" if body.get("outcome_is_binary") else "FALSE",
+        "maf_threshold": body.get("maf_threshold"),
+        "imputation_score_cutoff": body.get("imputation_score_cutoff"),
+    }
