@@ -1,4 +1,5 @@
 import string
+import re
 from typing import Dict
 import random
 import json
@@ -57,3 +58,62 @@ def add_scaling_groups(gen3_user_name: str, workflow: Dict) -> None:
 
 def add_argo_template(template_version: str, workflow: Dict) -> None:
     workflow["spec"]["workflowTemplateRef"]["name"] = template_version
+    # Here we convert back node_selector to original syntax nodeSelector
+    workflow["spec"]["nodeSelector"] = workflow["spec"].pop("node_selector")
+
+
+def _convert_to_hex(special_character_match: str) -> str:
+    if (match := special_character_match.group()) :
+        hex_val = match.encode("utf-8").hex()
+        return f"-{hex_val}"
+
+
+def convert_gen3username_to_label(username: str) -> str:
+    """a gen3username is an email and a label is a k8 pod label
+       core issue this causes is that email can have special characters but
+       pod labels can only have '-', '_' or '.'. This function will convert
+       all special characters to "-{hex_value}" and prepend "user-" to the label.
+       eg "!" -> "user--21"
+
+    Args:
+        username (str): email address of the user that can contain special characters
+
+    Returns:
+        str: converted string where all special characters are replaced with "-{hex_value}"
+    """
+
+    special_characters = re.escape(string.punctuation)
+    regex = f"[{special_characters}]"
+    logger.debug((label := re.sub(regex, _convert_to_hex, username)))
+    return f"user-{label}"
+
+
+def _convert_to_label(special_character_match: str) -> str:
+    if (match := special_character_match.group()) :
+        match = match.strip("-")
+        byte_array = bytearray.fromhex(match)
+        return byte_array.decode()
+
+
+def convert_username_label_to_gen3username(label: str) -> str:
+    """this function will reverse the conversion of a username to label as
+    defined by the convert_gen3username_to_label function. eg "user--21" -> "!"
+
+    Args:
+        label (str): _description_
+
+    Returns:
+        : _description_
+    """
+    label = label.replace("user-", "", 1)
+    regex = r"-[0-9A-Za-z]{2}"
+    logger.debug((username := re.sub(regex, _convert_to_label, label)))
+    return username
+
+
+def add_gen3user_label(username: str, workflow: Dict) -> None:
+    workflow["spec"]["pod_metadata"]["labels"][
+        "gen3username"
+    ] = convert_gen3username_to_label(username)
+
+    workflow["spec"]["podMetadata"] = workflow["spec"].pop("pod_metadata")

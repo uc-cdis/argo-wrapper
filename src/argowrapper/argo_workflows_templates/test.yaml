@@ -17,6 +17,9 @@ spec:
       operator: "Equal"
       value: "workflow"
       effect: "NoSchedule"
+  pod_metadata:
+    labels:
+      gen3username: "empty-user-label"
   arguments:
     parameters:
       - name: pheno_csv_key

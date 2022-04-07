@@ -1,3 +1,4 @@
+from collections import namedtuple
 import unittest.mock as mock
 import argowrapper.engine.helpers.argo_engine_helper as argo_engine_helper
 import importlib.resources as pkg_resources
@@ -51,3 +52,21 @@ def test_argo_engine_helper_add_scaling_groups():
 
     assert workflow_yaml["spec"]["nodeSelector"]["role"] == group
     assert workflow_yaml["spec"]["tolerations"][0]["value"] == group
+
+
+UsernameLabelPair = namedtuple("UsernameLabelPair", "username label")
+user_label_data = [
+    UsernameLabelPair("abc123", "user-abc123"),
+    UsernameLabelPair("48@!(CEab***", "user-48-40-21-28CEab-2a-2a-2a"),
+    UsernameLabelPair("-scott.VA@gmail.com", "user--2dscott-2eVA-40gmail-2ecom"),
+]
+
+
+@pytest.mark.parametrize("username,label", user_label_data)
+def test_convert_username_label_to_gen3username(username, label):
+    assert argo_engine_helper.convert_gen3username_to_label(username) == label
+
+
+@pytest.mark.parametrize("username,label", user_label_data)
+def test_convert_gen3username_to_label(username, label):
+    assert argo_engine_helper.convert_username_label_to_gen3username(label) == username

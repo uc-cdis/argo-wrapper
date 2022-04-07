@@ -187,7 +187,8 @@ class ArgoEngine:
             has ran if sucess, error message if fails
 
         """
-        label_selector = f"custom-username={username}"
+        user_label = argo_engine_helper.convert_gen3username_to_label(username)
+        label_selector = f"gen3username={user_label}"
 
         try:
             running_workflows = self.api_instance.list_workflows(
