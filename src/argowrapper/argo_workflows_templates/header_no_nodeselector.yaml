@@ -8,7 +8,7 @@ metadata:
   labels:
     gen3username: ""
 spec:
-  entrypoint: null-model
+  entrypoint: gwas-workflow
   podGC:
     strategy: OnWorkflowSuccess
   podMetadata:
@@ -16,8 +16,15 @@ spec:
       gen3username: ""
   arguments:
     parameters:
-      - name: pheno_csv_key
-        value: 5k.prod_height_pheno.csv
+      - name: cohort_definition_id
+        value: 0
+      - name: cohort_middleware_url
+        value: ""
+      - name: cohort_middleware_body
+        value: |-
+          {
+
+          }
       - name: n_pcs
         default: 0
         value: 10
@@ -63,10 +70,6 @@ spec:
           [
             "/commons-data/gds/chr1.merged.vcf.gz.gds"
           ]
-      - name: cohort_middleware_url
-        value: ""
-      - name: cohort_middleware_body
-        value: ""
 
   volumes:
     - name: gateway

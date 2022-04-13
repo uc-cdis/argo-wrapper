@@ -15,7 +15,7 @@ from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_create_request 
 )
 
 from argowrapper import argo_workflows_templates, logger
-from argowrapper.constants import ARGO_HOST, WF_HEADER
+from argowrapper.constants import ARGO_HOST, QA_HEADER, WF_HEADER
 from argowrapper.engine.helpers import argo_engine_helper
 
 
@@ -135,6 +135,9 @@ class ArgoEngine:
             str: workflow name of the submitted workflow if sucess, empty string if fail
         """
 
+        if not argo_engine_helper.setup_workspace_token_service(jwt_token):
+            return "could not run workflow"
+
         try:
             stream = pkg_resources.open_text(argo_workflows_templates, WF_HEADER)
             workflow_yaml = yaml.safe_load(stream)
@@ -143,7 +146,9 @@ class ArgoEngine:
             )
 
             username = argo_engine_helper.get_username_from_token(jwt_token)
-            argo_engine_helper.add_gen3user_label(username, workflow_yaml)
+            argo_engine_helper.add_gen3user_label_and_annotation(
+                username, workflow_yaml
+            )
             argo_engine_helper.add_scaling_groups(username, workflow_yaml)
             workflow_name = argo_engine_helper.add_name_to_workflow(workflow_yaml)
             argo_engine_helper.add_argo_template(
@@ -248,8 +253,9 @@ class ArgoEngine:
                 fields="items.metadata.name",
             )
 
-            if not running_workflows:
-                raise Exception("no workflow exists for this user")
+            if not running_workflows.items:
+                logger.info(f"no workflows exist for user {username}")
+                return []
 
             names = [
                 workflow.get("metadata", {}).get("name")

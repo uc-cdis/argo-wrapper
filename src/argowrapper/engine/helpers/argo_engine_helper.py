@@ -5,6 +5,7 @@ import random
 import json
 from argowrapper import logger
 import jwt
+import requests
 
 from argowrapper.constants import ARGO_CONFIG_PATH
 from argowrapper.auth import Auth
@@ -119,10 +120,12 @@ def convert_username_label_to_gen3username(label: str) -> str:
     return username
 
 
-def add_gen3user_label(username: str, workflow: Dict) -> None:
+def add_gen3user_label_and_annotation(username: str, workflow: Dict) -> None:
     workflow["spec"]["podMetadata"]["labels"][
         "gen3username"
     ] = convert_gen3username_to_label(username)
+
+    workflow["spec"]["podMetadata"]["annotations"]["gen3username"] = username
 
     workflow["metadata"]["labels"]["gen3username"] = convert_gen3username_to_label(
         username
@@ -169,11 +172,57 @@ def add_cohort_middleware_request(request_body: Dict, workflow: Dict) -> None:
 
 
 def _build_cohort_middleware_body(request_body: Dict) -> str:
-    prefixed_concept_ids = (
-        f'[{" ".join(request_body.get("covariates"))} {request_body.get("outcome")}]'
-    )
-    return f'{{"PrefixedConceptIds": {prefixed_concept_ids}}}'
+    prefixed_concept_ids = request_body.get("covariates") + [
+        request_body.get("outcome")
+    ]
+    prefixed_concept_ids = [f'"{concept_id}"' for concept_id in prefixed_concept_ids]
+
+    formatted_prefixed_concept_ids = f'[{", ".join(prefixed_concept_ids)}]'
+    return f'{{"PrefixedConceptIds": {formatted_prefixed_concept_ids}}}'
 
 
 def _build_cohort_middleware_url(request_body: Dict) -> str:
-    return f'https://qa-mickey.planx-pla.net/cohort-middleware/cohort-data/by-source-id/{request_body.get("source_id")}/by-cohort-definition-id/{request_body.get("cohort_definition_id")}'
+    environment = _get_argo_config_dict().get("environment", "default")
+    return f'http://cohort-middleware-service.{environment}/cohort-data/by-source-id/{request_body.get("source_id")}/by-cohort-definition-id/{request_body.get("cohort_definition_id")}'
+
+
+def setup_workspace_token_service(header: str) -> bool:
+    jwt_token = auth._parse_jwt(header)
+    environment = _get_argo_config_dict().get("environment", "default")
+    logger.info(_get_argo_config_dict())
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {jwt_token}",
+    }
+
+    try:
+        connected_res = requests.get(
+            f"http://workspace-token-service.{environment}/oauth2/connected?idp=default",
+            headers=headers,
+        )
+        logger.info(connected_res)
+        if connected_res.status_code == 400:
+            logger.error(
+                f"calling connected url for workspace token service failed with error {connected_res.content}"
+            )
+            return False
+
+        if connected_res.status_code == 403:
+            logger.info(
+                "refresh token expired or user not logged in, fetching new refresh token"
+            )
+            authorization_res = requests.get(
+                f"http://workspace-token-service.{environment}/oauth2/authorization_url?idp=default"
+            )
+            if authorization_res.status_code == 400:
+                logger.error(
+                    f"calling authorization_url endpoint in workspace token service failed with error {authorization_res.content}"
+                )
+                return False
+
+        return True
+
+    except Exception as exception:
+        logger.error(f"workspace token service setup failed with error {exception}")
+
+    return False
