@@ -14,6 +14,8 @@ spec:
   podMetadata:
     labels:
       gen3username: ""
+    annotations:
+      gen3username: ""
   arguments:
     parameters:
       - name: cohort_definition_id
