@@ -10,6 +10,7 @@ from starlette.status import (
 )
 from argowrapper.auth import Auth
 from argowrapper.engine import ArgoEngine
+from argowrapper.engine.helpers import argo_engine_helper
 
 router = APIRouter()
 argo_engine = ArgoEngine()
@@ -29,7 +30,6 @@ class WorkflowParameters(BaseModel):  # pylint: disable=too-few-public-methods
     maf_threshold: float
     imputation_score_cutoff: float
     template_version: str
-    gen3_user_name: str
 
 
 def check_auth(fn):
@@ -70,7 +70,9 @@ def submit_workflow(
     """route to submit workflow"""
 
     try:
-        return argo_engine.submit_workflow(workflow_parameters.dict())
+        return argo_engine.submit_workflow(
+            workflow_parameters.dict(), request.headers.get("Authorization")
+        )
 
     except Exception as exception:
         return HTMLResponse(

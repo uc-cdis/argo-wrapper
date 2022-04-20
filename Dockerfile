@@ -1,4 +1,4 @@
-FROM quay.io/cdis/python:2-alpine3.10 as base
+FROM quay.io/cdis/python:python3.10-buster-master as base
 
 FROM base as builder
 RUN apk add --no-cache --virtual .build-deps gcc musl-dev libffi-dev openssl-dev make postgresql-dev git curl
