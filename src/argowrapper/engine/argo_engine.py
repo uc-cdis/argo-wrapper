@@ -13,6 +13,9 @@ from argo_workflows.api import (
 from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_create_request import (
     IoArgoprojWorkflowV1alpha1WorkflowCreateRequest,
 )
+from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_terminate_request import (
+    IoArgoprojWorkflowV1alpha1WorkflowTerminateRequest,
+)
 
 from argowrapper import argo_workflows_templates, logger
 from argowrapper.constants import ARGO_HOST, QA_HEADER, WF_HEADER
@@ -58,7 +61,7 @@ class ArgoEngine:
         return self.api_instance.get_workflow(
             namespace="argo",
             name=workflow_name,
-            fields="metadata.name,spec.arguments,status.phase,status.progress,status.startedAt,status.finishedAt,status.outputs",
+            fields="metadata.name,spec.arguments,spec.shutdown,status.phase,status.progress,status.startedAt,status.finishedAt,status.outputs",
             # Note that _check_return_type=False avoids an existing issue with OpenAPI generator.
             _check_return_type=False,
         ).to_dict()
@@ -111,7 +114,17 @@ class ArgoEngine:
             logger.info(f"dry run for canceling {workflow_name}")
             return f"{workflow_name} canceled sucessfully"
         try:
-            self.api_instance.delete_workflow(namespace="argo", name=workflow_name)
+            self.api_instance.terminate_workflow(
+                namespace="argo",
+                name=workflow_name,
+                body=IoArgoprojWorkflowV1alpha1WorkflowTerminateRequest(
+                    name=workflow_name,
+                    namespace="argo",
+                    _check_type=False,
+                ),
+                _check_return_type=False,
+            )
+            # self.api_instance.delete_workflow(namespace="argo", name=workflow_name)
             return f"{workflow_name} canceled sucessfully"
 
         except Exception as exception:
