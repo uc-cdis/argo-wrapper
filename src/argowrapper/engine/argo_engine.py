@@ -1,6 +1,8 @@
 import string
 import traceback
 from typing import Dict, List
+import yaml
+import importlib.resources as pkg_resources
 
 import argo_workflows
 from argo_workflows.api import (
@@ -12,8 +14,8 @@ from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_create_request 
     IoArgoprojWorkflowV1alpha1WorkflowCreateRequest,
 )
 
-from argowrapper import logger
-from argowrapper.constants import ARGO_HOST
+from argowrapper import argo_workflows_templates, logger
+from argowrapper.constants import ARGO_HOST, WF_HEADER
 from argowrapper.engine.helpers import argo_engine_helper
 
 
@@ -60,19 +62,6 @@ class ArgoEngine:
             # Note that _check_return_type=False avoids an existing issue with OpenAPI generator.
             _check_return_type=False,
         ).to_dict()
-
-    def _get_workflow_template(self, template_name: str) -> dict:
-        try:
-            return self.template_api_instance.get_workflow_template(
-                namespace="argo", name=template_name
-            ).to_dict()
-
-        except Exception as exception:
-            logger.error(traceback.format_exc())
-            logger.error(
-                f"could not get workflow template {template_name} due to {exception}"
-            )
-            raise Exception(f"workflow template {template_name} does not exist")
 
     def get_workflow_status(self, workflow_name: str) -> Dict[str, any]:
         """
@@ -147,9 +136,8 @@ class ArgoEngine:
         """
 
         try:
-            workflow_yaml = self._get_workflow_template(parameters["template_version"])
-            logger.info(workflow_yaml)
-            workflow_yaml["kind"] = "Workflow"
+            stream = pkg_resources.open_text(argo_workflows_templates, WF_HEADER)
+            workflow_yaml = yaml.safe_load(stream)
             argo_engine_helper.add_parameters_to_gwas_workflow(
                 parameters, workflow_yaml
             )
