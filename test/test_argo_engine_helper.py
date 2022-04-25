@@ -44,7 +44,11 @@ workflow_yaml = yaml.safe_load(stream)
 
 
 def test_argo_engine_helper_add_parameters_to_gwas_workflow():
-    parameters = {"pheno_csv_key": "test_replace_value", "n_pcs": 100}
+    parameters = {
+        "pheno_csv_key": "test_replace_value",
+        "n_pcs": 100,
+        "covariates": ["123"],
+    }
     argo_engine_helper.add_parameters_to_gwas_workflow(parameters, workflow_yaml)
 
     parameter_dicts = [
@@ -52,8 +56,10 @@ def test_argo_engine_helper_add_parameters_to_gwas_workflow():
         for parameter_dict in workflow_yaml["spec"]["arguments"]["parameters"]
     ]
     for dict in parameter_dicts:
-        if (param_name := dict["name"]) in parameters:
+        if (param_name := dict["name"]) in parameters and not "covariates":
             assert dict["value"] == parameters[param_name]
+        elif param_name == "covariates":
+            assert dict["value"] == " ".join(parameters["covariates"])
 
 
 def test_argo_engine_helper_add_name_to_workflow():

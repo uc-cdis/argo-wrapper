@@ -43,6 +43,7 @@ def test_argo_engine_submit_succeeded():
             "n_pcs": 100,
             "template_version": "test",
             "gen3_user_name": "test_user",
+            "covariates": ["123"],
         }
         result = engine.submit_workflow(parameters, "test_jwt_token")
         assert result == workflow_name
@@ -168,6 +169,7 @@ def test_argo_engine_submit_yaml_succeeded():
         "n_pcs": 100,
         "template_version": "test",
         "gen3_user_name": "test_user",
+        "covariates": ["123"],
     }
     with mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.add_name_to_workflow"
@@ -187,5 +189,9 @@ def test_argo_engine_submit_yaml_succeeded():
         for parameter in args[0][1]["body"]["workflow"]["spec"]["arguments"][
             "parameters"
         ]:
-            if (param_name := parameter["name"]) in input_parameters:
+            if (
+                param_name := parameter["name"]
+            ) in input_parameters and not "covariates":
                 assert parameter["value"] == input_parameters[param_name]
+            elif param_name == "covariates":
+                assert parameter["value"] == " ".join(input_parameters["covariates"])
