@@ -61,7 +61,7 @@ class ArgoEngine:
         return self.api_instance.get_workflow(
             namespace="argo",
             name=workflow_name,
-            fields="metadata.name,spec.arguments,status.phase,status.progress,status.startedAt,status.finishedAt,status.outputs",
+            fields="metadata.name,spec.arguments,spec.shutdown,status.phase,status.progress,status.startedAt,status.finishedAt,status.outputs",
             # Note that _check_return_type=False avoids an existing issue with OpenAPI generator.
             _check_return_type=False,
         ).to_dict()
@@ -78,7 +78,7 @@ class ArgoEngine:
                             {
                                 "name": {workflow_name},
                                 "arguments": {workflow_arguments},
-                                "phase": {workflow_status} can be running, failed, succeded,
+                                "phase": {workflow_status} can be running, failed, succeded, canceling, canceled
                                 "progress": {x/total_steps}, tracks which step the workflow is on
                                 "startedAt": {workflow_start_time},
                                 "finishedAt": {workflow_end_time},

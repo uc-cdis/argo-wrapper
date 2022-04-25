@@ -31,10 +31,17 @@ def add_name_to_workflow(workflow: Dict) -> str:
 
 
 def parse_status(status_dict: Dict[str, any]) -> Dict[str, any]:
+    phase = status_dict["status"].get("phase")
+    shutdown = status_dict["spec"].get("shutdown")
+    if shutdown == "Terminate" and phase == "Running":
+        phase = "Canceling"
+    if shutdown == "Terminate" and phase == "Failed":
+        phase = "Canceled"
+
     return {
         "name": status_dict["metadata"].get("name"),
         "arguments": status_dict["spec"].get("arguments"),
-        "phase": status_dict["status"].get("phase"),
+        "phase": phase,
         "progress": status_dict["status"].get("progress"),
         "startedAt": status_dict["status"].get("startedAt"),
         "finishedAt": status_dict["status"].get("finishedAt"),
