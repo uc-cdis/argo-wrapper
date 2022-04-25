@@ -29,7 +29,7 @@ def test_argo_engine_submit_succeeded():
     ), mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.get_username_from_token"
     ), mock.patch(
-        "argowrapper.engine.argo_engine.argo_engine_helper.add_gen3user_label"
+        "argowrapper.engine.argo_engine.argo_engine_helper.add_gen3user_label_and_annotation"
     ), mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_label"
     ), mock.patch(
@@ -174,7 +174,7 @@ def test_argo_engine_submit_yaml_succeeded():
     ), mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.get_username_from_token"
     ), mock.patch(
-        "argowrapper.engine.argo_engine.argo_engine_helper.add_gen3user_label"
+        "argowrapper.engine.argo_engine.argo_engine_helper.add_gen3user_label_and_annotation"
     ), mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.add_cohort_middleware_request"
     ):

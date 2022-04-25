@@ -156,7 +156,9 @@ class ArgoEngine:
 
             username = argo_engine_helper.get_username_from_token(jwt_token)
             argo_engine_helper.add_scaling_groups(username, workflow_yaml)
-            argo_engine_helper.add_gen3user_label(username, workflow_yaml)
+            argo_engine_helper.add_gen3user_label_and_annotation(
+                username, workflow_yaml
+            )
             argo_engine_helper.add_cohort_middleware_request(
                 request_body, workflow_yaml
             )
