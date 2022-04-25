@@ -120,7 +120,7 @@ def cancel_workflow(
 
 
 # get workflows
-@router.get("/workflows/{user_name}", status_code=HTTP_200_OK)
+@router.get("/workflows", status_code=HTTP_200_OK)
 @check_auth
 def get_workflows(
     user_name: str,
@@ -129,7 +129,7 @@ def get_workflows(
     """returns the list of workflows the user has ran"""
 
     try:
-        return argo_engine.get_workfows_for_user(user_name)
+        return argo_engine.get_workfows_for_user(request.headers.get("Authorization"))
 
     except Exception as exception:
         return HTMLResponse(

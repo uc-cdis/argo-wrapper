@@ -186,42 +186,39 @@ class ArgoEngine:
             logger.error(f"failed to submit workflow, failed with error {exception}")
             raise exception
 
-    def get_workfows_for_user(self, username: str) -> List[str]:
+    def get_workfows_for_user(self, jwt_token: str) -> List[str]:
         """
         Get a list of all workflow for a new user
 
         Args:
-            username (str): name of the user whose workflows we are returning
+            jwt_token: jwt token of the user submitting the workflow
 
         Returns:
             List[str]: List of workflow names that the user
             has ran if sucess, error message if fails
 
         """
+        username = argo_engine_helper.get_username_from_token(jwt_token)
         user_label = argo_engine_helper.convert_gen3username_to_label(username)
         label_selector = f"gen3username={user_label}"
 
         try:
-            running_workflows = self.api_instance.list_workflows(
+            workflows = self.api_instance.list_workflows(
                 namespace="argo",
                 list_options_label_selector=label_selector,
                 _check_return_type=False,
                 fields="items.metadata.name",
             )
 
-            archived_workflows = self.archeive_api_instance.list_archived_workflows(
-                list_options_label_selector=label_selector
-            )
+            if not workflows.items:
+                logger.info(f"no workflows exist for user {username}")
+                return []
 
             names = [
-                workflow["metadata"]["name"] for workflow in running_workflows.items
-            ]
-            archived_names = [
-                archived_workflow["metadata"]["name"]
-                for archived_workflow in archived_workflows.items
+                workflow.get("metadata", {}).get("name") for workflow in workflows.items
             ]
 
-            return list(set(names + archived_names))
+            return names
 
         except Exception as exception:
             logger.error(traceback.format_exc())

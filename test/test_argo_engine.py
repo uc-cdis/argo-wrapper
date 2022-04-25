@@ -30,6 +30,8 @@ def test_argo_engine_submit_succeeded():
         "argowrapper.engine.argo_engine.argo_engine_helper.get_username_from_token"
     ), mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.add_gen3user_label"
+    ), mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_label"
     ):
         add_name.return_value = workflow_name
         parameters = {
@@ -38,20 +40,19 @@ def test_argo_engine_submit_succeeded():
             "template_version": "test",
             "gen3_user_name": "test_user",
         }
-        result = engine.submit_workflow(parameters, "")
+        result = engine.submit_workflow(parameters, "test_jwt_token")
         assert result == workflow_name
 
 
 def test_argo_engine_submit_failed():
     """returns empty string is workflow submission fails"""
-    workflow_name = "wf_name"
     engine = ArgoEngine()
     engine.api_instance.create_workflow = mock.MagicMock(
         side_effect=Exception("bad input")
     )
     with mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.add_name_to_workflow"
-    ) as add_name, mock.patch(
+    ), mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.add_scaling_groups"
     ), mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.get_username_from_token"
@@ -126,19 +127,20 @@ def test_argo_engine_get_workflow_for_user_suceeded():
         {"metadata": {"name": "archieved_name"}},
         {"metadata": {"name": "running_name"}},
     ]
-    archived_workflows = [{"metadata": {"name": "archieved_name"}}]
 
     engine.api_instance.list_workflows = mock.MagicMock(
         return_value=WorkFlow(workflows)
     )
-    engine.archeive_api_instance.list_archived_workflows = mock.MagicMock(
-        return_value=WorkFlow(archived_workflows)
-    )
 
-    result = engine.get_workfows_for_user("test")
-    assert len(result) == 2
-    assert "archieved_name" in result
-    assert "running_name" in result
+    with mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper.get_username_from_token"
+    ), mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_label"
+    ):
+        result = engine.get_workfows_for_user("test_jwt_token")
+        assert len(result) == 2
+        assert "archieved_name" in result
+        assert "running_name" in result
 
 
 def test_argo_engine_get_workflow_for_user_failed():
