@@ -18,7 +18,7 @@ def test_argo_engine_submit_succeeded():
     workflow_name = "wf_name"
     engine = ArgoEngine()
     engine.api_instance.create_workflow = mock.MagicMock(return_value=workflow_name)
-    stream = pkg_resources.open_text(argo_workflows_templates, TEST_WF)
+    stream = pkg_resources.open_text(argo_workflows_templates, WF_HEADER)
     workflow_yaml = yaml.safe_load(stream)
     engine._get_workflow_template = mock.MagicMock(return_value=workflow_yaml)
 
@@ -32,6 +32,8 @@ def test_argo_engine_submit_succeeded():
         "argowrapper.engine.argo_engine.argo_engine_helper.add_gen3user_label"
     ), mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_label"
+    ), mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper.add_cohort_middleware_request"
     ):
         add_name.return_value = workflow_name
         parameters = {
@@ -156,7 +158,7 @@ def test_argo_engine_get_workflow_for_user_failed():
 def test_argo_engine_submit_yaml_succeeded():
     engine = ArgoEngine()
     engine.api_instance.create_workflow = mock.MagicMock()
-    stream = pkg_resources.open_text(argo_workflows_templates, TEST_WF)
+    stream = pkg_resources.open_text(argo_workflows_templates, WF_HEADER)
     workflow_yaml = yaml.safe_load(stream)
     engine._get_workflow_template = mock.MagicMock(return_value=workflow_yaml)
     input_parameters = {
@@ -173,6 +175,8 @@ def test_argo_engine_submit_yaml_succeeded():
         "argowrapper.engine.argo_engine.argo_engine_helper.get_username_from_token"
     ), mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.add_gen3user_label"
+    ), mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper.add_cohort_middleware_request"
     ):
         engine.submit_workflow(input_parameters, "")
         args = engine.api_instance.create_workflow.call_args_list

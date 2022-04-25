@@ -17,7 +17,7 @@ argo_engine = ArgoEngine()
 auth = Auth()
 
 
-class WorkflowParameters(BaseModel):  # pylint: disable=too-few-public-methods
+class RequestBody(BaseModel):  # pylint: disable=too-few-public-methods
     """
     A class that encompases the request body being passed
     """
@@ -30,6 +30,8 @@ class WorkflowParameters(BaseModel):  # pylint: disable=too-few-public-methods
     maf_threshold: float
     imputation_score_cutoff: float
     template_version: str
+    source_id: int
+    cohort_definition_id: int
 
 
 def check_auth(fn):
@@ -64,14 +66,14 @@ def test():
 @router.post("/submit", status_code=HTTP_200_OK)
 @check_auth
 def submit_workflow(
-    workflow_parameters: WorkflowParameters,
+    request_body: RequestBody,
     request: Request,  # pylint: disable=unused-argument
 ) -> str:
     """route to submit workflow"""
 
     try:
         return argo_engine.submit_workflow(
-            workflow_parameters.dict(), request.headers.get("Authorization")
+            request_body.dict(), request.headers.get("Authorization")
         )
 
     except Exception as exception:
