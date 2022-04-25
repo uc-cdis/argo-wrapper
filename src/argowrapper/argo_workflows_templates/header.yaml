@@ -1,10 +1,11 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
-  generateName: vadc-gwas-
   namespace: argo
   annotations:
     workflows.argoproj.io/version: ">= 3.1.0"
+  labels:
+    gen3username: ""
 spec:
   entrypoint: null-model
   podGC:
@@ -18,7 +19,9 @@ spec:
       effect: "NoSchedule"
   podMetadata:
     labels:
-      gen3username: "user-test"
+      gen3username: ""
+    annotations:
+      gen3username: ""
   arguments:
     parameters:
       - name: cohort_definition_id
@@ -75,6 +78,7 @@ spec:
           [
             "/commons-data/gds/chr1.merged.vcf.gz.gds"
           ]
+
   volumes:
     - name: gateway
       persistentVolumeClaim:

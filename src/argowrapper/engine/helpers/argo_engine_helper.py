@@ -25,7 +25,6 @@ def add_parameters_to_gwas_workflow(parameters: Dict[str, any], workflow: Dict) 
 
 def add_name_to_workflow(workflow: Dict) -> str:
     workflow_name = generate_workflow_name()
-    workflow["metadata"].pop("generateName", None)
     workflow["metadata"]["name"] = workflow_name
     return workflow_name
 
@@ -88,12 +87,14 @@ def convert_gen3username_to_label(username: str) -> str:
     return f"user-{label}"
 
 
-def add_gen3user_label(username: str, workflow: Dict) -> None:
-    workflow["spec"]["pod_metadata"]["labels"][
-        "gen3username"
-    ] = convert_gen3username_to_label(username)
+def add_gen3user_label_and_annotation(username: str, workflow: Dict) -> None:
+    workflow["spec"]["pod_metadata"]["labels"]["gen3username"] = (
+        user_label := convert_gen3username_to_label(username)
+    )
 
-    workflow["spec"]["podMetadata"] = workflow["spec"].pop("pod_metadata")
+    workflow["metadata"]["labels"]["gen3username"] = user_label
+
+    workflow["spec"]["podMetadata"]["annotations"]["gen3username"] = username
 
 
 def get_username_from_token(header: str) -> str:
