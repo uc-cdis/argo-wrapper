@@ -56,11 +56,8 @@ def add_scaling_groups(gen3_user_name: str, workflow: Dict) -> None:
         raise Exception(f"user {gen3_user_name} is not a part of any scaling group")
 
     # Note: when nodeSelector is returned from argo template, it becomes node_selector
-    workflow["spec"]["node_selector"]["role"] = scaling_group
+    workflow["spec"]["nodeSelector"]["role"] = scaling_group
     workflow["spec"]["tolerations"][0]["value"] = scaling_group
-
-    # Here we convert back node_selector to original syntax nodeSelector
-    workflow["spec"]["nodeSelector"] = workflow["spec"].pop("node_selector")
 
 
 def _convert_to_hex(special_character_match: str) -> str:
@@ -113,3 +110,7 @@ def get_username_from_token(header: str) -> str:
     username = decoded.get("context", {}).get("user", {}).get("name")
     logger.info(f"{username} is submitting a workflow")
     return username
+
+
+def add_argo_template(template_version: str, workflow: Dict) -> None:
+    workflow["spec"]["workflowTemplateRef"]["name"] = template_version
