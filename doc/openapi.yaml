@@ -9,27 +9,12 @@ components:
           type: array
       title: HTTPValidationError
       type: object
-    ValidationError:
+    RequestBody:
+      description: A class that encompases the request body being passed
       properties:
-        loc:
-          items:
-            type: string
-          title: Location
-          type: array
-        msg:
-          title: Message
-          type: string
-        type:
-          title: Error Type
-          type: string
-      required:
-      - loc
-      - msg
-      - type
-      title: ValidationError
-      type: object
-    WorkflowParameters:
-      properties:
+        cohort_definition_id:
+          title: Cohort Definition Id
+          type: integer
         covariantes:
           title: Covariantes
           type: string
@@ -51,6 +36,9 @@ components:
         outcome_is_binary:
           title: Outcome Is Binary
           type: string
+        source_id:
+          title: Source Id
+          type: integer
         template_version:
           title: Template Version
           type: string
@@ -63,7 +51,28 @@ components:
       - maf_threshold
       - imputation_score_cutoff
       - template_version
-      title: WorkflowParameters
+      - source_id
+      - cohort_definition_id
+      title: RequestBody
+      type: object
+    ValidationError:
+      properties:
+        loc:
+          items:
+            type: string
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
       type: object
 info:
   title: argo wrapper
@@ -80,12 +89,6 @@ paths:
         required: true
         schema:
           title: Workflow Name
-          type: string
-      - in: header
-        name: Authorization
-        required: false
-        schema:
-          title: Authorization
           type: string
       responses:
         '200':
@@ -111,12 +114,6 @@ paths:
         schema:
           title: Workflow Name
           type: string
-      - in: header
-        name: Authorization
-        required: false
-        schema:
-          title: Authorization
-          type: string
       responses:
         '200':
           content:
@@ -134,18 +131,11 @@ paths:
     post:
       description: route to submit workflow
       operationId: submit_workflow_submit_post
-      parameters:
-      - in: header
-        name: Authorization
-        required: false
-        schema:
-          title: Authorization
-          type: string
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WorkflowParameters'
+              $ref: '#/components/schemas/RequestBody'
         required: true
       responses:
         '200':
@@ -171,22 +161,16 @@ paths:
               schema: {}
           description: Successful Response
       summary: Test
-  /workflows/{user_name}:
+  /workflows:
     get:
       description: returns the list of workflows the user has ran
-      operationId: get_workflows_workflows__user_name__get
+      operationId: get_workflows_workflows_get
       parameters:
-      - in: path
+      - in: query
         name: user_name
         required: true
         schema:
           title: User Name
-          type: string
-      - in: header
-        name: Authorization
-        required: false
-        schema:
-          title: Authorization
           type: string
       responses:
         '200':
