@@ -5,6 +5,7 @@ import random
 import json
 from argowrapper import logger
 import jwt
+import requests
 
 from argowrapper.constants import ARGO_CONFIG_PATH
 from argowrapper.auth import Auth
@@ -97,16 +98,16 @@ def add_gen3user_label_and_annotation(username: str, workflow: Dict) -> None:
     workflow["spec"]["podMetadata"]["annotations"]["gen3username"] = username
 
 
-def get_username_from_token(header: str) -> str:
+def get_username_from_token(auth_header: str) -> str:
     """
 
     Args:
-        jwt_token (str): user jwt token
+        header (str): authorization header that contains a jwt token
 
     Returns:
         str: username
     """
-    jwt_token = auth._parse_jwt(header)
+    jwt_token = auth._parse_jwt(auth_header)
     decoded = jwt.decode(jwt_token, options={"verify_signature": False})
     username = decoded.get("context", {}).get("user", {}).get("name")
     logger.info(f"{username} is submitting a workflow")
@@ -138,3 +139,37 @@ def _build_cohort_middleware_body(request_body: Dict) -> str:
 def _build_cohort_middleware_url(request_body: Dict) -> str:
     environment = _get_argo_config_dict().get("environment", "default")
     return f'http://cohort-middleware-service.{environment}/cohort-data/by-source-id/{request_body.get("source_id")}/by-cohort-definition-id/{request_body.get("cohort_definition_id")}'
+
+
+def setup_workspace_token_service(auth_header: str) -> bool:
+    jwt_token = auth._parse_jwt(auth_header)
+    environment = _get_argo_config_dict().get("environment", "default")
+    logger.info(_get_argo_config_dict())
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {jwt_token}",
+    }
+
+    try:
+        connected_res = requests.get(
+            f"http://workspace-token-service.{environment}/oauth2/connected?idp=default",
+            headers=headers,
+        )
+        logger.info(connected_res)
+        if connected_res.status_code == 400:
+            logger.error(
+                f"calling connected url for workspace token service failed with error {connected_res.content}"
+            )
+            return False
+
+        if connected_res.status_code == 403:
+            logger.info(
+                "refresh token expired or user not logged in, please fetch new refresh token"
+            )
+
+        return True
+
+    except Exception as exception:
+        logger.error(f"workspace token service setup failed with error {exception}")
+
+    return False

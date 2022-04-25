@@ -34,6 +34,8 @@ def test_argo_engine_submit_succeeded():
         "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_label"
     ), mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.add_cohort_middleware_request"
+    ), mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper.setup_workspace_token_service"
     ):
         add_name.return_value = workflow_name
         parameters = {
@@ -177,6 +179,8 @@ def test_argo_engine_submit_yaml_succeeded():
         "argowrapper.engine.argo_engine.argo_engine_helper.add_gen3user_label_and_annotation"
     ), mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.add_cohort_middleware_request"
+    ), mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper.setup_workspace_token_service"
     ):
         engine.submit_workflow(input_parameters, "")
         args = engine.api_instance.create_workflow.call_args_list

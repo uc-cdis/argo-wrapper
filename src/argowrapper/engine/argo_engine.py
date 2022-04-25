@@ -135,39 +135,46 @@ class ArgoEngine:
                 f"could not cancel {workflow_name} because workflow not found"
             )
 
-    def submit_workflow(self, request_body: Dict[str, str], jwt_token: str) -> str:
+    def submit_workflow(self, request_body: Dict[str, str], auth_header: str) -> str:
         """
         Submits a workflow with definied parameters
 
         Args:
             parameters (Dict[str, str]): a dictionary of input parameters of the submitted workflow
-            jwt_token: jwt token of the user submitting the workflow
+            auth_header: authorization header that contains the user's jwt token
 
         Returns:
             str: workflow name of the submitted workflow if sucess, empty string if fail
         """
 
+        if not argo_engine_helper.setup_workspace_token_service(auth_header):
+            return "could not run workflow"
+
         try:
             stream = pkg_resources.open_text(argo_workflows_templates, WF_HEADER)
             workflow_yaml = yaml.safe_load(stream)
+
             argo_engine_helper.add_parameters_to_gwas_workflow(
                 request_body, workflow_yaml
             )
 
-            username = argo_engine_helper.get_username_from_token(jwt_token)
+            username = argo_engine_helper.get_username_from_token(auth_header)
             argo_engine_helper.add_scaling_groups(username, workflow_yaml)
             argo_engine_helper.add_gen3user_label_and_annotation(
                 username, workflow_yaml
             )
+
             argo_engine_helper.add_cohort_middleware_request(
                 request_body, workflow_yaml
             )
-            workflow_name = argo_engine_helper.add_name_to_workflow(workflow_yaml)
+            argo_engine_helper.add_argo_template(
+                request_body.get("template_version"), workflow_yaml
+            )
 
+            workflow_name = argo_engine_helper.add_name_to_workflow(workflow_yaml)
             logger.debug(
                 f"the workflow {workflow_name} being submitted is {workflow_yaml}"
             )
-
             if self.dry_run:
                 logger.info("dry run of workflow submission")
                 logger.info(f"workflow being submitted {workflow_yaml}")
@@ -191,19 +198,19 @@ class ArgoEngine:
             logger.error(f"failed to submit workflow, failed with error {exception}")
             raise exception
 
-    def get_workfows_for_user(self, jwt_token: str) -> List[str]:
+    def get_workfows_for_user(self, auth_header: str) -> List[str]:
         """
         Get a list of all workflow for a new user
 
         Args:
-            jwt_token: jwt token of the user submitting the workflow
+            auth_header: authorization header that contains the user's jwt token
 
         Returns:
             List[str]: List of workflow names that the user
             has ran if sucess, error message if fails
 
         """
-        username = argo_engine_helper.get_username_from_token(jwt_token)
+        username = argo_engine_helper.get_username_from_token(auth_header)
         user_label = argo_engine_helper.convert_gen3username_to_label(username)
         label_selector = f"gen3username={user_label}"
 
