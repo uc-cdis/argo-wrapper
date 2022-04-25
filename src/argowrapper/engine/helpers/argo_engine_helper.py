@@ -114,3 +114,26 @@ def get_username_from_token(header: str) -> str:
 
 def add_argo_template(template_version: str, workflow: Dict) -> None:
     workflow["spec"]["workflowTemplateRef"]["name"] = template_version
+
+
+def add_cohort_middleware_request(request_body: Dict, workflow: Dict) -> None:
+    for dict in workflow["spec"]["arguments"]["parameters"]:
+        if dict.get("name") == "cohort_middleware_url":
+            dict["value"] = _build_cohort_middleware_url(request_body)
+        if dict.get("name") == "cohort_middleware_body":
+            dict["value"] = _build_cohort_middleware_body(request_body)
+
+
+def _build_cohort_middleware_body(request_body: Dict) -> str:
+    prefixed_concept_ids = request_body.get("covariates") + [
+        request_body.get("outcome")
+    ]
+    prefixed_concept_ids = [f'"{concept_id}"' for concept_id in prefixed_concept_ids]
+
+    formatted_prefixed_concept_ids = f'[{", ".join(prefixed_concept_ids)}]'
+    return f'{{"PrefixedConceptIds": {formatted_prefixed_concept_ids}}}'
+
+
+def _build_cohort_middleware_url(request_body: Dict) -> str:
+    environment = _get_argo_config_dict().get("environment", "default")
+    return f'http://cohort-middleware-service.{environment}/cohort-data/by-source-id/{request_body.get("source_id")}/by-cohort-definition-id/{request_body.get("cohort_definition_id")}'

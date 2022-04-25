@@ -34,12 +34,12 @@ def convert_username_label_to_gen3username(label: str) -> str:
 @pytest.fixture(scope="module")
 def setup():
     print("*****SETUP*****")
-    stream = pkg_resources.open_text(argo_workflows_templates, TEST_WF)
+    stream = pkg_resources.open_text(argo_workflows_templates, WF_HEADER)
     workflow_yaml = yaml.safe_load(stream)
     yield
 
 
-stream = pkg_resources.open_text(argo_workflows_templates, TEST_WF)
+stream = pkg_resources.open_text(argo_workflows_templates, WF_HEADER)
 workflow_yaml = yaml.safe_load(stream)
 
 

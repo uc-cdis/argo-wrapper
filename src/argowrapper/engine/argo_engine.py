@@ -135,7 +135,7 @@ class ArgoEngine:
                 f"could not cancel {workflow_name} because workflow not found"
             )
 
-    def submit_workflow(self, parameters: Dict[str, str], jwt_token: str) -> str:
+    def submit_workflow(self, request_body: Dict[str, str], jwt_token: str) -> str:
         """
         Submits a workflow with definied parameters
 
@@ -151,12 +151,15 @@ class ArgoEngine:
             stream = pkg_resources.open_text(argo_workflows_templates, WF_HEADER)
             workflow_yaml = yaml.safe_load(stream)
             argo_engine_helper.add_parameters_to_gwas_workflow(
-                parameters, workflow_yaml
+                request_body, workflow_yaml
             )
 
             username = argo_engine_helper.get_username_from_token(jwt_token)
             argo_engine_helper.add_scaling_groups(username, workflow_yaml)
             argo_engine_helper.add_gen3user_label(username, workflow_yaml)
+            argo_engine_helper.add_cohort_middleware_request(
+                request_body, workflow_yaml
+            )
             workflow_name = argo_engine_helper.add_name_to_workflow(workflow_yaml)
 
             logger.debug(

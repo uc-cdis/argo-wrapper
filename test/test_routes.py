@@ -41,7 +41,8 @@ def test_submit_workflow(client):
         "maf_threshold": 1.01,
         "imputation_score_cutoff": 2.02,
         "template_version": "test",
-        "gen3_user_name": "test_user",
+        "source_id": 2,
+        "cohort_definition_id": 70,
     }
     with patch("argowrapper.routes.workflow.auth.authenticate") as mock_auth, patch(
         "argowrapper.routes.workflow.argo_engine.submit_workflow"
