@@ -13,6 +13,9 @@ from argo_workflows.api import (
 from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_create_request import (
     IoArgoprojWorkflowV1alpha1WorkflowCreateRequest,
 )
+from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_terminate_request import (
+    IoArgoprojWorkflowV1alpha1WorkflowTerminateRequest,
+)
 
 from argowrapper import argo_workflows_templates, logger
 from argowrapper.constants import ARGO_HOST, WF_HEADER
@@ -105,13 +108,22 @@ class ArgoEngine:
             workflow_name (str): name of the workflow whose status will be canceled
 
         Returns:
-            bool : True if workflow was sucessfully canceled, else False
+            string : "{workflow_name} canceled sucessfully" if suceed, error message if not
         """
         if self.dry_run:
             logger.info(f"dry run for canceling {workflow_name}")
             return f"{workflow_name} canceled sucessfully"
         try:
-            self.api_instance.delete_workflow(namespace="argo", name=workflow_name)
+            self.api_instance.terminate_workflow(
+                namespace="argo",
+                name=workflow_name,
+                body=IoArgoprojWorkflowV1alpha1WorkflowTerminateRequest(
+                    name=workflow_name,
+                    namespace="argo",
+                    _check_type=False,
+                ),
+                _check_return_type=False,
+            )
             return f"{workflow_name} canceled sucessfully"
 
         except Exception as exception:

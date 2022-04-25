@@ -69,7 +69,7 @@ def test_argo_engine_submit_failed():
 def test_argo_engine_cancel_succeeded():
     """returns True if workflow cancelation suceeds"""
     engine = ArgoEngine()
-    engine.api_instance.delete_workflow = mock.MagicMock(return_value=None)
+    engine.api_instance.terminate_workflow = mock.MagicMock(return_value=None)
     result = engine.cancel_workflow("wf_name")
     assert result == "wf_name canceled sucessfully"
 
