@@ -23,7 +23,7 @@ class RequestBody(BaseModel):  # pylint: disable=too-few-public-methods
     """
 
     n_pcs: int
-    covariantes: str
+    covariates: List[str]
     out_prefix: str
     outcome: str
     outcome_is_binary: str
@@ -125,7 +125,6 @@ def cancel_workflow(
 @router.get("/workflows", status_code=HTTP_200_OK)
 @check_auth
 def get_workflows(
-    user_name: str,
     request: Request,  # pylint: disable=unused-argument
 ) -> List[str]:
     """returns the list of workflows the user has ran"""

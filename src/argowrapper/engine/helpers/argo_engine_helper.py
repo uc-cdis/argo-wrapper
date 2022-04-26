@@ -18,7 +18,25 @@ def generate_workflow_name() -> str:
     return "argo-wrapper-workflow-" + ending_id
 
 
-def add_parameters_to_gwas_workflow(parameters: Dict[str, any], workflow: Dict) -> None:
+def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
+    return {
+        "n_pcs": request_body.get("n_pcs"),
+        "covariates": " ".join(request_body.get("covariates")),
+        "outcome": request_body.get("outcome"),
+        "out_prefix": request_body.get("out_prefix"),
+        "outcome_is_binary": "TRUE"
+        if request_body.get("outcome_is_binary")
+        else "FALSE",
+        "maf_threshold": request_body.get("maf_threshold"),
+        "imputation_score_cutoff": request_body.get("imputation_score_cutoff"),
+        "cohort_definition_id": request_body.get("cohort_definition_id"),
+    }
+
+
+def add_parameters_to_gwas_workflow(
+    request_body: Dict[str, any], workflow: Dict
+) -> None:
+    parameters = _convert_request_body_to_parameter_dict(request_body)
     for dict in workflow["spec"]["arguments"]["parameters"]:
         if (param_name := dict["name"]) in parameters:
             dict["value"] = parameters[param_name]
@@ -57,10 +75,18 @@ def _get_argo_config_dict() -> Dict:
 
 
 def add_scaling_groups(gen3_user_name: str, workflow: Dict) -> None:
+    if "qa_scaling_groups" in _get_argo_config_dict():
+        del workflow["spec"]["nodeSelector"]
+        logger.info("we are in qa, removing node selector from header")
+        return
+
     user_to_scaling_groups = _get_argo_config_dict().get("scaling_groups", {})
     scaling_group = user_to_scaling_groups.get(gen3_user_name)
     if not scaling_group:
-        raise Exception(f"user {gen3_user_name} is not a part of any scaling group")
+        logger.error(
+            f"user {gen3_user_name} is not a part of any scaling group, setting group to automatically be workflow"
+        )
+        scaling_group = "workflow"
 
     # Note: when nodeSelector is returned from argo template, it becomes node_selector
     workflow["spec"]["nodeSelector"]["role"] = scaling_group
@@ -96,7 +122,7 @@ def convert_gen3username_to_label(username: str) -> str:
 
 
 def add_gen3user_label_and_annotation(username: str, workflow: Dict) -> None:
-    workflow["spec"]["pod_metadata"]["labels"]["gen3username"] = (
+    workflow["spec"]["podMetadata"]["labels"]["gen3username"] = (
         user_label := convert_gen3username_to_label(username)
     )
 

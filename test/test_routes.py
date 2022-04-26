@@ -34,9 +34,9 @@ def client(app: FastAPI) -> Generator[TestClient, Any, None]:
 def test_submit_workflow(client):
     data = {
         "n_pcs": 5,
-        "covariantes": "test_cov",
+        "covariates": ["1234", "1412"],
         "out_prefix": "test_out_prefix",
-        "outcome": "test_outcome",
+        "outcome": "123",
         "outcome_is_binary": "TRUE",
         "maf_threshold": 1.01,
         "imputation_score_cutoff": 2.02,
