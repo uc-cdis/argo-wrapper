@@ -6,7 +6,7 @@ RUN pip install --upgrade pip
 RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
 COPY . /src/
 WORKDIR /src
-RUN apk --no-cache add git && python -m venv /env && . /env/bin/activate && pip install --upgrade pip && $HOME/.poetry/bin/poetry install --no-dev --no-interaction && pip install git+https://github.com/argoproj/argo-workflows@master#subdirectory=sdks/python/client
+RUN apk --no-cache add git && python -m venv /env && . /env/bin/activate && pip install --upgrade pip && $HOME/.poetry/bin/poetry install --no-dev --no-interaction
 
 FROM base
 RUN apk add --no-cache postgresql-libs
