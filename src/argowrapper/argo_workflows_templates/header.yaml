@@ -5,6 +5,7 @@ metadata:
   annotations:
     workflows.argoproj.io/version: ">= 3.1.0"
   labels:
+    workflows.argoproj.io/archive-strategy: "true"
     gen3username: ""
 spec:
   entrypoint: gwas-workflow
