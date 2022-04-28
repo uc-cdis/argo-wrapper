@@ -93,3 +93,46 @@ def test_cancel_workflow(client):
         )
         assert response.status_code == 200
         assert response.content.decode("utf-8") == '"workflow_123 canceled sucessfully"'
+
+
+def test_get_user_workflows(client):
+    with patch("argowrapper.routes.workflow.auth.authenticate") as mock_auth, patch(
+        "argowrapper.routes.workflow.argo_engine.get_workfows_for_user"
+    ) as mock_engine:
+        mock_auth.return_value = True
+        mock_engine.return_value = ["wf_1", "wf_2"]
+        response = client.get(
+            "/workflows",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": "bearer 1234",
+            },
+        )
+        assert response.status_code == 200
+        assert response.content.decode("utf-8") == '["wf_1","wf_2"]'
+
+
+def test_get_workflow_logs(client):
+    with patch("argowrapper.routes.workflow.auth.authenticate") as mock_auth, patch(
+        "argowrapper.routes.workflow.argo_engine.get_workflow_logs"
+    ) as mock_engine:
+        mock_auth.return_value = True
+        mock_engine.return_value = [
+            {
+                "name": "wf_name",
+                "step_template": "wf_template",
+                "error_message": "wf_error",
+            }
+        ]
+        response = client.get(
+            "/logs/wf_123",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": "bearer 1234",
+            },
+        )
+        assert response.status_code == 200
+        assert (
+            response.content.decode("utf-8")
+            == '[{"name":"wf_name","step_template":"wf_template","error_message":"wf_error"}]'
+        )

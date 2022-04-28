@@ -137,3 +137,21 @@ def get_workflows(
             content=exception,
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
+
+@router.get("/logs/{workflow_name}", status_code=HTTP_200_OK)
+@check_auth
+def get_workflows(
+    workflow_name,
+    request: Request,  # pylint: disable=unused-argument
+) -> List[str]:
+    """returns the list of workflows the user has ran"""
+
+    try:
+        return argo_engine.get_workflow_logs(workflow_name)
+
+    except Exception as exception:
+        return HTMLResponse(
+            content=exception,
+            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
+        )

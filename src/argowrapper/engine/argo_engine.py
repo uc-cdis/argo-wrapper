@@ -3,12 +3,12 @@ import traceback
 from typing import Dict, List
 import yaml
 import importlib.resources as pkg_resources
+import json
 
 import argo_workflows
 from argo_workflows.api import (
     archived_workflow_service_api,
     workflow_service_api,
-    workflow_template_service_api,
 )
 from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_create_request import (
     IoArgoprojWorkflowV1alpha1WorkflowCreateRequest,
@@ -18,7 +18,7 @@ from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_terminate_reque
 )
 
 from argowrapper import argo_workflows_templates, logger
-from argowrapper.constants import ARGO_HOST, WF_HEADER
+from argowrapper.constants import ARGO_HOST, ARGO_NAMESPACE, WF_HEADER
 from argowrapper.engine.helpers import argo_engine_helper
 
 
@@ -49,17 +49,14 @@ class ArgoEngine:
         self.archeive_api_instance = (
             archived_workflow_service_api.ArchivedWorkflowServiceApi(api_client)
         )
-        self.template_api_instance = (
-            workflow_template_service_api.WorkflowTemplateServiceApi(api_client)
-        )
 
     def _get_all_workflows(self):
-        return self.api_instance.list_workflows(namespace="argo").to_str()
+        return self.api_instance.list_workflows(namespace=ARGO_NAMESPACE).to_str()
 
     def _get_workflow_status_dict(self, workflow_name: str) -> Dict:
 
         return self.api_instance.get_workflow(
-            namespace="argo",
+            namespace=ARGO_NAMESPACE,
             name=workflow_name,
             fields="metadata.name,spec.arguments,spec.shutdown,status.phase,status.progress,status.startedAt,status.finishedAt,status.outputs",
             # Note that _check_return_type=False avoids an existing issue with OpenAPI generator.
@@ -115,11 +112,11 @@ class ArgoEngine:
             return f"{workflow_name} canceled sucessfully"
         try:
             self.api_instance.terminate_workflow(
-                namespace="argo",
+                namespace=ARGO_NAMESPACE,
                 name=workflow_name,
                 body=IoArgoprojWorkflowV1alpha1WorkflowTerminateRequest(
                     name=workflow_name,
-                    namespace="argo",
+                    namespace=ARGO_NAMESPACE,
                     _check_type=False,
                 ),
                 _check_return_type=False,
@@ -182,7 +179,7 @@ class ArgoEngine:
                 return workflow_name
 
             response = self.api_instance.create_workflow(
-                namespace="argo",
+                namespace=ARGO_NAMESPACE,
                 body=IoArgoprojWorkflowV1alpha1WorkflowCreateRequest(
                     workflow=workflow_yaml,
                     _check_return_type=False,
@@ -216,7 +213,7 @@ class ArgoEngine:
 
         try:
             workflows = self.api_instance.list_workflows(
-                namespace="argo",
+                namespace=ARGO_NAMESPACE,
                 list_options_label_selector=label_selector,
                 _check_return_type=False,
                 fields="items.metadata.name",
@@ -238,3 +235,25 @@ class ArgoEngine:
                 f"could not get workflows for {username}, failed with error {exception}"
             )
             raise exception
+
+    def get_workflow_logs(self, workflow_name: str) -> List[Dict]:
+        res = self.api_instance.get_workflow(
+            namespace=ARGO_NAMESPACE,
+            name=workflow_name,
+            fields="status.nodes",
+            # Note that _check_return_type=False avoids an existing issue with OpenAPI generator.
+            _check_return_type=False,
+        ).to_dict()
+
+        errors = []
+
+        for _, step in res.get("status", {}).get("nodes", {}).items():
+            if step.get("phase") == "Failed" and "Error" in step.get("message", ""):
+                errors.append(
+                    {
+                        "name": step.get("name"),
+                        "step_template": step.get("templateName"),
+                        "error_message": step.get("message"),
+                    }
+                )
+        return errors
