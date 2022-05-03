@@ -25,7 +25,7 @@ def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
         "outcome": request_body.get("outcome"),
         "out_prefix": request_body.get("out_prefix"),
         "outcome_is_binary": "TRUE"
-        if request_body.get("outcome_is_binary")
+        if request_body.get("outcome_is_binary") == "True"
         else "FALSE",
         "maf_threshold": request_body.get("maf_threshold"),
         "imputation_score_cutoff": request_body.get("imputation_score_cutoff"),
