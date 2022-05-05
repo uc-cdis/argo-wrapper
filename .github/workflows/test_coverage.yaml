@@ -22,4 +22,4 @@ jobs:
 
       - name: Get test coverage and fail if total coverage under 80 percent
         run: |
-          pytest --cov argowrapper test --cov-fail-under=70
+          pytest --cov argowrapper test --cov-fail-under=80
