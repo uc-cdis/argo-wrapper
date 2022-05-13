@@ -1,14 +1,15 @@
-from collections import namedtuple
-import unittest.mock as mock
-import argowrapper.engine.helpers.argo_engine_helper as argo_engine_helper
 import importlib.resources as pkg_resources
+import re
+import unittest.mock as mock
+from collections import namedtuple
+
+import pytest
+import yaml
+
+import argowrapper.engine.helpers.argo_engine_helper as argo_engine_helper
 from argowrapper import argo_workflows_templates
 from argowrapper.constants import *
-import yaml
-import pytest
-import re
-
-EXAMPLE_AUTH_HEADER = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb250ZXh0Ijp7InVzZXIiOnsibmFtZSI6InRlc3QgdXNlciJ9fX0.FJUBv2hAhUG--Rhosxy6iLNKitvUTSGxDl8ZXIWBUdE"  # pragma: allowlist secret
+from test.constants import EXAMPLE_AUTH_HEADER
 
 
 def _convert_to_label(special_character_match: str) -> str:

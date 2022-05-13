@@ -1,8 +1,8 @@
 import os
+
 import yaml
 
 from argowrapper.app import get_app
-
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 

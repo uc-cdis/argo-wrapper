@@ -1,14 +1,15 @@
-import string
-import re
-from typing import Dict
-import random
 import json
-from argowrapper import logger
+import random
+import re
+import string
+from typing import Dict
+
 import jwt
 import requests
 
-from argowrapper.constants import ARGO_CONFIG_PATH
+from argowrapper import logger
 from argowrapper.auth import Auth
+from argowrapper.constants import ARGO_CONFIG_PATH
 
 auth = Auth()
 
@@ -20,6 +21,7 @@ def generate_workflow_name() -> str:
 
 def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
     return {
+        "cohort_definition_id": request_body.get("cohort_definition_id"),
         "n_pcs": request_body.get("n_pcs"),
         "covariates": " ".join(request_body.get("covariates")),
         "outcome": request_body.get("outcome"),
@@ -29,7 +31,6 @@ def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
         else "FALSE",
         "maf_threshold": request_body.get("maf_threshold"),
         "imputation_score_cutoff": request_body.get("imputation_score_cutoff"),
-        "cohort_definition_id": request_body.get("cohort_definition_id"),
     }
 
 
