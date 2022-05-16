@@ -15,6 +15,7 @@ request_body = {
     "template_version": "gwas-template-6226080403eb62585981d9782aec0f3a82a7e906",
     "source_id": 4,
     "cohort_definition_id": 70,
+    "workflow_name": "wf_name",
 }
 
 config = {"environment": "default", "scaling_groups": {"gen3user": "group_1"}}
@@ -38,6 +39,7 @@ def test_gwas_yaml_metadata():
 
     gwas_metadata_annotations = gwas_metadata.get("annotations")
     assert gwas_metadata_annotations.get("workflows.argoproj.io/version") == ">= 3.1.0"
+    assert gwas_metadata_annotations.get("workflow_name") == "wf_name"
 
     gwas_metadata_labels = gwas_metadata.get("labels")
     assert gwas_metadata_labels.get("workflows.argoproj.io/archive-strategy") == "true"

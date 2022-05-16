@@ -65,15 +65,15 @@ class GWAS(WorkflowBase):
 
         super().__init__(namespace, WORKFLOW_ENTRYPOINT.GWAS_ENTRYPOINT, dry_run)
 
-    def _add_metadata_labels(self):
-        super()._add_metadata_labels()
-        self.metadata.add_metadata_label("gen3username", self.gen3username_label)
-
     def _add_metadata_annotations(self):
         super()._add_metadata_annotations()
         self.metadata.add_metadata_annotation(
             "workflow_name", self._request_body.get("workflow_name")
         )
+
+    def _add_metadata_labels(self):
+        super()._add_metadata_labels()
+        self.metadata.add_metadata_label("gen3username", self.gen3username_label)
 
     def _add_spec_scaling_group(self):
         if "qa_scaling_groups" in argo_engine_helper._get_argo_config_dict():

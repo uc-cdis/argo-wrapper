@@ -59,6 +59,7 @@ def parse_status(status_dict: Dict[str, any]) -> Dict[str, any]:
 
     return {
         "name": status_dict["metadata"].get("name"),
+        "wf_name": status_dict["metadata"].get("annotations", {}).get("workflow_name"),
         "arguments": status_dict["spec"].get("arguments"),
         "phase": phase,
         "progress": status_dict["status"].get("progress"),

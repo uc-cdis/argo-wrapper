@@ -42,6 +42,7 @@ def test_submit_workflow(client):
         "template_version": "test",
         "source_id": 2,
         "cohort_definition_id": 70,
+        "workflow_name": "user-input-name",
     }
 
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
