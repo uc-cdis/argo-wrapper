@@ -33,6 +33,7 @@ class RequestBody(BaseModel):  # pylint: disable=too-few-public-methods
     template_version: str
     source_id: int
     cohort_definition_id: int
+    workflow_name: str
 
 
 def check_auth(fn):
