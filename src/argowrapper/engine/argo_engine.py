@@ -1,15 +1,12 @@
+import importlib.resources as pkg_resources
+import json
 import string
 import traceback
 from typing import Dict, List
-import yaml
-import importlib.resources as pkg_resources
-import json
 
 import argo_workflows
-from argo_workflows.api import (
-    archived_workflow_service_api,
-    workflow_service_api,
-)
+import yaml
+from argo_workflows.api import archived_workflow_service_api, workflow_service_api
 from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_create_request import (
     IoArgoprojWorkflowV1alpha1WorkflowCreateRequest,
 )
@@ -18,8 +15,9 @@ from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_terminate_reque
 )
 
 from argowrapper import argo_workflows_templates, logger
-from argowrapper.constants import ARGO_HOST, ARGO_NAMESPACE, WF_HEADER
+from argowrapper.constants import ARGO_HOST, ARGO_NAMESPACE, WF_HEADER, WORKFLOW
 from argowrapper.engine.helpers import argo_engine_helper
+from argowrapper.engine.helpers.workflow_factory import WorkflowFactory
 
 
 class ArgoEngine:
@@ -257,3 +255,27 @@ class ArgoEngine:
                     }
                 )
         return errors
+
+    def new_workflow_submission(self, request_body: Dict, auth_header: str):
+        workflow = WorkflowFactory._get_workflow(
+            ARGO_NAMESPACE, request_body, auth_header, WORKFLOW.GWAS
+        )
+        workflow_yaml = workflow._to_dict()
+        logger.debug(workflow_yaml)
+        try:
+            response = self.api_instance.create_workflow(
+                namespace="argo",
+                body=IoArgoprojWorkflowV1alpha1WorkflowCreateRequest(
+                    workflow=workflow_yaml,
+                    _check_return_type=False,
+                    _check_type=False,
+                ),
+                _check_return_type=False,
+            )
+            logger.debug(response)
+        except Exception as exception:
+            logger.error(traceback.format_exc())
+            logger.error(f"could not submit workflow, failed with error {exception}")
+            raise exception
+
+        return workflow.wf_name

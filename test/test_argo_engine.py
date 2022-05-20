@@ -1,11 +1,13 @@
+import importlib.resources as pkg_resources
 import unittest.mock as mock
-from argowrapper.engine.argo_engine import *
+
+import pytest
+import yaml
+
 from argowrapper import argo_workflows_templates
 from argowrapper.constants import *
-import yaml
-import pytest
-
-import importlib.resources as pkg_resources
+from argowrapper.engine.argo_engine import *
+from test.constants import EXAMPLE_AUTH_HEADER
 
 
 class WorkFlow:
@@ -195,3 +197,54 @@ def test_argo_engine_submit_yaml_succeeded():
                 assert parameter["value"] == input_parameters[param_name]
             elif param_name == "covariates":
                 assert parameter["value"] == " ".join(input_parameters["covariates"])
+
+
+def test_argo_engine_new_submit_succeeded():
+    engine = ArgoEngine()
+    engine.api_instance.create_workflow = mock.MagicMock()
+    request_body = {
+        "n_pcs": 3,
+        "covariates": ["ID_2000006886", "ID_2000000324"],
+        "out_prefix": "vadc_genesis",
+        "outcome": "ID_2000006885",
+        "outcome_is_binary": "false",
+        "maf_threshold": 0.01,
+        "imputation_score_cutoff": 0.3,
+        "template_version": "gwas-template-6226080403eb62585981d9782aec0f3a82a7e906",
+        "source_id": 4,
+        "cohort_definition_id": 70,
+    }
+
+    config = {"environment": "default", "scaling_groups": {"gen3user": "group_1"}}
+    with mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
+    ) as mock_config_dict:
+        mock_config_dict.return_value = config
+        res = engine.new_workflow_submission(request_body, EXAMPLE_AUTH_HEADER)
+        assert len(res) > 0
+
+
+def test_argo_engine_new_submit_failed():
+    engine = ArgoEngine()
+    engine.api_instance.create_workflow = mock.MagicMock(
+        side_effect=Exception("workflow misformatted")
+    )
+    request_body = {
+        "n_pcs": 3,
+        "covariates": ["ID_2000006886", "ID_2000000324"],
+        "out_prefix": "vadc_genesis",
+        "outcome": "ID_2000006885",
+        "outcome_is_binary": "false",
+        "maf_threshold": 0.01,
+        "imputation_score_cutoff": 0.3,
+        "template_version": "gwas-template-6226080403eb62585981d9782aec0f3a82a7e906",
+        "source_id": 4,
+        "cohort_definition_id": 70,
+    }
+
+    config = {"environment": "default", "scaling_groups": {"gen3user": "group_1"}}
+    with mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
+    ) as mock_config_dict, pytest.raises(Exception):
+        mock_config_dict.return_value = config
+        res = engine.new_workflow_submission(request_body, EXAMPLE_AUTH_HEADER)

@@ -1,5 +1,6 @@
-from argowrapper.auth import Auth
 import unittest.mock as mock
+
+from argowrapper.auth import Auth
 
 
 def test_parse_token_suceed():

@@ -1,12 +1,14 @@
 import re
+
 from gen3authz.client.arborist.client import ArboristClient
 from gen3authz.client.arborist.errors import ArboristError
+
 from argowrapper import logger
 from argowrapper.constants import (
-    TOKEN_REGEX,
-    ARGO_ACCESS_SERVICE,
-    ARGO_ACCESS_RESOURCES,
     ARGO_ACCESS_METHOD,
+    ARGO_ACCESS_RESOURCES,
+    ARGO_ACCESS_SERVICE,
+    TOKEN_REGEX,
 )
 
 
@@ -28,7 +30,6 @@ class Auth:
             logger.error("malformed token")
             return ""
 
-        logger.info(parsed_token)
         return parsed_token
 
     def authenticate(self, token: str) -> bool:

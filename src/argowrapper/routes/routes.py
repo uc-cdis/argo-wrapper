@@ -1,5 +1,6 @@
 from functools import wraps
-from typing import List, Dict
+from typing import Dict, List
+
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
@@ -8,9 +9,9 @@ from starlette.status import (
     HTTP_401_UNAUTHORIZED,
     HTTP_500_INTERNAL_SERVER_ERROR,
 )
+
 from argowrapper.auth import Auth
-from argowrapper.engine import ArgoEngine
-from argowrapper.engine.helpers import argo_engine_helper
+from argowrapper.engine.argo_engine import ArgoEngine
 
 router = APIRouter()
 argo_engine = ArgoEngine()
@@ -35,6 +36,8 @@ class RequestBody(BaseModel):  # pylint: disable=too-few-public-methods
 
 
 def check_auth(fn):
+    """custom annotation to authenticate user request"""
+
     @wraps(fn)
     def wrapper(*args, **kwargs):
         request = kwargs["request"]
@@ -72,7 +75,7 @@ def submit_workflow(
     """route to submit workflow"""
 
     try:
-        return argo_engine.submit_workflow(
+        return argo_engine.new_workflow_submission(
             request_body.dict(), request.headers.get("Authorization")
         )
 
@@ -141,7 +144,7 @@ def get_workflows(
 
 @router.get("/logs/{workflow_name}", status_code=HTTP_200_OK)
 @check_auth
-def get_workflows(
+def get_workflow_logs(
     workflow_name,
     request: Request,  # pylint: disable=unused-argument
 ) -> List[str]:
