@@ -19,7 +19,7 @@ argo-workflows = "6.3.0rc2"
 gen3authz = "^1.5.0"
 importlib-resources = "^5.4.0"
 requests = "^2.27.1"
-PyJWT = "^2.3.0"
+PyJWT = "^2.4.0"
 pytest-cov = "^3.0.0"
 
 [tool.poetry.dev-dependencies]
