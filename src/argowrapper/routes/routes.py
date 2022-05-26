@@ -27,12 +27,12 @@ class RequestBody(BaseModel):  # pylint: disable=too-few-public-methods
     covariates: List[str]
     out_prefix: str
     outcome: str
-    outcome_is_binary: str
     maf_threshold: float
     imputation_score_cutoff: float
     template_version: str
     source_id: int
-    cohort_definition_id: int
+    case_cohort_definition_id: int
+    control_cohort_definition_id: int
     workflow_name: str
 
 

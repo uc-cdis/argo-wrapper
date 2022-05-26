@@ -21,14 +21,17 @@ def generate_workflow_name() -> str:
 
 def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
     return {
-        "cohort_definition_id": request_body.get("cohort_definition_id"),
+        "source_id": request_body.get("source_id"),
+        "case_cohort_definition_id": request_body.get("case_cohort_definition_id"),
+        "control_cohort_definition_id": request_body.get(
+            "control_cohort_definition_id"
+        ),
         "n_pcs": request_body.get("n_pcs"),
         "covariates": " ".join(request_body.get("covariates")),
-        "outcome": request_body.get("outcome"),
+        "outcome": -1  # outcome defaults to an int value of -1 but when set is a str value
+        if request_body.get("outcome") == "-1"
+        else request_body.get("outcome"),
         "out_prefix": request_body.get("out_prefix"),
-        "outcome_is_binary": "TRUE"
-        if request_body.get("outcome_is_binary") == "True"
-        else "FALSE",
         "maf_threshold": request_body.get("maf_threshold"),
         "imputation_score_cutoff": request_body.get("imputation_score_cutoff"),
     }

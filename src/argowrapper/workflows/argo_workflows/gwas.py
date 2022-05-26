@@ -24,6 +24,7 @@ class GWAS(WorkflowBase):
         return f'[{", ".join(gds_files)}]'
 
     HARD_CODED_PARAMETERS = {
+        "internal_api_env": "default",
         "genome_build": "hg19",
         "pca_file": "/commons-data/pcs.RData",
         "relatedness_matrix_file": "/commons-data/KINGmatDeg3.RData",
@@ -36,6 +37,8 @@ class GWAS(WorkflowBase):
 
     PARAMETER_TO_DEFAULT_VALS = {
         "n_pcs": 0,
+        "internal_api_env": "default",
+        "control_cohort_definition_id": -1,
         "out_prefix": "genesis_vadc",
         "outcome_is_binary": "FALSE",
         "genome_build": "hg19",
@@ -135,7 +138,6 @@ class GWAS(WorkflowBase):
             spec_parameters (Dict): _description_
         """
         self._add_user_defined_spec_parameters()
-        self._add_cohort_middlware_request_parameters()
         self._add_hard_coded_spec_parameters()
 
     def _add_spec_volumes(self):
