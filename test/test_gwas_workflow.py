@@ -1,4 +1,5 @@
 import unittest.mock as mock
+import json
 
 from argowrapper.constants import *
 from argowrapper.workflows.argo_workflows.gwas import *
@@ -8,13 +9,13 @@ request_body = {
     "n_pcs": 3,
     "covariates": ["ID_2000006886", "ID_2000000324"],
     "out_prefix": "vadc_genesis",
-    "outcome": "ID_2000006885",
-    "outcome_is_binary": "false",
+    "outcome": "-1",
     "maf_threshold": 0.01,
     "imputation_score_cutoff": 0.3,
     "template_version": "gwas-template-6226080403eb62585981d9782aec0f3a82a7e906",
     "source_id": 4,
-    "cohort_definition_id": 70,
+    "case_cohort_definition_id": 70,
+    "control_cohort_definition_id": -1,
     "workflow_name": "wf_name",
 }
 
@@ -87,11 +88,9 @@ def test_gwas_yaml_spec_arguments():
         "n_pcs": 3,
         "covariates": "ID_2000006886 ID_2000000324",
         "out_prefix": "vadc_genesis",
-        "outcome": "ID_2000006885",
-        "outcome_is_binary": "FALSE",
+        "outcome": -1,
         "maf_threshold": 0.01,
         "imputation_score_cutoff": 0.3,
-        "cohort_definition_id": 70,
     }
 
     for param_name, param_val in user_params.items():

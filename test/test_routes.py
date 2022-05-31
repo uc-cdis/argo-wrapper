@@ -35,13 +35,13 @@ def test_submit_workflow(client):
         "n_pcs": 5,
         "covariates": ["1234", "1412"],
         "out_prefix": "test_out_prefix",
-        "outcome": "123",
-        "outcome_is_binary": "TRUE",
+        "outcome": "-1",
         "maf_threshold": 1.01,
         "imputation_score_cutoff": 2.02,
         "template_version": "test",
         "source_id": 2,
-        "cohort_definition_id": 70,
+        "case_cohort_definition_id": 70,
+        "control_cohort_definition_id": -1,
         "workflow_name": "user-input-name",
     }
 
