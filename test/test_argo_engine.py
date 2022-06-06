@@ -17,29 +17,14 @@ class WorkFlow:
 
 def test_argo_engine_submit_succeeded():
     """returns workflow name if workflow submission suceeds"""
-    workflow_name = "wf_name"
     engine = ArgoEngine()
-    engine.api_instance.create_workflow = mock.MagicMock(return_value=workflow_name)
-    stream = pkg_resources.open_text(argo_workflows_templates, WF_HEADER)
-    workflow_yaml = yaml.safe_load(stream)
-    engine._get_workflow_template = mock.MagicMock(return_value=workflow_yaml)
+    engine.api_instance.create_workflow = mock.MagicMock(return_value=None)
+    config = {"environment": "default", "scaling_groups": {"gen3user": "group_1"}}
 
     with mock.patch(
-        "argowrapper.engine.argo_engine.argo_engine_helper.add_name_to_workflow"
-    ) as add_name, mock.patch(
-        "argowrapper.engine.argo_engine.argo_engine_helper.add_scaling_groups"
-    ), mock.patch(
-        "argowrapper.engine.argo_engine.argo_engine_helper.get_username_from_token"
-    ), mock.patch(
-        "argowrapper.engine.argo_engine.argo_engine_helper.add_gen3user_label_and_annotation"
-    ), mock.patch(
-        "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_label"
-    ), mock.patch(
-        "argowrapper.engine.argo_engine.argo_engine_helper.add_cohort_middleware_request"
-    ), mock.patch(
-        "argowrapper.engine.argo_engine.argo_engine_helper.setup_workspace_token_service"
-    ):
-        add_name.return_value = workflow_name
+        "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
+    ) as mock_config_dict:
+        mock_config_dict.return_value = config
         parameters = {
             "pheno_csv_key": "test_replace_value",
             "n_pcs": 100,
@@ -47,8 +32,8 @@ def test_argo_engine_submit_succeeded():
             "gen3_user_name": "test_user",
             "covariates": ["123"],
         }
-        result = engine.submit_workflow(parameters, "test_jwt_token")
-        assert result == workflow_name
+        result = engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
+        assert "argo-wrapper" in result
 
 
 def test_argo_engine_submit_failed():
@@ -57,21 +42,19 @@ def test_argo_engine_submit_failed():
     engine.api_instance.create_workflow = mock.MagicMock(
         side_effect=Exception("bad input")
     )
+
+    config = {"environment": "default", "scaling_groups": {"gen3user": "group_1"}}
+
     with mock.patch(
-        "argowrapper.engine.argo_engine.argo_engine_helper.add_name_to_workflow"
-    ), mock.patch(
-        "argowrapper.engine.argo_engine.argo_engine_helper.add_scaling_groups"
-    ), mock.patch(
-        "argowrapper.engine.argo_engine.argo_engine_helper.get_username_from_token"
-    ), pytest.raises(
-        Exception
-    ):
+        "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
+    ) as mock_config_dict, pytest.raises(Exception):
+        mock_config_dict.return_value = config
         parameters = {
             "pheno_csv_key": "test_replace_value",
             "n_pcs": 100,
             "template_version": "test",
         }
-        engine.submit_workflow(parameters, "")
+        engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
 
 
 def test_argo_engine_cancel_succeeded():
@@ -163,9 +146,7 @@ def test_argo_engine_get_workflow_for_user_failed():
 def test_argo_engine_submit_yaml_succeeded():
     engine = ArgoEngine()
     engine.api_instance.create_workflow = mock.MagicMock()
-    stream = pkg_resources.open_text(argo_workflows_templates, WF_HEADER)
-    workflow_yaml = yaml.safe_load(stream)
-    engine._get_workflow_template = mock.MagicMock(return_value=workflow_yaml)
+    config = {"environment": "default", "scaling_groups": {"gen3user": "group_1"}}
     input_parameters = {
         "pheno_csv_key": "test_replace_value",
         "n_pcs": 100,
@@ -174,19 +155,10 @@ def test_argo_engine_submit_yaml_succeeded():
         "covariates": ["123"],
     }
     with mock.patch(
-        "argowrapper.engine.argo_engine.argo_engine_helper.add_name_to_workflow"
-    ), mock.patch(
-        "argowrapper.engine.argo_engine.argo_engine_helper.add_scaling_groups"
-    ), mock.patch(
-        "argowrapper.engine.argo_engine.argo_engine_helper.get_username_from_token"
-    ), mock.patch(
-        "argowrapper.engine.argo_engine.argo_engine_helper.add_gen3user_label_and_annotation"
-    ), mock.patch(
-        "argowrapper.engine.argo_engine.argo_engine_helper.add_cohort_middleware_request"
-    ), mock.patch(
-        "argowrapper.engine.argo_engine.argo_engine_helper.setup_workspace_token_service"
-    ):
-        engine.submit_workflow(input_parameters, "")
+        "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
+    ) as mock_config_dict:
+        mock_config_dict.return_value = config
+        engine.workflow_submission(input_parameters, EXAMPLE_AUTH_HEADER)
         args = engine.api_instance.create_workflow.call_args_list
         for parameter in args[0][1]["body"]["workflow"]["spec"]["arguments"][
             "parameters"
@@ -220,7 +192,7 @@ def test_argo_engine_new_submit_succeeded():
         "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
     ) as mock_config_dict:
         mock_config_dict.return_value = config
-        res = engine.new_workflow_submission(request_body, EXAMPLE_AUTH_HEADER)
+        res = engine.workflow_submission(request_body, EXAMPLE_AUTH_HEADER)
         assert len(res) > 0
 
 
@@ -247,4 +219,4 @@ def test_argo_engine_new_submit_failed():
         "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
     ) as mock_config_dict, pytest.raises(Exception):
         mock_config_dict.return_value = config
-        res = engine.new_workflow_submission(request_body, EXAMPLE_AUTH_HEADER)
+        res = engine.workflow_submission(request_body, EXAMPLE_AUTH_HEADER)

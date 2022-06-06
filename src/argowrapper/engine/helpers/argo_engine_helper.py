@@ -5,7 +5,6 @@ import string
 from typing import Dict
 
 import jwt
-import requests
 
 from argowrapper import logger
 from argowrapper.auth import Auth
@@ -35,21 +34,6 @@ def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
         "maf_threshold": request_body.get("maf_threshold"),
         "imputation_score_cutoff": request_body.get("imputation_score_cutoff"),
     }
-
-
-def add_parameters_to_gwas_workflow(
-    request_body: Dict[str, any], workflow: Dict
-) -> None:
-    parameters = _convert_request_body_to_parameter_dict(request_body)
-    for dict in workflow["spec"]["arguments"]["parameters"]:
-        if (param_name := dict["name"]) in parameters:
-            dict["value"] = parameters[param_name]
-
-
-def add_name_to_workflow(workflow: Dict) -> str:
-    workflow_name = generate_workflow_name()
-    workflow["metadata"]["name"] = workflow_name
-    return workflow_name
 
 
 def parse_status(status_dict: Dict[str, any]) -> Dict[str, any]:
@@ -126,16 +110,6 @@ def convert_gen3username_to_label(username: str) -> str:
     return f"user-{label}"
 
 
-def add_gen3user_label_and_annotation(username: str, workflow: Dict) -> None:
-    workflow["spec"]["podMetadata"]["labels"]["gen3username"] = (
-        user_label := convert_gen3username_to_label(username)
-    )
-
-    workflow["metadata"]["labels"]["gen3username"] = user_label
-
-    workflow["spec"]["podMetadata"]["annotations"]["gen3username"] = username
-
-
 def get_username_from_token(auth_header: str) -> str:
     """
 
@@ -150,64 +124,3 @@ def get_username_from_token(auth_header: str) -> str:
     username = decoded.get("context", {}).get("user", {}).get("name")
     logger.info(f"{username} is submitting a workflow")
     return username
-
-
-def add_argo_template(template_version: str, workflow: Dict) -> None:
-    workflow["spec"]["workflowTemplateRef"]["name"] = template_version
-
-
-def add_cohort_middleware_request(request_body: Dict, workflow: Dict) -> None:
-    for dict in workflow["spec"]["arguments"]["parameters"]:
-        if dict.get("name") == "cohort_middleware_url":
-            dict["value"] = _build_cohort_middleware_url(request_body)
-        if dict.get("name") == "cohort_middleware_body":
-            dict["value"] = _build_cohort_middleware_body(request_body)
-
-
-def _build_cohort_middleware_body(request_body: Dict) -> str:
-    prefixed_concept_ids = request_body.get("covariates") + [
-        request_body.get("outcome")
-    ]
-    prefixed_concept_ids = [f'"{concept_id}"' for concept_id in prefixed_concept_ids]
-
-    formatted_prefixed_concept_ids = f'[{", ".join(prefixed_concept_ids)}]'
-    return f'{{"PrefixedConceptIds": {formatted_prefixed_concept_ids}}}'
-
-
-def _build_cohort_middleware_url(request_body: Dict) -> str:
-    environment = _get_argo_config_dict().get("environment", "default")
-    return f'http://cohort-middleware-service.{environment}/cohort-data/by-source-id/{request_body.get("source_id")}/by-cohort-definition-id/{request_body.get("cohort_definition_id")}'
-
-
-def setup_workspace_token_service(auth_header: str) -> bool:
-    jwt_token = auth._parse_jwt(auth_header)
-    environment = _get_argo_config_dict().get("environment", "default")
-    logger.info(_get_argo_config_dict())
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {jwt_token}",
-    }
-
-    try:
-        connected_res = requests.get(
-            f"http://workspace-token-service.{environment}/oauth2/connected?idp=default",
-            headers=headers,
-        )
-        logger.info(connected_res)
-        if connected_res.status_code == 400:
-            logger.error(
-                f"calling connected url for workspace token service failed with error {connected_res.content}"
-            )
-            return False
-
-        if connected_res.status_code == 403:
-            logger.info(
-                "refresh token expired or user not logged in, please fetch new refresh token"
-            )
-
-        return True
-
-    except Exception as exception:
-        logger.error(f"workspace token service setup failed with error {exception}")
-
-    return False
