@@ -15,3 +15,10 @@ argo-wrapper is a service that faciliatates argo-engine to interact with GWAS fr
 * Permissions
     * currently there is 1 permission called [workflow_admin](https://github.com/uc-cdis/commons-users/blob/master/users/vhdcprod/user.yaml#L69-L72) that grants users
     the ability to all 4 apis.
+
+# Key Documentation
+
+All documentation can be found in the [docs](docs) folder, and key documents are linked below.
+
+* [Deploying Argo-wrapper to a Gen3 Data Commons](docs/readmes/deploy.md)
+* [Argo-wrapper APIs](docs/readmes/apis.md)
