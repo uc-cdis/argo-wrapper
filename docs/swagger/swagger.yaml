@@ -15,9 +15,11 @@ components:
         cohort_definition_id:
           title: Cohort Definition Id
           type: integer
-        covariantes:
-          title: Covariantes
-          type: string
+        covariates:
+          items:
+            type: string
+          title: Covariates
+          type: array
         imputation_score_cutoff:
           title: Imputation Score Cutoff
           type: number
@@ -42,9 +44,12 @@ components:
         template_version:
           title: Template Version
           type: string
+        workflow_name:
+          title: Workflow Name
+          type: string
       required:
       - n_pcs
-      - covariantes
+      - covariates
       - out_prefix
       - outcome
       - outcome_is_binary
@@ -53,6 +58,7 @@ components:
       - template_version
       - source_id
       - cohort_definition_id
+      - workflow_name
       title: RequestBody
       type: object
     ValidationError:
@@ -103,6 +109,29 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
       summary: Cancel Workflow
+  /logs/{workflow_name}:
+    get:
+      description: returns the list of workflows the user has ran
+      operationId: get_workflows_logs__workflow_name__get
+      parameters:
+      - in: path
+        name: workflow_name
+        required: true
+        schema:
+          title: Workflow Name
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Workflows
   /status/{workflow_name}:
     get:
       description: returns current status of a workflow
@@ -165,23 +194,10 @@ paths:
     get:
       description: returns the list of workflows the user has ran
       operationId: get_workflows_workflows_get
-      parameters:
-      - in: query
-        name: user_name
-        required: true
-        schema:
-          title: User Name
-          type: string
       responses:
         '200':
           content:
             application/json:
               schema: {}
           description: Successful Response
-        '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-          description: Validation Error
       summary: Get Workflows

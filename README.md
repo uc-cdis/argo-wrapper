@@ -22,3 +22,4 @@ All documentation can be found in the [docs](docs) folder, and key documents are
 
 * [Deploying Argo-wrapper to a Gen3 Data Commons](docs/readmes/deploy.md)
 * [Argo-wrapper APIs](docs/readmes/apis.md)
+* [Argo-wrapper SWAGGER](docs/readmes/swagger.md)
