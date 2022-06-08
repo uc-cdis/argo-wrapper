@@ -46,7 +46,7 @@ def test_submit_workflow(client):
     }
 
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
-        "argowrapper.routes.routes.argo_engine.new_workflow_submission"
+        "argowrapper.routes.routes.argo_engine.workflow_submission"
     ) as mock_engine:
         mock_auth.return_value = True
         mock_engine.return_value = "workflow_123"

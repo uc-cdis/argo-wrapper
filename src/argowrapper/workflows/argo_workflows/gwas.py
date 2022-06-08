@@ -94,17 +94,6 @@ class GWAS(WorkflowBase):
 
         self.spec.add_scaling_group(scaling_group)
 
-    def _add_cohort_middlware_request_parameters(self):
-        cohort_middleware_body = argo_engine_helper._build_cohort_middleware_body(
-            self._request_body
-        )
-        cohort_middleware_url = argo_engine_helper._build_cohort_middleware_url(
-            self._request_body
-        )
-
-        self.spec.add_string_parameter("cohort_middleware_body", cohort_middleware_body)
-        self.spec.add_string_parameter("cohort_middleware_url", cohort_middleware_url)
-
     def _add_param_helper(self, parameters: Dict) -> None:
         for parameter_name, parameter_val in parameters.items():
             default_val = self.PARAMETER_TO_DEFAULT_VALS.get(parameter_name, "")

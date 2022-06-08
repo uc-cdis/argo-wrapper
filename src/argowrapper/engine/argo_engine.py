@@ -1,11 +1,8 @@
-import importlib.resources as pkg_resources
-import json
 import string
 import traceback
 from typing import Dict, List
 
 import argo_workflows
-import yaml
 from argo_workflows.api import archived_workflow_service_api, workflow_service_api
 from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_create_request import (
     IoArgoprojWorkflowV1alpha1WorkflowCreateRequest,
@@ -14,8 +11,8 @@ from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_terminate_reque
     IoArgoprojWorkflowV1alpha1WorkflowTerminateRequest,
 )
 
-from argowrapper import argo_workflows_templates, logger
-from argowrapper.constants import ARGO_HOST, ARGO_NAMESPACE, WF_HEADER, WORKFLOW
+from argowrapper import logger
+from argowrapper.constants import ARGO_HOST, ARGO_NAMESPACE, WORKFLOW
 from argowrapper.engine.helpers import argo_engine_helper
 from argowrapper.engine.helpers.workflow_factory import WorkflowFactory
 
@@ -130,69 +127,6 @@ class ArgoEngine:
                 f"could not cancel {workflow_name} because workflow not found"
             )
 
-    def submit_workflow(self, request_body: Dict[str, str], auth_header: str) -> str:
-        """
-        Submits a workflow with definied parameters
-
-        Args:
-            parameters (Dict[str, str]): a dictionary of input parameters of the submitted workflow
-            auth_header: authorization header that contains the user's jwt token
-
-        Returns:
-            str: workflow name of the submitted workflow if sucess, empty string if fail
-        """
-
-        if not argo_engine_helper.setup_workspace_token_service(auth_header):
-            return "could not run workflow"
-
-        try:
-            stream = pkg_resources.open_text(argo_workflows_templates, WF_HEADER)
-            workflow_yaml = yaml.safe_load(stream)
-
-            argo_engine_helper.add_parameters_to_gwas_workflow(
-                request_body, workflow_yaml
-            )
-
-            username = argo_engine_helper.get_username_from_token(auth_header)
-            argo_engine_helper.add_scaling_groups(username, workflow_yaml)
-            argo_engine_helper.add_gen3user_label_and_annotation(
-                username, workflow_yaml
-            )
-
-            argo_engine_helper.add_cohort_middleware_request(
-                request_body, workflow_yaml
-            )
-            argo_engine_helper.add_argo_template(
-                request_body.get("template_version"), workflow_yaml
-            )
-
-            workflow_name = argo_engine_helper.add_name_to_workflow(workflow_yaml)
-            logger.debug(
-                f"the workflow {workflow_name} being submitted is {workflow_yaml}"
-            )
-            if self.dry_run:
-                logger.info("dry run of workflow submission")
-                logger.info(f"workflow being submitted {workflow_yaml}")
-                logger.info(f"workflow name {workflow_name}")
-                return workflow_name
-
-            response = self.api_instance.create_workflow(
-                namespace=ARGO_NAMESPACE,
-                body=IoArgoprojWorkflowV1alpha1WorkflowCreateRequest(
-                    workflow=workflow_yaml,
-                    _check_return_type=False,
-                    _check_type=False,
-                ),
-                _check_return_type=False,
-            )
-            logger.debug(response)
-            return workflow_name
-
-        except Exception as exception:
-            logger.error(traceback.format_exc())
-            logger.error(f"failed to submit workflow, failed with error {exception}")
-            raise exception
-
     def get_workfows_for_user(self, auth_header: str) -> List[str]:
         """
         Get a list of all workflow for a new user
@@ -256,7 +190,7 @@ class ArgoEngine:
                 )
         return errors
 
-    def new_workflow_submission(self, request_body: Dict, auth_header: str):
+    def workflow_submission(self, request_body: Dict, auth_header: str):
         workflow = WorkflowFactory._get_workflow(
             ARGO_NAMESPACE, request_body, auth_header, WORKFLOW.GWAS
         )

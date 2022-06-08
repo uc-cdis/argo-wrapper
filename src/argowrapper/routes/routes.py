@@ -76,7 +76,7 @@ def submit_workflow(
     """route to submit workflow"""
 
     try:
-        return argo_engine.new_workflow_submission(
+        return argo_engine.workflow_submission(
             request_body.dict(), request.headers.get("Authorization")
         )
 
