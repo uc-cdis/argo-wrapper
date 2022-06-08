@@ -5,7 +5,7 @@
 2. Fetch token using API key
 
 ```
-echo Authorization: bearer $(curl -d '{"api_key": "<replaceme>", "key_id": "<replaceme>"}' -X POST -H "Content-Type: application/json" https://{commons-url}/user/credentials/api/access_token | jq .access_token | sed 's/"//g') > auth
+echo Authorization: bearer $(curl -d '{"api_key": "<replaceme>", "key_id": "<replaceme>"}' -X POST -H "Content-Type: application/json" https://{commons-url}/user/credentials/api/access_token | jq .access_token | sed 's/"//g') > auth # pragma: allowlist secret
 ```
 
 3. POST the workflow submission
