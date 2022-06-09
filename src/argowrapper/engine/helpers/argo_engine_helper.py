@@ -18,6 +18,13 @@ def generate_workflow_name() -> str:
     return "argo-wrapper-workflow-" + ending_id
 
 
+def __get_internal_api_env() -> str:
+    if "qa_scaling_groups" in _get_argo_config_dict():
+        return "qa-mickey"
+
+    return "default"
+
+
 def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
     return {
         "source_id": request_body.get("source_id"),
@@ -33,6 +40,8 @@ def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
         "out_prefix": request_body.get("out_prefix"),
         "maf_threshold": request_body.get("maf_threshold"),
         "imputation_score_cutoff": request_body.get("imputation_score_cutoff"),
+        "hare_population": request_body.get("hare_population"),
+        "internal_api_env": __get_internal_api_env(),
     }
 
 
