@@ -24,7 +24,6 @@ class GWAS(WorkflowBase):
         return f'[{", ".join(gds_files)}]'
 
     HARD_CODED_PARAMETERS = {
-        "internal_api_env": "default",
         "genome_build": "hg19",
         "pca_file": "/commons-data/pcs.RData",
         "relatedness_matrix_file": "/commons-data/KINGmatDeg3.RData",

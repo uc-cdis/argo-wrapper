@@ -25,6 +25,7 @@ class RequestBody(BaseModel):  # pylint: disable=too-few-public-methods
 
     n_pcs: int
     covariates: List[str]
+    hare_population: str
     out_prefix: str
     outcome: str
     maf_threshold: float
