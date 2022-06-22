@@ -41,6 +41,7 @@ def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
         "maf_threshold": request_body.get("maf_threshold"),
         "imputation_score_cutoff": request_body.get("imputation_score_cutoff"),
         "hare_population": request_body.get("hare_population"),
+        "prefixed_hare_concept_id": "ID_" + str(request_body.get("hare_concept_id")),
         "internal_api_env": __get_internal_api_env(),
     }
 

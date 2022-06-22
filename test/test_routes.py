@@ -44,6 +44,7 @@ def test_submit_workflow(client):
         "control_cohort_definition_id": -1,
         "workflow_name": "user-input-name",
         "hare_population": "hare_pop_1",
+        "hare_concept_id": 123,
     }
 
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(

@@ -43,6 +43,7 @@ class GWAS(WorkflowBase):
         "genome_build": "hg19",
         "segment_length": 2000,
         "variant_block_size": 1024,
+        "prefixed_hare_concept_id": "ID_2000007027",
     }
 
     ENUM_PARAMETERS_TO_ENUM_VALS = {
