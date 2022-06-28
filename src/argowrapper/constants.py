@@ -5,7 +5,6 @@ ARGO_HOST: Final = "http://argo-argo-workflows-server.argo.svc.cluster.local:274
 TEST_WF: Final = "test.yaml"
 WF_HEADER: Final = "header.yaml"
 ARGO_NAMESPACE: Final = "argo"
-GWAS_HEADER: Final = "gwas_header.yaml"
 TOKEN_REGEX: Final = r"[Bb]earer"
 ARGO_ACCESS_SERVICE: Final = "argo_workflow"
 ARGO_ACCESS_METHOD: Final = "access"

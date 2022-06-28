@@ -1,4 +1,5 @@
 import importlib.resources as pkg_resources
+import json
 import unittest.mock as mock
 
 import pytest
@@ -13,6 +14,14 @@ from test.constants import EXAMPLE_AUTH_HEADER
 class WorkFlow:
     def __init__(self, items):
         self.items = items
+
+
+covariates = [
+    {"variable_type": "concept", "prefixed_concept_id": "ID_2000000324"},
+    {"variable_type": "concept", "prefixed_concept_id": "ID_2000000123"},
+    {"variable_type": "custom_dichotomous", "cohort_ids": [1, 3]},
+]
+outcome = {"concept_type": "concept"}
 
 
 def test_argo_engine_submit_succeeded():
@@ -30,7 +39,7 @@ def test_argo_engine_submit_succeeded():
             "n_pcs": 100,
             "template_version": "test",
             "gen3_user_name": "test_user",
-            "covariates": ["123"],
+            "covariates": covariates,
         }
         result = engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
         assert "argo-wrapper" in result
@@ -152,7 +161,8 @@ def test_argo_engine_submit_yaml_succeeded():
         "n_pcs": 100,
         "template_version": "test",
         "gen3_user_name": "test_user",
-        "covariates": ["123"],
+        "covariates": covariates,
+        "outcome": outcome,
     }
     with mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
@@ -165,10 +175,19 @@ def test_argo_engine_submit_yaml_succeeded():
         ]:
             if (
                 param_name := parameter["name"]
-            ) in input_parameters and not "covariates":
+            ) in input_parameters and param_name not in ("covariates", "outcome"):
                 assert parameter["value"] == input_parameters[param_name]
-            elif param_name == "covariates":
-                assert parameter["value"] == " ".join(input_parameters["covariates"])
+
+            if param_name == "covariates":
+                for index, covariate in enumerate(parameter["value"]):
+                    assert covariate == json.dumps(
+                        input_parameters[param_name][index], indent=0
+                    )
+
+            if param_name == "outcome":
+                assert parameter["value"] == json.dumps(
+                    input_parameters[param_name], indent=0
+                )
 
 
 def test_argo_engine_new_submit_succeeded():
@@ -176,10 +195,9 @@ def test_argo_engine_new_submit_succeeded():
     engine.api_instance.create_workflow = mock.MagicMock()
     request_body = {
         "n_pcs": 3,
-        "covariates": ["ID_2000006886", "ID_2000000324"],
+        "covariates": covariates,
         "out_prefix": "vadc_genesis",
-        "outcome": "ID_2000006885",
-        "outcome_is_binary": "false",
+        "outcome": outcome,
         "maf_threshold": 0.01,
         "imputation_score_cutoff": 0.3,
         "template_version": "gwas-template-6226080403eb62585981d9782aec0f3a82a7e906",
@@ -203,10 +221,9 @@ def test_argo_engine_new_submit_failed():
     )
     request_body = {
         "n_pcs": 3,
-        "covariates": ["ID_2000006886", "ID_2000000324"],
+        "covariates": covariates,
         "out_prefix": "vadc_genesis",
-        "outcome": "ID_2000006885",
-        "outcome_is_binary": "false",
+        "outcome": outcome,
         "maf_threshold": 0.01,
         "imputation_score_cutoff": 0.3,
         "template_version": "gwas-template-6226080403eb62585981d9782aec0f3a82a7e906",

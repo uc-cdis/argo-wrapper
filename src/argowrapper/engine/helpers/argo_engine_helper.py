@@ -2,7 +2,7 @@ import json
 import random
 import re
 import string
-from typing import Dict
+from typing import Dict, List
 
 import jwt
 
@@ -25,6 +25,10 @@ def __get_internal_api_env() -> str:
     return "default"
 
 
+def __get_covariates(covariates: List[Dict]):
+    return [json.dumps(covariate, indent=0) for covariate in covariates]
+
+
 def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
     return {
         "source_id": request_body.get("source_id"),
@@ -33,10 +37,8 @@ def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
             "control_cohort_definition_id"
         ),
         "n_pcs": request_body.get("n_pcs"),
-        "covariates": " ".join(request_body.get("covariates")),
-        "outcome": -1  # outcome defaults to an int value of -1 but when set is a str value
-        if request_body.get("outcome") == "-1"
-        else request_body.get("outcome"),
+        "covariates": __get_covariates(request_body.get("covariates")),
+        "outcome": json.dumps(request_body.get("outcome"), indent=0),
         "out_prefix": request_body.get("out_prefix"),
         "maf_threshold": request_body.get("maf_threshold"),
         "imputation_score_cutoff": request_body.get("imputation_score_cutoff"),

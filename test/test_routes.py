@@ -31,11 +31,18 @@ def client(app: FastAPI) -> Generator[TestClient, Any, None]:
 
 
 def test_submit_workflow(client):
+
+    covariates = [
+        {"variable_type": "concept", "prefixed_concept_id": "ID_2000000324"},
+        {"variable_type": "concept", "prefixed_concept_id": "ID_2000000123"},
+        {"variable_type": "custom_dichotomous", "cohort_ids": [1, 3]},
+    ]
+    outcome = {"concept_type": "concept"}
     data = {
         "n_pcs": 5,
-        "covariates": ["1234", "1412"],
+        "covariates": covariates,
         "out_prefix": "test_out_prefix",
-        "outcome": "-1",
+        "outcome": outcome,
         "maf_threshold": 1.01,
         "imputation_score_cutoff": 2.02,
         "template_version": "test",
