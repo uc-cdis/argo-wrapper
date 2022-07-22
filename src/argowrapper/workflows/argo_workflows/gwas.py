@@ -2,7 +2,11 @@ from typing import Dict
 
 import argowrapper.engine.helpers.argo_engine_helper as argo_engine_helper
 from argowrapper import logger
-from argowrapper.constants import POD_COMPLETION_STRATEGY, PVC_NAME, WORKFLOW_ENTRYPOINT
+from argowrapper.constants import (
+    BACKUP_PVC_NAME,
+    POD_COMPLETION_STRATEGY,
+    WORKFLOW_ENTRYPOINT,
+)
 from argowrapper.workflows.workflow_base import WorkflowBase
 
 
@@ -130,7 +134,11 @@ class GWAS(WorkflowBase):
         self._add_hard_coded_spec_parameters()
 
     def _add_spec_volumes(self):
-        self.spec.add_persistent_volume_claim("gateway", PVC_NAME)
+        pvc_name = argo_engine_helper._get_argo_config_dict().get(
+            "pvc", BACKUP_PVC_NAME
+        )
+        logger.info(f"pvc {pvc_name} is used as storage gateway pvc")
+        self.spec.add_persistent_volume_claim("gateway", pvc_name)
         self.spec.add_empty_dir("workdir", "10Gi")
 
     def _add_spec_podMetadata_annotations(self):
