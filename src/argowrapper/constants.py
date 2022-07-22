@@ -12,7 +12,7 @@ ARGO_ACCESS_METHOD: Final = "access"
 ARGO_ACCESS_RESOURCES: Final = "/services/workflow/argo/admin"
 ARGO_CONFIG_PATH: Final = "/argo.json"
 API_VERSION: Final = "argoproj.io/v1alpha1"
-PVC_NAME: Final = "va-input-nfs-pvc"
+BACKUP_PVC_NAME: Final = "va-input-nfs-pvc"
 WORKFLOW_KIND: Final = "workflow"
 
 
