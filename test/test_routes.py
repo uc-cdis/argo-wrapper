@@ -32,26 +32,25 @@ def client(app: FastAPI) -> Generator[TestClient, Any, None]:
 
 def test_submit_workflow(client):
 
-    covariates = [
-        {"variable_type": "concept", "prefixed_concept_id": "ID_2000000324"},
-        {"variable_type": "concept", "prefixed_concept_id": "ID_2000000123"},
+    variables = [
+        {"variable_type": "concept", "concept_id": "2000000324"},
+        {"variable_type": "concept", "concept_id": "2000000123"},
         {"variable_type": "custom_dichotomous", "cohort_ids": [1, 3]},
     ]
-    outcome = {"concept_type": "concept"}
+
     data = {
-        "n_pcs": 5,
-        "covariates": covariates,
-        "out_prefix": "test_out_prefix",
-        "outcome": outcome,
-        "maf_threshold": 1.01,
-        "imputation_score_cutoff": 2.02,
-        "template_version": "test",
-        "source_id": 2,
+        "n_pcs": 3,
+        "variables": variables,
+        "hare_population": "hare",
+        "out_prefix": "vadc_genesis",
+        "outcome": 1,
+        "maf_threshold": 0.01,
+        "imputation_score_cutoff": 0.3,
+        "template_version": "gwas-template-latest",
+        "source_id": 4,
         "case_cohort_definition_id": 70,
         "control_cohort_definition_id": -1,
-        "workflow_name": "user-input-name",
-        "hare_population": "hare_pop_1",
-        "hare_concept_id": 123,
+        "workflow_name": "wf_name",
     }
 
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
