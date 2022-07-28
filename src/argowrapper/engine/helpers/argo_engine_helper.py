@@ -2,7 +2,7 @@ import json
 import random
 import re
 import string
-from typing import Dict
+from typing import Dict, List
 
 import jwt
 
@@ -15,14 +15,19 @@ auth = Auth()
 
 def generate_workflow_name() -> str:
     ending_id = "".join(random.choices(string.digits, k=10))
-    return "argo-wrapper-workflow-" + ending_id
+    return "gwas-workflow-" + ending_id
 
 
 def __get_internal_api_env() -> str:
-    if "qa_scaling_groups" in _get_argo_config_dict():
-        return "qa-mickey"
+    return _get_argo_config_dict().get("environment", "default")
 
-    return "default"
+
+def __get_variables(variables: List[Dict]):
+    variables_in_strings_format = [
+        json.dumps(variable, indent=0) for variable in variables
+    ]
+    variables_string = ",".join(variables_in_strings_format)
+    return f"[{variables_string}]"
 
 
 def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
@@ -32,17 +37,14 @@ def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
         "control_cohort_definition_id": request_body.get(
             "control_cohort_definition_id"
         ),
-        "n_pcs": request_body.get("n_pcs"),
-        "covariates": " ".join(request_body.get("covariates")),
-        "outcome": -1  # outcome defaults to an int value of -1 but when set is a str value
-        if request_body.get("outcome") == "-1"
-        else request_body.get("outcome"),
+        "variables": __get_variables(request_body.get("variables")),
+        "hare_population": request_body.get("hare_population"),
+        "internal_api_env": __get_internal_api_env(),
         "out_prefix": request_body.get("out_prefix"),
+        "outcome": request_body.get("outcome"),
+        "n_pcs": request_body.get("n_pcs"),
         "maf_threshold": request_body.get("maf_threshold"),
         "imputation_score_cutoff": request_body.get("imputation_score_cutoff"),
-        "hare_population": request_body.get("hare_population"),
-        "prefixed_hare_concept_id": "ID_" + str(request_body.get("hare_concept_id")),
-        "internal_api_env": __get_internal_api_env(),
     }
 
 
@@ -69,7 +71,6 @@ def parse_status(status_dict: Dict[str, any]) -> Dict[str, any]:
 def _get_argo_config_dict() -> Dict:
     with open(ARGO_CONFIG_PATH, encoding="utf-8") as file_stream:
         data = json.load(file_stream)
-        logger.debug(data)
         return data
 
 

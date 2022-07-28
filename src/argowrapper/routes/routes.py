@@ -24,11 +24,10 @@ class RequestBody(BaseModel):  # pylint: disable=too-few-public-methods
     """
 
     n_pcs: int
-    covariates: List[str]
+    variables: List[Dict]
     hare_population: str
-    hare_concept_id: int
     out_prefix: str
-    outcome: str
+    outcome: int
     maf_threshold: float
     imputation_score_cutoff: float
     template_version: str

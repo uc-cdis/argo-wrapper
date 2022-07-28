@@ -1,12 +1,13 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
+  generateName: gwas-template-wrapper-
   namespace: argo
   annotations:
     workflows.argoproj.io/version: ">= 3.1.0"
   labels:
     workflows.argoproj.io/archive-strategy: "true"
-    gen3username: "user-test user"
+    gen3username: "user-test"
 spec:
   entrypoint: gwas-workflow
   podGC:
@@ -19,21 +20,22 @@ spec:
       value: "workflow"
       effect: "NoSchedule"
   podMetadata:
-    annotations:
-      gen3username: "test user"
     labels:
-      gen3username: "user-test user"
+      gen3username: "user-test"
+    annotations:
+      gen3username: "test@uchicago.edu"
   arguments:
     parameters:
-      - name: cohort_definition_id
+      - name: internal_api_env
+        value: default
+      - name: source_id
+        value: 4
+      - name: case_cohort_definition_id
         value: 70
-      - name: cohort_middleware_url
-        value: "http://cohort-middleware-service.default/cohort-data/by-source-id/4/by-cohort-definition-id/70"
-      - name: cohort_middleware_body
-        value: |-
-          {
-            "PrefixedConceptIds": ["ID_2000006885", "ID_2000006886", "ID_2000000324"]
-          }
+      - name: control_cohort_definition_id
+        value: -1
+      - name: hare_population
+        value: "non-hispanic White"
       - name: n_pcs
         default: 0
         value: 3
@@ -43,12 +45,6 @@ spec:
         value: vadc_genesis
       - name: outcome
         value: ID_2000006885
-      - name: outcome_is_binary
-        enum:
-          - "TRUE"
-          - "FALSE"
-        default: "FALSE"
-        value: "FALSE"
       - name: pca_file
         value: /commons-data/pcs.RData
       - name: relatedness_matrix_file
@@ -106,6 +102,5 @@ spec:
     - name: workdir
       emptyDir:
         sizeLimit: "10Gi"
-
   workflowTemplateRef:
-    name: gwas-template-6226080403eb62585981d9782aec0f3a82a7e906
+    name: gwas-template

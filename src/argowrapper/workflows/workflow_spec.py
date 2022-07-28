@@ -43,6 +43,10 @@ class WorkflowSpec:
         if kwargs.get("enum"):
             parameter["enum"] = kwargs.get("enum")
 
+        # if a value is None, then remove it, setting a value to None will cause issues
+        if parameter_value is None:
+            del parameter["value"]
+
         self.arguments["parameters"].append(parameter)
 
     def add_enum_parameter(

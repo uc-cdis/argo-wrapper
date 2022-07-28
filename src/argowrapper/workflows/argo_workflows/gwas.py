@@ -39,19 +39,17 @@ class GWAS(WorkflowBase):
     }
 
     PARAMETER_TO_DEFAULT_VALS = {
+        "genome_build": "hg19",
         "n_pcs": 0,
         "internal_api_env": "default",
         "control_cohort_definition_id": -1,
         "out_prefix": "genesis_vadc",
-        "outcome_is_binary": "FALSE",
-        "genome_build": "hg19",
         "segment_length": 2000,
         "variant_block_size": 1024,
-        "prefixed_hare_concept_id": "ID_2000007027",
+        "hare_concept_id": 2000007027,
     }
 
     ENUM_PARAMETERS_TO_ENUM_VALS = {
-        "outcome_is_binary": ["TRUE", "FALSE"],
         "genome_build": ["hg38", "hg19"],
     }
 

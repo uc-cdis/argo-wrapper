@@ -1,55 +1,55 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
+  generateName: gwas-integration-test-wrapper-
   namespace: argo
   annotations:
     workflows.argoproj.io/version: ">= 3.1.0"
   labels:
     workflows.argoproj.io/archive-strategy: "true"
-    gen3username: ""
+    gen3username: "user-test-user"
 spec:
   entrypoint: gwas-workflow
   podGC:
     strategy: OnWorkflowSuccess
   nodeSelector:
-    role: "test-role"
+    role: "workflow"
   tolerations:
     - key: "role"
       operator: "Equal"
-      value: "test-value"
+      value: "workflow"
       effect: "NoSchedule"
   podMetadata:
     labels:
-      gen3username: ""
+      gen3username: "user-test-user"
     annotations:
-      gen3username: ""
+      gen3username: "test-user@uchicago.edu"
   arguments:
     parameters:
-      - name: cohort_definition_id
-        value: 0
-      - name: cohort_middleware_url
-        value: ""
-      - name: cohort_middleware_body
-        value: |-
-          {
-
-          }
+      - name: internal_api_env
+        value: qa-mickey
+      - name: source_id
+        value: 2
+      - name: case_cohort_definition_id
+        value: 401
+      - name: control_cohort_definition_id
+        value: -1
+      - name: hare_population
+        value: ASN
       - name: n_pcs
         default: 0
-        value: 10
-      - name: covariates
-        value: gender age Hare
+        value: 3
+      - name: variables
+        value: |
+          [
+            {"variable_type": "concept", "concept_id": 2000006886},
+            {"variable_type": "concept", "concept_id": 2000006885},
+            {"variable_type": "custom_dichotomous", "cohort_ids": [301, 401], "provided_name": "My Custom Dichotomous"}
+          ]
       - name: out_prefix
-        default: genesis_vadc
-        value: 5k_vhdcprod_height
+        value: vadc_genesis
       - name: outcome
-        value: Height
-      - name: outcome_is_binary
-        enum:
-          - "TRUE"
-          - "FALSE"
-        default: "FALSE"
-        value: "FALSE"
+        value: 2000006885
       - name: pca_file
         value: /commons-data/pcs.RData
       - name: relatedness_matrix_file
@@ -63,7 +63,7 @@ spec:
       - name: n_segments
         value: 0
       - name: segment_length
-        default: 2000
+        default: 10000
         value: 2000
       - name: variant_block_size
         default: 1024
@@ -100,14 +100,9 @@ spec:
             "/commons-data/gds/chr21.merged.vcf.gz.gds",
             "/commons-data/gds/chr22.merged.vcf.gz.gds"
           ]
-
   volumes:
-    - name: gateway
-      persistentVolumeClaim:
-        claimName: va-input-nfs-pvc
     - name: workdir
       emptyDir:
-        sizeLimit: "10Gi"
-
+        sizeLimit: "3Gi"
   workflowTemplateRef:
-    name: test-template
+    name: gwas-template-integration-test

@@ -1,3 +1,4 @@
+from textwrap import indent
 import unittest.mock as mock
 import json
 
@@ -5,14 +6,21 @@ from argowrapper.constants import *
 from argowrapper.workflows.argo_workflows.gwas import *
 from test.constants import EXAMPLE_AUTH_HEADER
 
+variables = [
+    {"variable_type": "concept", "concept_id": "2000000324"},
+    {"variable_type": "concept", "concept_id": "2000000123"},
+    {"variable_type": "custom_dichotomous", "cohort_ids": [1, 3]},
+]
+
 request_body = {
     "n_pcs": 3,
-    "covariates": ["ID_2000006886", "ID_2000000324"],
+    "variables": variables,
+    "hare_population": "hare",
     "out_prefix": "vadc_genesis",
-    "outcome": "-1",
+    "outcome": 1,
     "maf_threshold": 0.01,
     "imputation_score_cutoff": 0.3,
-    "template_version": "gwas-template-6226080403eb62585981d9782aec0f3a82a7e906",
+    "template_version": "gwas-template-latest",
     "source_id": 4,
     "case_cohort_definition_id": 70,
     "control_cohort_definition_id": -1,
@@ -28,6 +36,7 @@ with mock.patch(
     gwas_yaml = gwas._to_dict()
     gwas_metadata = gwas_yaml.get("metadata")
     gwas_spec = gwas_yaml.get("spec")
+    print(gwas_spec)
 
 
 def test_gwas_yaml_apiVersion_and_kind():
@@ -86,20 +95,28 @@ def test_gwas_yaml_spec_arguments():
     )
     user_params = {
         "n_pcs": 3,
-        "covariates": "ID_2000006886 ID_2000000324",
+        "variables": variables,
         "out_prefix": "vadc_genesis",
-        "outcome": -1,
+        "variables": variables,
         "maf_threshold": 0.01,
         "imputation_score_cutoff": 0.3,
     }
 
     for param_name, param_val in user_params.items():
-        assert param_val == parameters[param_name]
+        if param_name == "variables":
+            for _, variable in enumerate(param_val):
+                result = parameters[param_name].replace("\n", "")
+                for key in variable:
+                    assert str(key) in result
+
+        elif param_name == "outcome":
+            assert json.dumps(param_val, indent=0) == parameters[param_name]
+        else:
+            assert param_val == parameters[param_name]
 
     hardcoded_params = {
         "pca_file": "/commons-data/pcs.RData",
         "relatedness_matrix_file": "/commons-data/KINGmatDeg3.RData",
-        "genome_build": "hg19",
         "segment_length": 2000,
         "variant_block_size": 100,
         "mac_threshold": 0,
