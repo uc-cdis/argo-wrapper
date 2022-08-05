@@ -116,3 +116,15 @@ def test_get_username_from_token():
     assert (
         argo_engine_helper.get_username_from_token(EXAMPLE_AUTH_HEADER) == "test user"
     )
+
+
+def test___get_variables():
+    variables = variables = [
+        {"variable_type": "concept", "concept_id": "2000000324", "uiid": 123},
+        {"variable_type": "concept", "concept_id": "2000000123", "uuid": 456},
+        {"variable_type": "custom_dichotomous", "cohort_ids": [1, 3], "uiid": 12345},
+    ]
+
+    result = argo_engine_helper.__get_variables(variables)
+    assert "uuid" not in result
+    assert "uiid" not in result

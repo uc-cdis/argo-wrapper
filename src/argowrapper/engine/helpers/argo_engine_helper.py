@@ -23,6 +23,11 @@ def __get_internal_api_env() -> str:
 
 
 def __get_variables(variables: List[Dict]):
+
+    for variable in variables:
+        variable.pop("uiid", None)
+        variable.pop("uuid", None)
+
     variables_in_strings_format = [
         json.dumps(variable, indent=0) for variable in variables
     ]
