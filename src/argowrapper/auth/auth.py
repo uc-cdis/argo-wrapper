@@ -24,7 +24,7 @@ class Auth:
 
     def _parse_jwt(self, token: str) -> str:
 
-        parsed_token = re.sub(TOKEN_REGEX, "", token)
+        parsed_token = TOKEN_REGEX.sub("", token)
         parsed_token = parsed_token.replace(" ", "")
         if len(parsed_token.split(".")) != 3:
             logger.error("malformed token")

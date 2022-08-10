@@ -1,3 +1,4 @@
+from re import A
 import unittest.mock as mock
 
 from argowrapper.auth import Auth
@@ -13,6 +14,10 @@ def test_parse_token_suceed():
     token = "bearer something_else.s.s"
     jwt = auth._parse_jwt(token)
     assert jwt == "something_else.s.s"
+
+    token = "beAReR test.test.test"
+    jwt = auth._parse_jwt(token)
+    assert jwt == "test.test.test"
 
 
 def test_parse_token_failed():
