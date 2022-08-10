@@ -25,10 +25,9 @@ jobs:
           ${{ runner.os }}-poetry-
     - name: Install dependencies
       run: |
-        curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python
-        $HOME/.poetry/bin/poetry install
+        python -m pip install --upgrade pip poetry
+        poetry install
         pip install .
-        python -m pip install --upgrade pip
     - name: Test with pytest
       run: |
-        $HOME/.poetry/bin/poetry run pytest test
+        poetry run pytest test
