@@ -15,10 +15,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python
-          $HOME/.poetry/bin/poetry install
+          python -m pip install --upgrade pip poetry
+          poetry install
           pip install .
-          python -m pip install --upgrade pip
 
       - name: Get test coverage and fail if total coverage under 80 percent
         run: |
