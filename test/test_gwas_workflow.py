@@ -63,7 +63,7 @@ def test_gwas_yaml_spec_entrypoint():
 def test_gwas_yaml_spec_podGC():
     assert (
         gwas_spec.get("podGC").get("strategy")
-        == POD_COMPLETION_STRATEGY.ONWORKFLOWSUCCESS.value
+        == POD_COMPLETION_STRATEGY.ONPODSUCESS.value
     )
 
 

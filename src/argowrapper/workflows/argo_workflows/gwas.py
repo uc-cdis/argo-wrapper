@@ -147,7 +147,7 @@ class GWAS(WorkflowBase):
 
     def setup_spec(self):
         super().setup_spec()
-        self.spec.set_podGC_strategy(POD_COMPLETION_STRATEGY.ONWORKFLOWSUCCESS.value)
+        self.spec.set_podGC_strategy(POD_COMPLETION_STRATEGY.ONPODSUCESS.value)
         self._add_spec_scaling_group()
         self._add_spec_podMetadata_annotations()
         self._add_spec_podMetadata_labels()
