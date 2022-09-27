@@ -3,6 +3,7 @@ from typing import Dict, List, NamedTuple
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
+import html
 from pydantic import BaseModel
 from starlette.status import (
     HTTP_200_OK,
@@ -77,9 +78,8 @@ def submit_workflow(
     """route to submit workflow"""
 
     try:
-        return argo_engine.workflow_submission(
-            request_body.dict(), request.headers.get("Authorization")
-        )
+        auth_token = html.escape(request.headers.get("Authorization"))
+        return argo_engine.workflow_submission(request_body.dict(), auth_token)
 
     except Exception as exception:
         return HTMLResponse(
@@ -132,13 +132,12 @@ def get_workflows(
 ) -> List[NamedTuple]:
 
     try:
-        return argo_engine.get_archived_workfows_for_user(
-            request.headers.get("Authorization")
-        )
+        auth_token = html.escape(request.headers.get("Authorization"))
+        return argo_engine.get_archived_workfows_for_user(auth_token)
 
     except Exception as exception:
         return HTMLResponse(
-            content=exception,
+            content=str(exception),
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -155,7 +154,7 @@ def get_workflows(
 
     except Exception as exception:
         return HTMLResponse(
-            content=exception,
+            content=str(exception),
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -169,11 +168,12 @@ def get_workflows(
     """returns the list of workflows the user has ran"""
 
     try:
-        return argo_engine.get_workfows_for_user(request.headers.get("Authorization"))
+        auth_token = html.escape(request.headers.get("Authorization"))
+        return argo_engine.get_workfows_for_user(auth_token)
 
     except Exception as exception:
         return HTMLResponse(
-            content=exception,
+            content=str(exception),
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -191,6 +191,6 @@ def get_workflow_logs(
 
     except Exception as exception:
         return HTMLResponse(
-            content=exception,
+            content=str(exception),
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )
