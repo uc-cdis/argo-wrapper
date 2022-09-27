@@ -79,7 +79,8 @@ class WorkflowSpec:
 
         if pod_metadata_label_key in self.podMetadata.get("labels"):
             logger.warning(
-                f"pod metadata label {pod_metadata_label_key} will be overwritten with value {pod_metadata_label_val}"
+                f"pod metadata label {pod_metadata_label_key} \
+                    will be overwritten with value {pod_metadata_label_val}"
             )
 
         self.podMetadata["labels"][pod_metadata_label_key] = pod_metadata_label_val
@@ -92,7 +93,8 @@ class WorkflowSpec:
 
         if pod_metadata_annotation_key in self.podMetadata.get("annotations"):
             logger.warning(
-                f"pod metadata annotation {pod_metadata_annotation_key} will be overwritten with value {pod_metadata_annotation_val}"
+                f"pod metadata annotation {pod_metadata_annotation_key} \
+                    will be overwritten with value {pod_metadata_annotation_val}"
             )
 
         self.podMetadata["annotations"][

@@ -1,6 +1,6 @@
 import string
 import traceback
-from typing import Dict, List
+from typing import Dict, List, NamedTuple
 
 import argo_workflows
 from argo_workflows.api import archived_workflow_service_api, workflow_service_api
@@ -27,6 +27,10 @@ class ArgoEngine:
         non-archived workflows archive_api_instance (ArchivedWorkflowServiceApi):
         api client to interact with archived workflows
     """
+
+    # TODO we want to make sure that any api calls for a specfici workflow
+    # which is currently: cancel, get workflow status, get archived workflow status
+    # have a userlabel that matches the generated userlabel from the request's auth token
 
     def __repr__(self) -> str:
         return f"dry_run={self.dry_run}"
@@ -57,6 +61,79 @@ class ArgoEngine:
             # Note that _check_return_type=False avoids an existing issue with OpenAPI generator.
             _check_return_type=False,
         ).to_dict()
+
+    def get_archived_workfows_for_user(self, auth_header: str) -> List[NamedTuple]:
+        """
+        Gets archived workflows for user
+
+        Args:
+            auth_header (str): authorization header that contains the user's jwt token
+
+        Raises:
+            exception: archeive_api_instance.list_archived_workflows error
+
+        Returns:
+            List[NamedTuple]: a list of ArchivedWorkflowNameAndUID
+        """
+        username = argo_engine_helper.get_username_from_token(auth_header)
+        user_label = argo_engine_helper.convert_gen3username_to_label(username)
+        label_selector = f"gen3username={user_label}"
+
+        try:
+            archived_workflows = self.archeive_api_instance.list_archived_workflows(
+                list_options_label_selector=label_selector,
+                _check_return_type=False,
+            ).items
+
+            if not archived_workflows:
+                logger.info(f"no archived workflows exist for user {username}")
+                return []
+
+            archievd_workflow_metadatas = [
+                workflow.get("metadata", {}) for workflow in archived_workflows
+            ]
+            name_UID_pairs = [
+                argo_engine_helper.ArchivedWorkflowNameAndUID(
+                    metadata.get("name"), metadata.get("uid")
+                )
+                for metadata in archievd_workflow_metadatas
+            ]
+
+            return name_UID_pairs
+
+        except Exception as exception:
+            logger.error(traceback.format_exc())
+            logger.error(
+                f"could not get archived workflows for {username}, failed with error {exception}"
+            )
+            raise exception
+
+    def get_archived_workflow_status(self, workflow_uid: str) -> Dict[str, any]:
+        """
+        Get archived workflow status
+
+        Args:
+            workflow_uid (str): unique identifier of archived workflow
+
+        Returns:
+            Dict[str, any]: returns a dict that looks like the below
+                            {
+                                "name": {workflow_name},
+                                "arguments": {workflow_arguments},
+                                "phase": {workflow_status} can be running, failed, succeded, canceling, canceled
+                                "progress": {x/total_steps}, tracks which step the workflow is on
+                                "startedAt": {workflow_start_time},
+                                "finishedAt": {workflow_end_time},
+                                "outputs": {workflow_outputs}
+                            }
+        """
+
+        archived_wf_info = self.archeive_api_instance.get_archived_workflow(
+            uid=workflow_uid,
+            _check_return_type=False,
+        ).to_dict()
+
+        return argo_engine_helper.parse_archived_workflow_status(archived_wf_info)
 
     def get_workflow_status(self, workflow_name: str) -> Dict[str, any]:
         """

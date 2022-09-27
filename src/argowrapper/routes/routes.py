@@ -1,5 +1,5 @@
 from functools import wraps
-from typing import Dict, List
+from typing import Dict, List, NamedTuple
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
@@ -122,6 +122,40 @@ def cancel_workflow(
     except Exception as exception:
         return HTMLResponse(
             content=str(exception),
+            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+@router.get("/archivedWorkflows", status_code=HTTP_200_OK)
+def get_workflows(
+    request: Request,  # pylint: disable=unused-argument
+) -> List[NamedTuple]:
+
+    try:
+        return argo_engine.get_archived_workfows_for_user(
+            request.headers.get("Authorization")
+        )
+
+    except Exception as exception:
+        return HTMLResponse(
+            content=exception,
+            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+@router.get("/archivedworkflowstatus/{workflow_uid}", status_code=HTTP_200_OK)
+@check_auth
+def get_workflows(
+    workflow_uid: str,
+    request: Request,  # pylint: disable=unused-argument
+) -> List[str]:
+
+    try:
+        return argo_engine.get_archived_workflow_status(workflow_uid)
+
+    except Exception as exception:
+        return HTMLResponse(
+            content=exception,
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )
 

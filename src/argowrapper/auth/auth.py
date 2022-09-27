@@ -1,5 +1,3 @@
-import re
-
 from gen3authz.client.arborist.client import ArboristClient
 from gen3authz.client.arborist.errors import ArboristError
 

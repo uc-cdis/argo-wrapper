@@ -15,7 +15,8 @@ class WorkflowMetadata:
     ) -> None:
         if metadata_label_key in self.labels:
             logger.warning(
-                f"workflow metadata label {metadata_label_key} will be overwritten with value {metadata_label_val}"
+                f"workflow metadata label {metadata_label_key} \
+                    will be overwritten with value {metadata_label_val}"
             )
 
         self.labels[metadata_label_key] = metadata_label_val
@@ -25,7 +26,8 @@ class WorkflowMetadata:
     ) -> None:
         if metadata_annotation_key in self.annotations:
             logger.warning(
-                f"workflow metadata annotation {metadata_annotation_key} will be overwritten with value {metadata_annotation_val}"
+                f"workflow metadata annotation {metadata_annotation_key} \
+                    will be overwritten with value {metadata_annotation_val}"
             )
 
         self.annotations[metadata_annotation_key] = metadata_annotation_val

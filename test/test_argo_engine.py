@@ -234,3 +234,27 @@ def test_argo_engine_new_submit_failed():
     ) as mock_config_dict, pytest.raises(Exception):
         mock_config_dict.return_value = config
         res = engine.workflow_submission(request_body, EXAMPLE_AUTH_HEADER)
+
+
+def test_argo_engine_get_archived_workflows_succeed():
+    workflows = [
+        {"metadata": {"name": "wf_1", "uid": "wf_1_uid"}},
+        {"metadata": {"name": "wf_2", "uid": "wf_2_uid"}},
+    ]
+
+    engine = ArgoEngine()
+    engine.archeive_api_instance.list_archived_workflows = mock.MagicMock(
+        return_value=WorkFlow(workflows)
+    )
+
+    with mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper.get_username_from_token"
+    ), mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_label"
+    ):
+        result = engine.get_archived_workfows_for_user("test_jwt_token")
+        assert len(result) == 2
+        assert result[0].name == "wf_1"
+        assert result[0].UID == "wf_1_uid"
+        assert result[1].name == "wf_2"
+        assert result[1].UID == "wf_2_uid"

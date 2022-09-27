@@ -1,3 +1,4 @@
+from collections import namedtuple
 import json
 import random
 import re
@@ -12,10 +13,38 @@ from argowrapper.constants import ARGO_CONFIG_PATH
 
 auth = Auth()
 
+ArchivedWorkflowNameAndUID = namedtuple("ArchivedWorkflowNameAndUID", "name UID")
+
 
 def generate_workflow_name() -> str:
     ending_id = "".join(random.choices(string.digits, k=10))
     return "gwas-workflow-" + ending_id
+
+
+def parse_archived_workflow_status(status_dict: Dict[str, any]) -> Dict[str, any]:
+    wf_metadata = status_dict.get("metadata", {})
+    wf_spec = status_dict.get("spec", {})
+    wf_status = status_dict.get("status", {})
+
+    phase = wf_status.get("phase")
+    shutdown = wf_spec.get("shutdown")
+    if shutdown == "Terminate" and phase == "Running":
+        phase = "Canceling"
+    if shutdown == "Terminate" and phase == "Failed":
+        phase = "Canceled"
+
+    logger.warning(wf_metadata)
+
+    return {
+        "name": wf_metadata.get("name"),
+        "wf_name": wf_metadata.get("annotations", {}).get("workflow_name"),
+        "arguments": wf_metadata.get("arguments"),
+        "phase": phase,
+        "progress": wf_status.get("progress"),
+        "startedAt": wf_status.get("startedAt"),
+        "finishedAt": wf_status.get("finishedAt"),
+        "outputs": wf_status.get("outputs", {}),
+    }
 
 
 def __get_internal_api_env() -> str:
@@ -89,7 +118,8 @@ def add_scaling_groups(gen3_user_name: str, workflow: Dict) -> None:
     scaling_group = user_to_scaling_groups.get(gen3_user_name)
     if not scaling_group:
         logger.error(
-            f"user {gen3_user_name} is not a part of any scaling group, setting group to automatically be workflow"
+            f"user {gen3_user_name} is not a part of any scaling group, \
+                setting group to automatically be workflow"
         )
         scaling_group = "workflow"
 
@@ -102,6 +132,8 @@ def _convert_to_hex(special_character_match: str) -> str:
     if (match := special_character_match.group()) :
         hex_val = match.encode("utf-8").hex()
         return f"-{hex_val}"
+
+    return ""
 
 
 def convert_gen3username_to_label(username: str) -> str:
@@ -118,7 +150,8 @@ def convert_gen3username_to_label(username: str) -> str:
         str: converted string where all special characters are replaced with "-{hex_value}"
     """
 
-    # TODO: please not that there are more special characteres than this https://stackoverflow.com/questions/2049502/what-characters-are-allowed-in-an-email-address/2071250#2071250
+    # TODO: please not that there are more special characteres than this
+    # https://stackoverflow.com/questions/2049502/what-characters-are-allowed-in-an-email-address/2071250#2071250
     # in order to address this have a list of accepted characters and regex match everything that is not accepted
     special_characters = re.escape(string.punctuation)
     regex = f"[{special_characters}]"
