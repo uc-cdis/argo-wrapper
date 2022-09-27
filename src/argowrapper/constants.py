@@ -19,6 +19,7 @@ WORKFLOW_KIND: Final = "workflow"
 class POD_COMPLETION_STRATEGY(Enum):
     ONWORKFLOWSUCCESS: Final = "OnWorkflowSuccess"
     ONPODSUCESS: Final = "OnPodSuccess"
+    ONPODCOMPLETION: Final = "OnPodCompletion"
 
 
 class WORKFLOW_ENTRYPOINT(Enum):
