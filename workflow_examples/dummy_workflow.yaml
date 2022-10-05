@@ -1,0 +1,52 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: dummy-example-
+  labels:
+    gen3username: "user-dummyuser"
+    workflows.argoproj.io/archive-strategy: "false"
+  annotations:
+    workflows.argoproj.io/description: |
+      This is a simple hello world example with a gen3username label,
+      adapted from https://raw.githubusercontent.com/argoproj/argo-workflows/master/examples/hello-world.yaml
+spec:
+#=======================
+# the workflow:
+#=======================
+  entrypoint: whalesay
+  templates:
+  - name: whalesay
+    steps:
+    - - name: wait-5s
+        template: wait-seconds
+        arguments:
+          parameters:
+          - name: seconds
+            value: 5
+    - - name: print-hello
+        template: print-message
+        arguments:
+          parameters:
+          - name: message
+            value: hello-argo-world!
+
+#=======================
+# the step definitions:
+#=======================
+  - name: wait-seconds
+    inputs:
+      parameters:
+      - name: seconds
+    container:
+      image: docker/whalesay:latest
+      command: [sleep]
+      args: ["{{inputs.parameters.seconds}}"]
+
+  - name: print-message
+    inputs:
+      parameters:
+      - name: message
+    container:
+      image: docker/whalesay:latest
+      command: [cowsay]
+      args: ["message: {{inputs.parameters.message}}"]

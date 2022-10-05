@@ -44,15 +44,10 @@ def check_auth(fn):
     def wrapper(*args, **kwargs):
         request = kwargs["request"]
         token = request.headers.get("Authorization")
-        if not token:
-            return HTMLResponse(
-                content="authentication token required",
-                status_code=HTTP_401_UNAUTHORIZED,
-            )
 
         if not auth.authenticate(token=token):
             return HTMLResponse(
-                content="token is not authorized, out of date, or malformed",
+                content="token is missing, not authorized, out of date, or malformed",
                 status_code=HTTP_401_UNAUTHORIZED,
             )
 
