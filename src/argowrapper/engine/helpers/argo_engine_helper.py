@@ -56,10 +56,11 @@ def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
 def parse_status(status_dict: Dict[str, any]) -> Dict[str, any]:
     phase = status_dict["status"].get("phase")
     shutdown = status_dict["spec"].get("shutdown")
-    if shutdown == "Terminate" and phase == "Running":
-        phase = "Canceling"
-    if shutdown == "Terminate" and phase == "Failed":
-        phase = "Canceled"
+    if shutdown == "Terminate":
+        if phase == "Running":
+            phase = "Canceling"
+        if phase == "Failed":
+            phase = "Canceled"
 
     return {
         "name": status_dict["metadata"].get("name"),
@@ -99,7 +100,7 @@ def add_scaling_groups(gen3_user_name: str, workflow: Dict) -> None:
 
 
 def _convert_to_hex(special_character_match: str) -> str:
-    if (match := special_character_match.group()) :
+    if match := special_character_match.group():
         hex_val = match.encode("utf-8").hex()
         return f"-{hex_val}"
 

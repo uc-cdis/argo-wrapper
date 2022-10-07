@@ -127,9 +127,10 @@ class ArgoEngine:
                 f"could not cancel {workflow_name} because workflow not found"
             )
 
-    def get_workfows_for_user(self, auth_header: str) -> List[str]:
+    def get_workfows_for_user(self, auth_header: str) -> List[Dict]:
         """
-        Get a list of all workflow for a new user
+        Get a list of all workflows for a new user. Each item in the list
+        contains the workflow name, its status, start and end time.
 
         Args:
             auth_header: authorization header that contains the user's jwt token
@@ -148,18 +149,18 @@ class ArgoEngine:
                 namespace=ARGO_NAMESPACE,
                 list_options_label_selector=label_selector,
                 _check_return_type=False,
-                fields="items.metadata.name",
+                fields="items.metadata.name,items.metadata.annotations,spec.arguments,items.spec.shutdown,items.status.phase,items.status.progress,items.status.startedAt,items.status.finishedAt",
             )
 
             if not workflows.items:
-                logger.info(f"no workflows exist for user {username}")
+                logger.info(f"no workflows exist for user {user_label}")
                 return []
-
-            names = [
-                workflow.get("metadata", {}).get("name") for workflow in workflows.items
+            workflow_list = [
+                argo_engine_helper.parse_status(workflow)
+                for workflow in workflows.items
             ]
 
-            return names
+            return workflow_list
 
         except Exception as exception:
             logger.error(traceback.format_exc())

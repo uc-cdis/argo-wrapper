@@ -20,7 +20,10 @@ class Auth:
     """
 
     def __init__(self):
-        self.arborist_client = ArboristClient(logger=logger)
+        if ARGO_ACCESS_METHOD == "NONE":
+            pass
+        else:
+            self.arborist_client = ArboristClient(logger=logger)
 
     def _parse_jwt(self, token: str) -> str:
 
@@ -41,17 +44,24 @@ class Auth:
             token (str): authorization token
 
         Returns:
-            bool: is user authorized to access resources in argo
+            bool: True if user is authorized to access resources in argo
         """
+        if not token:
+            logger.error("authentication token required")
+            return False
+
         jwt = self._parse_jwt(token)
 
         try:
-            authorized = self.arborist_client.auth_request(
-                jwt,
-                ARGO_ACCESS_SERVICE,
-                ARGO_ACCESS_METHOD,
-                resources=ARGO_ACCESS_RESOURCES,
-            )
+            if ARGO_ACCESS_METHOD == "NONE":
+                return True
+            else:
+                authorized = self.arborist_client.auth_request(
+                    jwt,
+                    ARGO_ACCESS_SERVICE,
+                    ARGO_ACCESS_METHOD,
+                    resources=ARGO_ACCESS_RESOURCES,
+                )
 
         except ArboristError as exception:
             logger.error(f"error while talking to arborist with error {exception}")

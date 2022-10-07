@@ -10,3 +10,4 @@ All documentation can be found in the [docs](docs) folder, and key documents are
 * [Argo-wrapper APIs](docs/readmes/apis.md)
 * [Argo-wrapper SWAGGER](docs/readmes/swagger.md)
 * [How to create new Argo Engine template](docs/readmes/argo-templates.md)
+* [How to develop and test argo-wrapper locally](docs/readmes/local-dev.md)
