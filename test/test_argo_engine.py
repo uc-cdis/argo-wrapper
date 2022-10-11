@@ -121,16 +121,36 @@ def test_argo_engine_get_status_failed():
         engine.get_workflow_status("test_wf")
 
 
-def test_argo_engine_get_workflow_for_user_suceeded():
+def test_argo_engine_get_workflows_for_user_suceeded():
     """returns list of workflow names if get workflows for user suceeds"""
     engine = ArgoEngine()
-    workflows = [
-        {"metadata": {"name": "archieved_name"}},
-        {"metadata": {"name": "running_name"}},
+    argo_workflows_mock_raw_response = [
+        {
+            "metadata": {"name": "archived_name"},
+            "spec": {"arguments": {}, "shutdown": "Terminate"},
+            "status": {
+                "phase": "Failed",
+                "progress": "0/1",
+                "startedAt": "2022-03-22T18:56:48Z",
+                "finishedAt": "2022-03-22T18:58:48Z",
+            },
+            "outputs": {},
+        },
+        {
+            "metadata": {"name": "running_name"},
+            "spec": {"arguments": {}},
+            "status": {
+                "phase": "Running",
+                "progress": "0/1",
+                "startedAt": "2022-03-22T18:56:48Z",
+                "finishedAt": None,
+            },
+            "outputs": {},
+        },
     ]
 
     engine.api_instance.list_workflows = mock.MagicMock(
-        return_value=WorkFlow(workflows)
+        return_value=WorkFlow(argo_workflows_mock_raw_response)
     )
 
     with mock.patch(
@@ -138,13 +158,15 @@ def test_argo_engine_get_workflow_for_user_suceeded():
     ), mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_label"
     ):
-        result = engine.get_workfows_for_user("test_jwt_token")
-        assert len(result) == 2
-        assert "archieved_name" in result
-        assert "running_name" in result
+        simplified_transformed_workflow_list = engine.get_workfows_for_user(
+            "test_jwt_token"
+        )
+        assert len(simplified_transformed_workflow_list) == 2
+        assert "archived_name" == simplified_transformed_workflow_list[0]["name"]
+        assert "running_name" == simplified_transformed_workflow_list[1]["name"]
 
 
-def test_argo_engine_get_workflow_for_user_failed():
+def test_argo_engine_get_workflows_for_user_failed():
     """returns error message if get workflows for user fails"""
     engine = ArgoEngine()
     engine.api_instance.list_workflows = mock.MagicMock(
