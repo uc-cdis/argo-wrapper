@@ -1,20 +1,40 @@
 ## How to deploy Argo-wrapper in a Gen3 environment
 
-### Prereq's
+### Pre-requisites
 
-1. Make sure that argo-engine is alredy deployed. if not please refer to [Argo Engine](argo-engine.md)
+Make sure that argo-engine is already deployed. If not, please refer to [Argo Engine](argo-engine.md)
 
-### Deployment to a commons that already has argo-wrapper installed
+### (One time only) pre-deployment steps for a data commons that does not yet have argo-wrapper installed
 
-2. Check if argo-wrapper is deployment to your commons via running `kubectl get pods | grep argo-wrapper`. If a pod is returned via the previous command then to redeploy run `gen3 delete deployment.apps argo-wrapper-deployment && gen3 roll argo-wrapper `
+Add argo-wrapper to the manifest.json of the environment:
 
-### Deployment to an data commons that does not have argo-wrapper installed
+- If in qa then the environment manifests are stored [here](https://github.com/uc-cdis/gitops-qa).
+- If a production environment then [here](https://github.com/uc-cdis/cdis-manifest).
 
-3. Add argo-wrapper to the manifest.json of the enviorment. If in qa then the enviorment manifests are stored [here](https://github.com/uc-cdis/gitops-qa). If a production enviorment then [here](https://github.com/uc-cdis/cdis-manifest). After that ssh onto the enviorment and run `gen3 roll argo-wrapper`
+After that, run deployment steps listed in the subsection below.
+
+### Deployment steps
+
+Connect (ssh) to the environment and deploy from the command line using:
+
+```
+echo "====== Pull manifest without going into directory ====== "
+git -C ~/cdis-manifest pull
+echo "====== Update the manifest configmaps ======"
+gen3 kube-setup-secrets
+echo "====== Deploy ======"
+gen3 roll argo-wrapper
+```
+
+Check if argo-wrapper is up and running using:
+
+```
+kubectl get pods | grep argo-wrapper`
+```
 
 ### Auth and User YAML
 
-4. Argo-wrapper utilizes Gen3's policy engine, [Arborist](https://github.com/uc-cdis/arborist), for authorization. It is defined as the following in qa-mickey:
+1. Argo-wrapper utilizes Gen3's policy engine, [Arborist](https://github.com/uc-cdis/arborist), for authorization. It is defined as the following in qa-mickey:
     1. Role
         ```yaml
             - id: 'workflow_admin'
@@ -25,7 +45,7 @@
                     method: 'access'
         ```
 
-5. Give the `workflow_admin` policy to those users who need it.
+2. Assign the `workflow_admin` policy to the user whom should be granted permission for submitting Argo workflows through argo-wrapper:
 ```yaml
     policies:
     - workflow_admin
