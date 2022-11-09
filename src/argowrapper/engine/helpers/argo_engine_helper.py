@@ -18,7 +18,7 @@ def generate_workflow_name() -> str:
     return "gwas-workflow-" + ending_id
 
 
-def __get_internal_api_env() -> str:
+def _get_internal_api_env() -> str:
     return _get_argo_config_dict().get("environment", "default")
 
 
@@ -38,15 +38,15 @@ def __get_variables(variables: List[Dict]):
 def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
     return {
         "source_id": request_body.get("source_id"),
+        "study_population_cohort": request_body.get("study_population_cohort"),
         "case_cohort_definition_id": request_body.get("case_cohort_definition_id"),
         "control_cohort_definition_id": request_body.get(
             "control_cohort_definition_id"
         ),
         "variables": __get_variables(request_body.get("variables")),
         "hare_population": request_body.get("hare_population"),
-        "internal_api_env": __get_internal_api_env(),
         "out_prefix": request_body.get("out_prefix"),
-        "outcome": request_body.get("outcome"),
+        "outcome": json.dumps(request_body.get("outcome"), indent=0),
         "n_pcs": request_body.get("n_pcs"),
         "maf_threshold": request_body.get("maf_threshold"),
         "imputation_score_cutoff": request_body.get("imputation_score_cutoff"),

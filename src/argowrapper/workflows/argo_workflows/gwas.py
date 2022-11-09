@@ -121,7 +121,7 @@ class GWAS(WorkflowBase):
         self._add_param_helper(self.HARD_CODED_PARAMETERS)
 
     def _add_spec_parameters(self):
-        """spec parameter ordering matters and must aline with input parameter order
+        """spec parameter ordering matters and must align with input parameter order
         in the self.template_ref. Thus we setup the user defined parameters then
         hard coded ones.
 
@@ -130,6 +130,9 @@ class GWAS(WorkflowBase):
         """
         self._add_user_defined_spec_parameters()
         self._add_hard_coded_spec_parameters()
+        self._add_param_helper(
+            {"internal_api_env": argo_engine_helper._get_internal_api_env()}
+        )
 
     def _add_spec_volumes(self):
         pvc_name = argo_engine_helper._get_argo_config_dict().get(
