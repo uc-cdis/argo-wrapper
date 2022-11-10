@@ -118,18 +118,6 @@ def test_get_username_from_token():
     )
 
 
-def test___get_variables():
-    variables = variables = [
-        {"variable_type": "concept", "concept_id": "2000000324", "uiid": 123},
-        {"variable_type": "concept", "concept_id": "2000000123", "uuid": 456},
-        {"variable_type": "custom_dichotomous", "cohort_ids": [1, 3], "uiid": 12345},
-    ]
-
-    result = argo_engine_helper.__get_variables(variables)
-    assert "uuid" not in result
-    assert "uiid" not in result
-
-
 def test__convert_request_body_to_parameter_dict():
     request_body = {
         "source_id": 1,
@@ -158,16 +146,20 @@ def test__convert_request_body_to_parameter_dict():
         request_body=request_body
     )
     # expect the same as above, but with complex values stringified:
-    assert result == {
+    expected_result = {
         "source_id": 1,
         "study_population_cohort": 123,
         "case_cohort_definition_id": 456,
         "control_cohort_definition_id": 789,
-        "variables": '[{\n"variable_type": "concept",\n"concept_id": 2000000324\n},{\n"variable_type": "concept",\n"concept_id": 2000006885\n},{\n"variable_type": "concept",\n"concept_id": 2000007027\n},{\n"variable_type": "custom_dichotomous",\n"provided_name": "my outcome",\n"cohort_ids": [\n1,\n99\n]\n}]',
+        "variables": '[\n{\n"variable_type": "concept",\n"concept_id": 2000000324\n},\n{\n"variable_type": "concept",\n"concept_id": 2000006885\n},\n{\n"variable_type": "concept",\n"concept_id": 2000007027\n},\n{\n"variable_type": "custom_dichotomous",\n"provided_name": "my outcome",\n"cohort_ids": [\n1,\n99\n]\n}\n]',
         "hare_population": "Hispanic",
+        "hare_concept_id": 2000007027,
         "out_prefix": "abc",
         "outcome": '{\n"variable_type": "concept",\n"concept_id": 2000001234\n}',
         "n_pcs": 3,
         "maf_threshold": 0.5,
         "imputation_score_cutoff": 0.3,
     }
+    assert len(expected_result.items()) == len(result.items())
+    for key, value in expected_result.items():
+        assert value == result[key]

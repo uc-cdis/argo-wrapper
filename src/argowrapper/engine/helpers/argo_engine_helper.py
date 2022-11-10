@@ -22,35 +22,15 @@ def _get_internal_api_env() -> str:
     return _get_argo_config_dict().get("environment", "default")
 
 
-def __get_variables(variables: List[Dict]):
-
-    for variable in variables:
-        variable.pop("uiid", None)
-        variable.pop("uuid", None)
-
-    variables_in_strings_format = [
-        json.dumps(variable, indent=0) for variable in variables
-    ]
-    variables_string = ",".join(variables_in_strings_format)
-    return f"[{variables_string}]"
-
-
 def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
-    return {
-        "source_id": request_body.get("source_id"),
-        "study_population_cohort": request_body.get("study_population_cohort"),
-        "case_cohort_definition_id": request_body.get("case_cohort_definition_id"),
-        "control_cohort_definition_id": request_body.get(
-            "control_cohort_definition_id"
-        ),
-        "variables": __get_variables(request_body.get("variables")),
-        "hare_population": request_body.get("hare_population"),
-        "out_prefix": request_body.get("out_prefix"),
-        "outcome": json.dumps(request_body.get("outcome"), indent=0),
-        "n_pcs": request_body.get("n_pcs"),
-        "maf_threshold": request_body.get("maf_threshold"),
-        "imputation_score_cutoff": request_body.get("imputation_score_cutoff"),
-    }
+    """Basically returns a copy of the given dict, but with complex values stringified"""
+    dict_with_stringified_items = {}
+    for key, value in request_body.items():
+        if isinstance(value, (float, str, int)):
+            dict_with_stringified_items[key] = value
+        else:
+            dict_with_stringified_items[key] = json.dumps(value, indent=0)
+    return dict_with_stringified_items
 
 
 def parse_status(status_dict: Dict[str, any]) -> Dict[str, any]:
