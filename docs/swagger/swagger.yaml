@@ -9,58 +9,6 @@ components:
           type: array
       title: HTTPValidationError
       type: object
-    RequestBody:
-      description: A class that encompases the request body being passed
-      properties:
-        cohort_definition_id:
-          title: Cohort Definition Id
-          type: integer
-        covariates:
-          items:
-            type: string
-          title: Covariates
-          type: array
-        imputation_score_cutoff:
-          title: Imputation Score Cutoff
-          type: number
-        maf_threshold:
-          title: Maf Threshold
-          type: number
-        n_pcs:
-          title: N Pcs
-          type: integer
-        out_prefix:
-          title: Out Prefix
-          type: string
-        outcome:
-          title: Outcome
-          type: string
-        outcome_is_binary:
-          title: Outcome Is Binary
-          type: string
-        source_id:
-          title: Source Id
-          type: integer
-        template_version:
-          title: Template Version
-          type: string
-        workflow_name:
-          title: Workflow Name
-          type: string
-      required:
-      - n_pcs
-      - covariates
-      - out_prefix
-      - outcome
-      - outcome_is_binary
-      - maf_threshold
-      - imputation_score_cutoff
-      - template_version
-      - source_id
-      - cohort_definition_id
-      - workflow_name
-      title: RequestBody
-      type: object
     ValidationError:
       properties:
         loc:
@@ -163,8 +111,7 @@ paths:
       requestBody:
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/RequestBody'
+            schema: {}
         required: true
       responses:
         '200':
