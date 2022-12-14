@@ -1,9 +1,8 @@
 from functools import wraps
-from typing import Dict, List
+from typing import Dict, List, Any
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
 from starlette.status import (
     HTTP_200_OK,
     HTTP_401_UNAUTHORIZED,
@@ -16,25 +15,6 @@ from argowrapper.engine.argo_engine import ArgoEngine
 router = APIRouter()
 argo_engine = ArgoEngine()
 auth = Auth()
-
-
-class RequestBody(BaseModel):  # pylint: disable=too-few-public-methods
-    """
-    A class that encompases the request body being passed
-    """
-
-    n_pcs: int
-    variables: List[Dict]
-    hare_population: str
-    out_prefix: str
-    outcome: int
-    maf_threshold: float
-    imputation_score_cutoff: float
-    template_version: str
-    source_id: int
-    case_cohort_definition_id: int
-    control_cohort_definition_id: int
-    workflow_name: str
 
 
 def check_auth(fn):
@@ -66,14 +46,14 @@ def test():
 @router.post("/submit", status_code=HTTP_200_OK)
 @check_auth
 def submit_workflow(
-    request_body: RequestBody,
+    request_body: Dict[Any, Any],
     request: Request,  # pylint: disable=unused-argument
 ) -> str:
     """route to submit workflow"""
 
     try:
         return argo_engine.workflow_submission(
-            request_body.dict(), request.headers.get("Authorization")
+            request_body, request.headers.get("Authorization")
         )
 
     except Exception as exception:
