@@ -153,7 +153,6 @@ class ArgoEngine:
             )
             archived_workflow_list_return = (
                 self.archive_api_instance.list_archived_workflows(
-                    namespace=ARGO_NAMESPACE,
                     list_options_label_selector=label_selector,
                     _check_return_type=False,
                 )
