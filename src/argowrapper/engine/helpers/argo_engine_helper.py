@@ -54,6 +54,39 @@ def parse_status(status_dict: Dict[str, any]) -> Dict[str, any]:
     }
 
 
+def parse_list_item(list_dict: Dict[str, any], workflow_type: str) -> Dict[str, any]:
+    phase = list_dict["status"].get("phase")
+    if workflow_type == "active_workflow":
+        shutdown = list_dict["spec"].get("shutdown")
+        if shutdown == "Terminate":
+            if phase == "Running":
+                phase = "Canceling"
+            if phase == "Failed":
+                phase = "Canceled"
+    elif workflow_type == "archived_workflow": 
+        pass
+
+    return {
+        "name": list_dict["metadata"].get("name"),
+        "uid": list_dict["metadata"].get("uid"),
+        "phase": phase,
+        "startedAt": list_dict["status"].get("startedAt"),
+        "finishedAt": list_dict["status"].get("finishedAt")
+    }
+
+
+def remove_list_duplicate(workflow_list: List[Dict], archived_workflow_list: List[Dict]) -> List[Dict]:
+    uniq_list = workflow_list
+    uid_list = [single_workflow.get("uid") for single_workflow in workflow_list]
+    for archive_workflow in archived_workflow_list:
+        archive_workflow_uid = archive_workflow.get("uid")
+        if archive_workflow_uid not in uid_list:
+            uniq_list.append(archive_workflow)
+        else:
+            pass
+    return uniq_list
+
+
 def _get_argo_config_dict() -> Dict:
     with open(ARGO_CONFIG_PATH, encoding="utf-8") as file_stream:
         data = json.load(file_stream)

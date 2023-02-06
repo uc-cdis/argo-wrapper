@@ -126,31 +126,75 @@ def test_argo_engine_get_workflows_for_user_suceeded():
     engine = ArgoEngine()
     argo_workflows_mock_raw_response = [
         {
-            "metadata": {"name": "archived_name"},
-            "spec": {"arguments": {}, "shutdown": "Terminate"},
+            "metadata": {
+                "name": "workflow_one",
+                "namespace": "argo",
+                "uid": "uid_one"
+                },
+            "spec": {
+                "arguments": {}, 
+                "shutdown": "Terminate"
+                },
             "status": {
                 "phase": "Failed",
-                "progress": "0/1",
                 "startedAt": "2022-03-22T18:56:48Z",
                 "finishedAt": "2022-03-22T18:58:48Z",
-            },
-            "outputs": {},
+            }
         },
         {
-            "metadata": {"name": "running_name"},
-            "spec": {"arguments": {}},
+            "metadata": {
+                "name": "workflow_two",
+                "namespace": "argo",
+                "uid": "uid_2"
+                },
+            "spec": {
+                "arguments": {}
+                },
             "status": {
-                "phase": "Running",
-                "progress": "0/1",
+                "phase": "Succeeded",
                 "startedAt": "2022-03-22T18:56:48Z",
                 "finishedAt": None,
-            },
-            "outputs": {},
+            }
         },
+    ]
+    argo_archived_workflows_mock_raw_response = [
+        {
+            "metadata": {
+                "name": "workflow_two",
+                "namespace": "argo",
+                "uid": "uid_2"
+                },
+            "spec": {
+                "arguments": {}
+                },
+            "status": {
+                "phase": "Succeeded",
+                "startedAt": "2022-03-22T18:56:48Z",
+                "finishedAt": None,
+            }
+        },
+        {
+            "metadata": {
+                "name": "workflow_three",
+                "namespace": "argo",
+                "uid": "uid_3"
+                },
+            "spec": {
+                "arguments": {}
+                },
+            "status": {
+                "phase": "Succeeded",
+                "startedAt": "2023-02-03T18:56:48Z",
+                "finishedAt": None,
+            }
+        }
     ]
 
     engine.api_instance.list_workflows = mock.MagicMock(
         return_value=WorkFlow(argo_workflows_mock_raw_response)
+    )
+    engine.archive_api_instance.list_archived_workflows = mock.MagicMock(
+        return_value=WorkFlow(argo_archived_workflows_mock_raw_response)
     )
 
     with mock.patch(
@@ -158,18 +202,21 @@ def test_argo_engine_get_workflows_for_user_suceeded():
     ), mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_label"
     ):
-        simplified_transformed_workflow_list = engine.get_workfows_for_user(
+        uniq_workflow_list = engine.get_workfows_for_user(
             "test_jwt_token"
         )
-        assert len(simplified_transformed_workflow_list) == 2
-        assert "archived_name" == simplified_transformed_workflow_list[0]["name"]
-        assert "running_name" == simplified_transformed_workflow_list[1]["name"]
+        assert len(uniq_workflow_list) == 3
+        assert "Canceled" == uniq_workflow_list[0]["phase"]
+        assert "workflow_three" == uniq_workflow_list[2]["name"]
 
 
 def test_argo_engine_get_workflows_for_user_failed():
     """returns error message if get workflows for user fails"""
     engine = ArgoEngine()
     engine.api_instance.list_workflows = mock.MagicMock(
+        side_effect=Exception("user does not exist")
+    )
+    engine.archive_api_instance.list_archived_workflows = mock.MagicMock(
         side_effect=Exception("user does not exist")
     )
     with pytest.raises(Exception):

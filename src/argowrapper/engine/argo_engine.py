@@ -41,7 +41,7 @@ class ArgoEngine:
 
         api_client = argo_workflows.ApiClient(configuration)
         self.api_instance = workflow_service_api.WorkflowServiceApi(api_client)
-        self.archeive_api_instance = (
+        self.archive_api_instance = (
             archived_workflow_service_api.ArchivedWorkflowServiceApi(api_client)
         )
 
@@ -145,22 +145,42 @@ class ArgoEngine:
         label_selector = f"gen3username={user_label}"
 
         try:
-            workflows = self.api_instance.list_workflows(
+            workflow_list_return = self.api_instance.list_workflows(
                 namespace=ARGO_NAMESPACE,
                 list_options_label_selector=label_selector,
                 _check_return_type=False,
-                fields="items.metadata.name,items.metadata.annotations,spec.arguments,items.spec.shutdown,items.status.phase,items.status.progress,items.status.startedAt,items.status.finishedAt",
+                fields="items.metadata.name,items.metadata.namespace,items.metadata.uid,items.metadata.creationTimestamp,items.spec.arguments,items.spec.shutdown,items.status.phase,items.status.startedAt,items.status.finishedAt",
+            )
+            archived_workflow_list_return = (
+                self.archive_api_instance.list_archived_workflows(
+                    namespace=ARGO_NAMESPACE,
+                    list_options_label_selector=label_selector,
+                    _check_return_type=False,
+                )
             )
 
-            if not workflows.items:
-                logger.info(f"no workflows exist for user {user_label}")
+            if not (workflow_list_return.items or archived_workflow_list_return.items):
+                logger.info(
+                    f"no active workflows or archived workflow exist for user {user_label}"
+                )
                 return []
-            workflow_list = [
-                argo_engine_helper.parse_status(workflow)
-                for workflow in workflows.items
-            ]
 
-            return workflow_list
+            workflow_list = [
+                argo_engine_helper.parse_list_item(
+                    workflow, workflow_type="active_workflow"
+                )
+                for workflow in workflow_list_return.items
+            ]
+            archived_workflow_list = [
+                argo_engine_helper.parse_list_item(
+                    workflow, workflow_type="archived_workflow"
+                )
+                for workflow in archived_workflow_list_return.items
+            ]
+            uniq_workflow = argo_engine_helper.remove_list_duplicate(
+                workflow_list, archived_workflow_list
+            )
+            return uniq_workflow
 
         except Exception as exception:
             logger.error(traceback.format_exc())

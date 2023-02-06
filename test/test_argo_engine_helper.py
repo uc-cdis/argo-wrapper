@@ -111,6 +111,61 @@ def test_parse_status(parsed_phase, shutdown, phase):
     assert parsed_status.get("phase") == parsed_phase
 
 
+def test_parse_list_item():
+    """tests that workflow list item get correct phase based on workflow shutdown and phase"""
+    wf_list_item = {
+        "metadata": {
+            "name": "test_wk",
+            "uid": "test_uid",
+            "namespace": "argo",
+            "creationTimestamp": "test_starttime"
+
+        },
+        "spec": {
+            "arguments": "test_args",
+            "shutdown": "Terminate"
+        },
+        "status": {
+            "phase": "Running",
+            "startedAt": "test_starttime",
+            "finishedAt": "test_finishtime"
+        }
+    }
+    parsed_list_item = argo_engine_helper.parse_list_item(wf_list_item, "active_workflow")
+    assert parsed_list_item.get("phase") == "Canceling"
+
+
+def test_remove_list_duplicates():
+    """tests that remove_list_duplicates is able to only contain workflows with unique workflow uid"""
+    active_wf_list = [
+        {
+            "name": "test_wf_1",
+            "uid": "test_wf_1_uid",
+            "phase": "Succeeded",
+            "startedAt": "test_start",
+            "finishedAt": "test_end"
+        }
+    ]
+    archived_wf_list = [
+        {
+            "name": "test_wf_1",
+            "uid": "test_wf_1_uid",
+            "phase": "Succeeded",
+            "startedAt": "test_start",
+            "finishedAt": "test_end"
+        },
+        {
+            "name": "test_wf_2",
+            "uid": "test_wf_2_uid",
+            "phase": "Succeeded",
+            "startedAt": "test_start",
+            "finishedAt": "test_end"
+        }
+    ]
+    uniq_wf_list = argo_engine_helper.remove_list_duplicate(active_wf_list, archived_wf_list)
+    assert len(uniq_wf_list) == 2
+
+
 def test_get_username_from_token():
     """tests context["user"]["name"] can be parsed from example auth header"""
     assert (
