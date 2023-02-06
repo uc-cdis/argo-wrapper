@@ -76,8 +76,8 @@ def parse_list_item(list_dict: Dict[str, any], workflow_type: str) -> Dict[str, 
 
 
 def remove_list_duplicate(workflow_list: List[Dict], archived_workflow_list: List[Dict]) -> List[Dict]:
-    uniq_list = workflow_list
-    uid_list = [single_workflow.get("uid") for single_workflow in workflow_list]
+    uniq_list = workflow_list[:]
+    uid_list = tuple([single_workflow.get("uid") for single_workflow in workflow_list])
     for archive_workflow in archived_workflow_list:
         archive_workflow_uid = archive_workflow.get("uid")
         if archive_workflow_uid not in uid_list:

@@ -115,7 +115,7 @@ def test_parse_list_item():
     """tests that workflow list item get correct phase based on workflow shutdown and phase"""
     wf_list_item = {
         "metadata": {
-            "name": "test_wk",
+            "name": "test_wf",
             "uid": "test_uid",
             "namespace": "argo",
             "creationTimestamp": "test_starttime"
@@ -131,8 +131,26 @@ def test_parse_list_item():
             "finishedAt": "test_finishtime"
         }
     }
+    archived_workflow_list_item = {
+        "metadata" : {
+            "name": "test_wf_archived",
+            "uid": "test_uid_archived",
+            "namespace": "argo",
+            "creationTimestamp": "test_starttime_archived"
+        },
+        "spec": {
+            "arguments": {}
+        },
+        "status": {
+            "phase": "Succeeded",
+            "startedAt": "test_starttime",
+            "finishedAt": "test_finishtime"
+        }
+    }
     parsed_list_item = argo_engine_helper.parse_list_item(wf_list_item, "active_workflow")
+    parsed_list_item_archived = argo_engine_helper.parse_list_item(archived_workflow_list_item, "archived_workflow")
     assert parsed_list_item.get("phase") == "Canceling"
+    assert parsed_list_item_archived.get("name") == "test_wf_archived"
 
 
 def test_remove_list_duplicates():
