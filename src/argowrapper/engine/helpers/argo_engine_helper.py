@@ -33,14 +33,17 @@ def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
     return dict_with_stringified_items
 
 
-def parse_status(status_dict: Dict[str, any]) -> Dict[str, any]:
+def parse_status(status_dict: Dict[str, any], workflow_type: str) -> Dict[str, any]:
     phase = status_dict["status"].get("phase")
-    shutdown = status_dict["spec"].get("shutdown")
-    if shutdown == "Terminate":
-        if phase == "Running":
-            phase = "Canceling"
-        if phase == "Failed":
-            phase = "Canceled"
+    if workflow_type == "active_workflow":
+        shutdown = status_dict["spec"].get("shutdown")
+        if shutdown == "Terminate":
+            if phase == "Running":
+                phase = "Canceling"
+            if phase == "Failed":
+                phase = "Canceled"
+    elif workflow_type == "archived_workflow":
+        pass
 
     return {
         "name": status_dict["metadata"].get("name"),
@@ -52,6 +55,9 @@ def parse_status(status_dict: Dict[str, any]) -> Dict[str, any]:
         "finishedAt": status_dict["status"].get("finishedAt"),
         "outputs": status_dict["status"].get("outputs", {}),
     }
+
+
+
 
 
 def parse_list_item(list_dict: Dict[str, any], workflow_type: str) -> Dict[str, any]:

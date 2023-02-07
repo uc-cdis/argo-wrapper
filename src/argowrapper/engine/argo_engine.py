@@ -57,13 +57,21 @@ class ArgoEngine:
             # Note that _check_return_type=False avoids an existing issue with OpenAPI generator.
             _check_return_type=False,
         ).to_dict()
+    
+    def _get_archived_workflow_status_dict(self, uid: str) -> Dict:
 
-    def get_workflow_status(self, workflow_name: str) -> Dict[str, any]:
+        return self.archive_api_instance.get_archived_workflow(
+            uid=uid,
+            _check_return_type=False
+        ).to_dict()
+
+    def get_workflow_status(self, workflow_name: str, uid: str) -> Dict[str, any]:
         """
         Gets the workflow status
 
         Args:
-            workflow_name (str): name of workflow to get status of
+            workflow_name (str): name of an active workflow to get status of
+            uid (str): uid of an archived workflow to get status of
 
         Returns:
             Dict[str, any]: returns a dict that looks like the below
@@ -80,8 +88,21 @@ class ArgoEngine:
         if self.dry_run:
             return "workflow status"
         try:
-            result = self._get_workflow_status_dict(workflow_name)
-            return argo_engine_helper.parse_status(result)
+            archived_workflow_status = self._get_archived_workflow_status_dict(uid)
+            try:
+                archived_wf_status_parsed = argo_engine_helper.parse_status(
+                    archived_workflow_status, 
+                    "archived_workflow"
+                    )
+                return archived_wf_status_parsed
+            except KeyError:
+                logger.info(f"Can't find {workflow_name} workflow at archive workflow endpoint")
+                logger.info(f"Look up {workflow_name} workflow at workflow endpoint")
+                activate_workflow_status_parsed = self._get_workflow_status_dict(workflow_name)
+                return argo_engine_helper.parse_status(
+                    activate_workflow_status_parsed,
+                    "active_workflow"
+                    )
 
         except Exception as exception:
             logger.error(traceback.format_exc())
@@ -91,6 +112,7 @@ class ArgoEngine:
             raise Exception(
                 f"could not get status of {workflow_name}, workflow does not exist"
             )
+        
 
     def cancel_workflow(self, workflow_name: str) -> string:
         """

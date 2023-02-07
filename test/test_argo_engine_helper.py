@@ -107,8 +107,29 @@ def test_parse_status(parsed_phase, shutdown, phase):
         },
     }
 
-    parsed_status = argo_engine_helper.parse_status(wf_status_dict)
+    archived_wf_status_dict = {
+        "metadata": {
+            "name": "test_archived_wf",
+            "annotations": {
+                "workflow_name": "archived_wf_name"
+            }
+        },
+        "spec": {
+            "arguments": "test_args"
+        },
+        "status": {
+            "phase": "Succeeded",
+            "startedAt": "test_starttime",
+            "finishedAt": "test_finishtime",
+            "progress": "7/7",
+            "outputs": {}
+        }
+
+    }
+    parsed_status = argo_engine_helper.parse_status(wf_status_dict, "active_workflow")
+    archived_parsed_status = argo_engine_helper.parse_status(archived_wf_status_dict, "archived_workflow")
     assert parsed_status.get("phase") == parsed_phase
+    assert archived_parsed_status.get("wf_name") == "archived_wf_name"
 
 
 def test_parse_list_item():
