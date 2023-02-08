@@ -57,9 +57,6 @@ def parse_status(status_dict: Dict[str, any], workflow_type: str) -> Dict[str, a
     }
 
 
-
-
-
 def parse_list_item(list_dict: Dict[str, any], workflow_type: str) -> Dict[str, any]:
     phase = list_dict["status"].get("phase")
     if workflow_type == "active_workflow":
