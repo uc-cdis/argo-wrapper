@@ -96,7 +96,7 @@ class ArgoEngine:
                     )
                 return archived_wf_status_parsed
             except KeyError:
-                logger.info(f"Can't find {workflow_name} workflow at archive workflow endpoint")
+                logger.info(f"Can't find {workflow_name} workflow at archived workflow endpoint")
                 logger.info(f"Look up {workflow_name} workflow at workflow endpoint")
                 activate_workflow_status_parsed = self._get_workflow_status_dict(workflow_name)
                 return argo_engine_helper.parse_status(
