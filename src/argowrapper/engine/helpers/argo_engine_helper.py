@@ -75,12 +75,14 @@ def parse_list_item(list_dict: Dict[str, any], workflow_type: str) -> Dict[str, 
         "uid": list_dict["metadata"].get("uid"),
         "phase": phase,
         "startedAt": list_dict["status"].get("startedAt"),
-        "finishedAt": list_dict["status"].get("finishedAt")
+        "finishedAt": list_dict["status"].get("finishedAt"),
     }
 
 
-def remove_list_duplicate(workflow_list: List[Dict], archived_workflow_list: List[Dict]) -> List[Dict]:
-    """Remove any overlap between active workflow list and archived workflow list""""
+def remove_list_duplicate(
+    workflow_list: List[Dict], archived_workflow_list: List[Dict]
+) -> List[Dict]:
+    """Remove any overlap between active workflow list and archived workflow list"""
     uniq_list = workflow_list[:]
     uid_list = tuple([single_workflow.get("uid") for single_workflow in workflow_list])
     for archive_workflow in archived_workflow_list:
