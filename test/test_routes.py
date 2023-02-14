@@ -77,7 +77,7 @@ def test_get_workflow_status(client):
         mock_auth.return_value = True
         mock_engine.return_value = "running"
         response = client.get(
-            "/status/workflow_123",
+            "/status/workflow_123?uid=workflow_uid",
             headers={
                 "Content-Type": "application/json",
                 "Authorization": "bearer 1234",
@@ -134,7 +134,7 @@ def test_get_workflow_logs(client):
             }
         ]
         response = client.get(
-            "/logs/wf_123",
+            "/logs/wf_123?uid=wf_uid",
             headers={
                 "Content-Type": "application/json",
                 "Authorization": "bearer 1234",

@@ -334,3 +334,67 @@ def test_argo_engine_new_submit_failed():
     ) as mock_config_dict, pytest.raises(Exception):
         mock_config_dict.return_value = config
         res = engine.workflow_submission(request_body, EXAMPLE_AUTH_HEADER)
+
+
+def test_argo_engine_get_archived_workflow_log_succeeded():
+    """
+    Fetch workflow details at archived workflow endpoint 
+    """
+    engine = ArgoEngine()
+    mock_return_archived_wf = {
+        "metadata": {
+            "name": "archived_wf"
+        },
+        "spec": {
+            "arguments": "test_args"
+        },
+        "status": {
+            "phase": "Failed",
+            "nodes": {
+                "step_one_name": {
+                    "name": "step_one_name",
+                    "templateName": "step_one_template",
+                    "message": "Error (exit code 126)",
+                    "phase": "Failed"
+                }
+            }
+        }
+    }
+    engine._get_archived_workflow_status_dict = mock.MagicMock(return_value=mock_return_archived_wf)
+    archived_workflow_errors = engine.get_workflow_logs("archived_wf", "archived_uid")
+    assert len(archived_workflow_errors) == 1
+    assert archived_workflow_errors[0]["name"] == "step_one_name"
+    assert archived_workflow_errors[0]["step_template"] == "step_one_template"
+    assert archived_workflow_errors[0]["error_message"] == "Error (exit code 126)"
+
+
+def test_argo_engine_get_workflow_log_succeeded():
+    """
+    Fetch workflow details at workflow endpoint, but failed to fetch at archived workflow endpoint
+    """
+    engine=ArgoEngine()
+    mock_return_archived_wf = {
+        "code": 5,
+        "message": "not found"
+    }
+    mock_return_wf = {
+        "status": {
+            "phase": "Failed",
+            "nodes": {
+                "step_one_name": {
+                    "name": "step_one_name",
+                    "templateName": "step_one_template",
+                    "message": "Error (exit code 126)",
+                    "phase": "Failed"
+                } 
+            }
+               
+        }
+    }
+    engine._get_archived_workflow_status_dict = mock.MagicMock(return_value=mock_return_archived_wf)
+    engine._get_workflow_log_dict = mock.MagicMock(return_value=mock_return_wf)
+    workflow_errors = engine.get_workflow_logs("active_wf", "wf_uid")
+    assert len(workflow_errors) == 1
+    assert workflow_errors[0]["name"] == "step_one_name"
+    assert workflow_errors[0]["step_template"] == "step_one_template"
+    assert workflow_errors[0]["error_message"] == "Error (exit code 126)"
