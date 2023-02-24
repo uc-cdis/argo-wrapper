@@ -123,13 +123,14 @@ def get_workflows(
 @router.get("/logs/{workflow_name}", status_code=HTTP_200_OK)
 @check_auth
 def get_workflow_logs(
-    workflow_name,
+    workflow_name: str,
+    uid: str,
     request: Request,  # pylint: disable=unused-argument
 ) -> List[str]:
     """returns the list of workflows the user has ran"""
 
     try:
-        return argo_engine.get_workflow_logs(workflow_name)
+        return argo_engine.get_workflow_logs(workflow_name, uid)
 
     except Exception as exception:
         return HTMLResponse(
