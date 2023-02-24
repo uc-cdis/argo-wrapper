@@ -85,36 +85,67 @@ def test_argo_engine_cancel_failed():
     with pytest.raises(Exception):
         engine.cancel_workflow("wf_name")
 
-
-def test_argo_engine_get_status_succeeded():
-    """returns "running" for a running workflow if workflow get status suceeds"""
+def test_argo_engine_get_status_archived_workflow_succeeded():
     engine = ArgoEngine()
-    mock_return = {
-        "metadata": {"name": "hello-world-mwnw5"},
-        "spec": {"arguments": {}},
-        "status": {
-            "finishedAt": None,
-            "phase": "Running",
-            "progress": "0/1",
-            "startedAt": "2022-03-22T18:56:48Z",
+    mock_return_archived_wf = {
+        "metadata": {
+            "name": "archived_wf",
+            "annotations": {
+                "workflow_name": "custom_name"
+            }
         },
-        "outputs": {},
+        "spec": {
+            "arguments": "test_args"
+        },
+        "status": {
+            "phase": "Succeeded",
+            "progress": "7/7",
+            "startedAt": "test_starttime",
+            "finishedAt": "test_finishtime",
+            "outputs": {}
+        }
     }
-    engine._get_workflow_status_dict = mock.MagicMock(return_value=mock_return)
-    result = engine.get_workflow_status("test_wf")
-    assert result["name"] == "hello-world-mwnw5"
-    assert result["arguments"] == {}
-    assert result["phase"] == "Running"
-    assert result["progress"] == "0/1"
-    assert result["startedAt"] == "2022-03-22T18:56:48Z"
-    assert result["finishedAt"] == None
-    assert result["outputs"] == {}
+    engine._get_archived_workflow_status_dict = mock.MagicMock(return_value=mock_return_archived_wf)
+    archived_wf_status = engine.get_workflow_status("archived_wf", "archived_uid")
+    assert archived_wf_status["wf_name"] == "custom_name"
+    assert archived_wf_status["progress"] == "7/7"
+    assert archived_wf_status["outputs"] == {}
+
+
+def test_argo_engine_get_status_workflow_succeeded():
+    engine = ArgoEngine()
+    mock_return_archived_wf = {
+        "code": 5,
+        "message": "not found"
+    }
+    mock_return_wf = {
+            "metadata": {
+                "name": "hello-world-mwnw5",
+                "annotations": {
+                    "workflow_name": "custome_wf_name"
+                }
+                },
+            "spec": {"arguments": {}},
+            "status": {
+                "finishedAt": None,
+                "phase": "Running",
+                "progress": "0/1",
+                "startedAt": "2022-03-22T18:56:48Z",
+                "outputs": {}
+            }
+        }
+    engine._get_archived_workflow_status_dict = mock.MagicMock(return_value=mock_return_archived_wf)
+    engine._get_workflow_status_dict = mock.MagicMock(return_value=mock_return_wf)
+    wf_status =  engine.get_workflow_status("test_wf", "wf_uid")
+    assert wf_status["wf_name"] == "custome_wf_name"
+    assert wf_status["phase"] == "Running"
+    assert wf_status["progress"] == "0/1"
 
 
 def test_argo_engine_get_status_failed():
-    """returns empty string if workflow get status fails"""
+    """returns empty string if workflow get status fails at archived workflow endpoint"""
     engine = ArgoEngine()
-    engine._get_workflow_status_dict = mock.MagicMock(
+    engine._get_archived_workflow_status_dict = mock.MagicMock(
         side_effect=Exception("workflow does not exist")
     )
     with pytest.raises(Exception):

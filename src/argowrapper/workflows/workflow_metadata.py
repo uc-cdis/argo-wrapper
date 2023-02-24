@@ -35,11 +35,11 @@ class WorkflowMetadata:
 
     # used to debug workflow metadata state
     def _to_dict(self) -> Dict:
-        dict_representation = {}
+        dict_representation_meta = {}
         for attribute, attribute_val in self.__dict__.items():
             if attribute_val:
-                dict_representation[attribute] = attribute_val
-        return dict_representation
+                dict_representation_meta[attribute] = attribute_val
+        return dict_representation_meta
 
     def to_argo_metadata_dict(self) -> Dict:
         return self._to_dict()
