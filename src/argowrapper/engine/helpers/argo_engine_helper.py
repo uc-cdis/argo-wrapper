@@ -33,14 +33,17 @@ def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
     return dict_with_stringified_items
 
 
-def parse_status(status_dict: Dict[str, any]) -> Dict[str, any]:
+def parse_status(status_dict: Dict[str, any], workflow_type: str) -> Dict[str, any]:
     phase = status_dict["status"].get("phase")
-    shutdown = status_dict["spec"].get("shutdown")
-    if shutdown == "Terminate":
-        if phase == "Running":
-            phase = "Canceling"
-        if phase == "Failed":
-            phase = "Canceled"
+    if workflow_type == "active_workflow":
+        shutdown = status_dict["spec"].get("shutdown")
+        if shutdown == "Terminate":
+            if phase == "Running":
+                phase = "Canceling"
+            if phase == "Failed":
+                phase = "Canceled"
+    elif workflow_type == "archived_workflow":
+        pass
 
     return {
         "name": status_dict["metadata"].get("name"),
@@ -52,6 +55,43 @@ def parse_status(status_dict: Dict[str, any]) -> Dict[str, any]:
         "finishedAt": status_dict["status"].get("finishedAt"),
         "outputs": status_dict["status"].get("outputs", {}),
     }
+
+
+def parse_list_item(list_dict: Dict[str, any], workflow_type: str) -> Dict[str, any]:
+    """Parse the return of workflow list view"""
+    phase = list_dict["status"].get("phase")
+    if workflow_type == "active_workflow":
+        shutdown = list_dict["spec"].get("shutdown")
+        if shutdown == "Terminate":
+            if phase == "Running":
+                phase = "Canceling"
+            if phase == "Failed":
+                phase = "Canceled"
+    elif workflow_type == "archived_workflow":
+        pass
+
+    return {
+        "name": list_dict["metadata"].get("name"),
+        "uid": list_dict["metadata"].get("uid"),
+        "phase": phase,
+        "startedAt": list_dict["status"].get("startedAt"),
+        "finishedAt": list_dict["status"].get("finishedAt"),
+    }
+
+
+def remove_list_duplicate(
+    workflow_list: List[Dict], archived_workflow_list: List[Dict]
+) -> List[Dict]:
+    """Remove any overlap between active workflow list and archived workflow list"""
+    uniq_list = workflow_list[:]
+    uid_list = tuple([single_workflow.get("uid") for single_workflow in workflow_list])
+    for archive_workflow in archived_workflow_list:
+        archive_workflow_uid = archive_workflow.get("uid")
+        if archive_workflow_uid not in uid_list:
+            uniq_list.append(archive_workflow)
+        else:
+            pass
+    return uniq_list
 
 
 def _get_argo_config_dict() -> Dict:
