@@ -204,6 +204,35 @@ def test_remove_list_duplicates():
     uniq_wf_list = argo_engine_helper.remove_list_duplicate(active_wf_list, archived_wf_list)
     assert len(uniq_wf_list) == 2
 
+def test_remove_list_duplicates_both_empty():
+    """Test that remove_list_duplicates is able to handle empty list input"""
+    active_wf_list = []
+    archived_wf_list = []
+    uniq_wf_list = argo_engine_helper.remove_list_duplicate(active_wf_list, archived_wf_list)
+    assert len(uniq_wf_list) == 0
+
+def test_remove_list_duplicates_one_empty():
+    """Test that remove_list_duplicates is able to handle a single empty list input"""
+    archived_wf_list = [
+        {
+            "name": "test_wf_1",
+            "uid": "test_wf_1_uid",
+            "phase": "Succeeded",
+            "startedAt": "test_start",
+            "finishedAt": "test_end"
+        },
+        {
+            "name": "test_wf_2",
+            "uid": "test_wf_2_uid",
+            "phase": "Succeeded",
+            "startedAt": "test_start",
+            "finishedAt": "test_end"
+        }
+    ]
+    active_wf_list = []
+    uniq_wf_list = argo_engine_helper.remove_list_duplicate(active_wf_list, archived_wf_list)
+    assert len(uniq_wf_list) == 2
+    assert "test_wf_2" == uniq_wf_list[1]["name"]
 
 def test_get_username_from_token():
     """tests context["user"]["name"] can be parsed from example auth header"""

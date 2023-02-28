@@ -253,6 +253,80 @@ def test_argo_engine_get_workflows_for_user_failed():
     with pytest.raises(Exception):
         engine.get_workfows_for_user("test")
 
+def test_argo_engine_get_workflows_for_user_empty():
+    """Worklfow list of active workflow is empty"""
+    engine = ArgoEngine()
+    argo_workflows_mock_raw_response = None
+    argo_archived_workflows_mock_raw_response = [
+        {
+            "metadata": {
+                "name": "workflow_two",
+                "namespace": "argo",
+                "uid": "uid_2"
+                },
+            "spec": {
+                "arguments": {}
+                },
+            "status": {
+                "phase": "Succeeded",
+                "startedAt": "2022-03-22T18:56:48Z",
+                "finishedAt": None,
+            }
+        },
+        {
+            "metadata": {
+                "name": "workflow_three",
+                "namespace": "argo",
+                "uid": "uid_3"
+                },
+            "spec": {
+                "arguments": {}
+                },
+            "status": {
+                "phase": "Succeeded",
+                "startedAt": "2023-02-03T18:56:48Z",
+                "finishedAt": None,
+            }
+        }
+    ]
+    engine.api_instance.list_workflows = mock.MagicMock(
+        return_value=WorkFlow(argo_workflows_mock_raw_response)
+    )
+    engine.archive_api_instance.list_archived_workflows = mock.MagicMock(
+        return_value=WorkFlow(argo_archived_workflows_mock_raw_response)
+    )
+    with mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper.get_username_from_token"
+    ), mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_label"
+    ):
+        uniq_workflow_list = engine.get_workfows_for_user(
+            "test_jwt_token"
+        )
+        assert len(uniq_workflow_list) == 2
+        assert "Succeeded" == uniq_workflow_list[0]["phase"]
+        assert "workflow_three" == uniq_workflow_list[1]["name"]
+
+def test_argo_engine_get_workflows_for_user_empty_both():
+    """Both workfow list of active workflow and archived workflow are empty"""
+    engine = ArgoEngine()
+    argo_workflows_mock_raw_response = None
+    argo_archived_workflows_mock_raw_response = None
+    engine.api_instance.list_workflows = mock.MagicMock(
+        return_value=WorkFlow(argo_workflows_mock_raw_response)
+    )
+    engine.archive_api_instance.list_archived_workflows = mock.MagicMock(
+        return_value=WorkFlow(argo_archived_workflows_mock_raw_response)
+    )
+    with mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper.get_username_from_token"
+    ), mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_label"
+    ):
+        uniq_workflow_list = engine.get_workfows_for_user(
+            "test_jwt_token"
+        )
+        assert len(uniq_workflow_list) == 0
 
 def test_argo_engine_submit_yaml_succeeded():
     engine = ArgoEngine()
