@@ -83,7 +83,10 @@ def remove_list_duplicate(
     workflow_list: List[Dict], archived_workflow_list: List[Dict]
 ) -> List[Dict]:
     """Remove any overlap between active workflow list and archived workflow list"""
-    if len(workflow_list) == 0 and len(archived_workflow_list) >= 1:
+    if len(workflow_list) == 0 and len(archived_workflow_list) == 0:
+        uniq_list = []
+        return uniq_list
+    elif len(workflow_list) == 0 and len(archived_workflow_list) >= 1:
         uniq_list = archived_workflow_list[:]
         return uniq_list
     elif len(archived_workflow_list) == 0 and len(workflow_list) >= 1:
