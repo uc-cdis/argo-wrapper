@@ -5,7 +5,7 @@ import unittest.mock as mock
 import pytest
 import yaml
 
-from argo_workflows.exception import NotFoundException
+from argo_workflows.exceptions import NotFoundException
 from argowrapper import argo_workflows_templates
 from argowrapper.constants import *
 from argowrapper.engine.argo_engine import *
