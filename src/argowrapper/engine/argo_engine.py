@@ -210,18 +210,26 @@ class ArgoEngine:
                 )
                 return []
 
-            workflow_list = [
-                argo_engine_helper.parse_list_item(
-                    workflow, workflow_type="active_workflow"
-                )
-                for workflow in workflow_list_return.items
-            ]
-            archived_workflow_list = [
-                argo_engine_helper.parse_list_item(
-                    workflow, workflow_type="archived_workflow"
-                )
-                for workflow in archived_workflow_list_return.items
-            ]
+            if workflow_list_return.items:
+                workflow_list = [
+                    argo_engine_helper.parse_list_item(
+                        workflow, workflow_type="active_workflow"
+                    )
+                    for workflow in workflow_list_return.items
+                ]
+            else:
+                workflow_list = []
+            
+            if archived_workflow_list_return.items:
+                archived_workflow_list = [
+                    argo_engine_helper.parse_list_item(
+                        workflow, workflow_type="archived_workflow"
+                    )
+                    for workflow in archived_workflow_list_return.items
+                ]
+            else:
+                archived_workflow_list = []
+
             uniq_workflow = argo_engine_helper.remove_list_duplicate(
                 workflow_list, archived_workflow_list
             )
