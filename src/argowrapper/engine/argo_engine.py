@@ -10,7 +10,7 @@ from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_create_request 
 from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_terminate_request import (
     IoArgoprojWorkflowV1alpha1WorkflowTerminateRequest,
 )
-from argo_workflow.exception import NotFoundException
+from argo_workflows.exception import NotFoundException
 
 from argowrapper import logger
 from argowrapper.constants import ARGO_HOST, ARGO_NAMESPACE, WORKFLOW
