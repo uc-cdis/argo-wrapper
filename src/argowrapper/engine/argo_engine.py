@@ -10,6 +10,7 @@ from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_create_request 
 from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_terminate_request import (
     IoArgoprojWorkflowV1alpha1WorkflowTerminateRequest,
 )
+from argo_workflow.exception import NotFoundException
 
 from argowrapper import logger
 from argowrapper.constants import ARGO_HOST, ARGO_NAMESPACE, WORKFLOW
@@ -113,21 +114,19 @@ class ArgoEngine:
             return "workflow status"
         try:
             archived_workflow_status = self._get_archived_workflow_status_dict(uid)
-            try:
-                archived_wf_status_parsed = argo_engine_helper.parse_status(
-                    archived_workflow_status, 
-                    "archived_workflow"
-                    )
-                return archived_wf_status_parsed
-            except KeyError:
-                logger.info(f"Can't find {workflow_name} workflow at archived workflow endpoint")
-                logger.info(f"Look up {workflow_name} workflow at workflow endpoint")
-                activate_workflow_status_parsed = self._get_workflow_status_dict(workflow_name)
-                return argo_engine_helper.parse_status(
-                    activate_workflow_status_parsed,
-                    "active_workflow"
-                    )
-
+            archived_wf_status_parsed = argo_engine_helper.parse_status(
+                archived_workflow_status, 
+                "archived_workflow"
+                )
+            return archived_wf_status_parsed
+        except NotFoundException as exception:
+            logger.info(f"Can't find {workflow_name} workflow at archived workflow endpoint")
+            logger.info(f"Look up {workflow_name} workflow at workflow endpoint")
+            activate_workflow_status_parsed = self._get_workflow_status_dict(workflow_name)
+            return argo_engine_helper.parse_status(
+                activate_workflow_status_parsed,
+                "active_workflow"
+                )
         except Exception as exception:
             logger.error(traceback.format_exc())
             logger.error(
