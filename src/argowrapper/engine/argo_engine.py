@@ -76,12 +76,15 @@ class ArgoEngine:
     def _get_log_errors(self, status_nodes_dict: Dict) -> List[Dict]:
         errors = []
         for _, step in status_nodes_dict.items():
-            if step.get("phase") in ("Failed", "Error") and step.get("message", ""):
+            if step.get("phase") in ("Failed", "Error"):
+                message = (
+                    step["message"] if step.get("message") else "No message provided"
+                )
                 errors.append(
                     {
                         "name": step.get("name"),
                         "step_template": step.get("templateName"),
-                        "error_message": step.get("message"),
+                        "error_message": message,
                     }
                 )
             else:
