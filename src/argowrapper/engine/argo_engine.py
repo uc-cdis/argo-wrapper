@@ -58,12 +58,11 @@ class ArgoEngine:
             # Note that _check_return_type=False avoids an existing issue with OpenAPI generator.
             _check_return_type=False,
         ).to_dict()
-    
+
     def _get_archived_workflow_status_dict(self, uid: str) -> Dict:
 
         return self.archive_api_instance.get_archived_workflow(
-            uid=uid,
-            _check_return_type=False
+            uid=uid, _check_return_type=False
         ).to_dict()
 
     def _get_workflow_log_dict(self, workflow_name: str) -> Dict:
@@ -71,13 +70,13 @@ class ArgoEngine:
             namespace=ARGO_NAMESPACE,
             name=workflow_name,
             fields="status.nodes",
-            _check_return_type=False
+            _check_return_type=False,
         ).to_dict()
 
     def _get_log_errors(self, status_nodes_dict: Dict) -> List[Dict]:
-        errors=[]
+        errors = []
         for _, step in status_nodes_dict.items():
-            if step.get("phase") == "Failed" and "Error" in step.get("message", ""):
+            if step.get("phase") in ("Failed", "Error") and step.get("message", ""):
                 errors.append(
                     {
                         "name": step.get("name"),
@@ -88,7 +87,6 @@ class ArgoEngine:
             else:
                 pass
         return errors
-
 
     def get_workflow_status(self, workflow_name: str, uid: str) -> Dict[str, any]:
         """
@@ -115,18 +113,20 @@ class ArgoEngine:
         try:
             archived_workflow_status = self._get_archived_workflow_status_dict(uid)
             archived_wf_status_parsed = argo_engine_helper.parse_status(
-                archived_workflow_status, 
-                "archived_workflow"
-                )
+                archived_workflow_status, "archived_workflow"
+            )
             return archived_wf_status_parsed
         except NotFoundException as exception:
-            logger.info(f"Can't find {workflow_name} workflow at archived workflow endpoint")
+            logger.info(
+                f"Can't find {workflow_name} workflow at archived workflow endpoint"
+            )
             logger.info(f"Look up {workflow_name} workflow at workflow endpoint")
-            activate_workflow_status_parsed = self._get_workflow_status_dict(workflow_name)
+            activate_workflow_status_parsed = self._get_workflow_status_dict(
+                workflow_name
+            )
             return argo_engine_helper.parse_status(
-                activate_workflow_status_parsed,
-                "active_workflow"
-                )
+                activate_workflow_status_parsed, "active_workflow"
+            )
         except Exception as exception:
             logger.error(traceback.format_exc())
             logger.error(
@@ -135,7 +135,6 @@ class ArgoEngine:
             raise Exception(
                 f"could not get status of {workflow_name}, workflow does not exist"
             )
-        
 
     def cancel_workflow(self, workflow_name: str) -> string:
         """
@@ -218,7 +217,7 @@ class ArgoEngine:
                 ]
             else:
                 workflow_list = []
-            
+
             if archived_workflow_list_return.items:
                 archived_workflow_list = [
                     argo_engine_helper.parse_list_item(
@@ -255,15 +254,27 @@ class ArgoEngine:
         try:
             archived_workflow_dict = self._get_archived_workflow_status_dict(uid)
             try:
-                archived_workflow_status_nodes =  archived_workflow_dict["status"].get("nodes")
-                archived_workflow_errors = self._get_log_errors(archived_workflow_status_nodes)
+                archived_workflow_status_nodes = archived_workflow_dict["status"].get(
+                    "nodes"
+                )
+                archived_workflow_errors = self._get_log_errors(
+                    archived_workflow_status_nodes
+                )
                 return archived_workflow_errors
             except KeyError:
-                logger.info(f"Can't find the log of {workflow_name} workflow at archived workflow endpoint")
-                logger.info(f"Look up the log of {workflow_name} workflow at workflow endpoint")
+                logger.info(
+                    f"Can't find the log of {workflow_name} workflow at archived workflow endpoint"
+                )
+                logger.info(
+                    f"Look up the log of {workflow_name} workflow at workflow endpoint"
+                )
                 active_workflow_log_return = self._get_workflow_log_dict(workflow_name)
-                active_workflow_status_nodes = active_workflow_log_return["status"].get("nodes")
-                active_workflow_errors = self._get_log_errors(active_workflow_status_nodes)
+                active_workflow_status_nodes = active_workflow_log_return["status"].get(
+                    "nodes"
+                )
+                active_workflow_errors = self._get_log_errors(
+                    active_workflow_status_nodes
+                )
                 return active_workflow_errors
         except Exception as exception:
             logger.error(traceback.format_exc())
