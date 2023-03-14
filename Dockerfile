@@ -8,7 +8,7 @@ COPY poetry.lock /src/poetry.lock
 WORKDIR /src
 RUN python -m venv /env \
     && . /env/bin/activate \
-    && pip install --upgrade pip poetry \
+    && pip install --upgrade pip poetry==1.3.2 \
     && poetry install --without dev --no-interaction
 
 # include code and run poetry again (this split allows for faster local builds when changing code and using docker cache):
