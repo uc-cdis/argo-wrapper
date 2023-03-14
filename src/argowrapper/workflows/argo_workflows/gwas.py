@@ -81,18 +81,22 @@ class GWAS(WorkflowBase):
         self.metadata.add_metadata_label("gen3username", self.gen3username_label)
 
     def _add_spec_scaling_group(self):
-        if "qa_scaling_groups" in argo_engine_helper._get_argo_config_dict():
-            return
-
-        user_to_scaling_groups = argo_engine_helper._get_argo_config_dict().get(
+        # Check if default or custom are confined
+        scaling_group_config = argo_engine_helper._get_argo_config_dict().get(
             "scaling_groups", {}
         )
-        scaling_group = user_to_scaling_groups.get(self.username)
-        if not scaling_group:
-            logger.error(
-                f"user {self.username} is not a part of any scaling group, setting group to automatically be workflow"
-            )
-            scaling_group = "workflow"
+
+        # If not we are in QA
+        if not scaling_group_config.get("default") and not scaling_group_config.get(
+            "custom"
+        ):
+            return
+
+        # First check if name in custom config, else use default
+        if scaling_group_config.get("custom", {}).get(self.username):
+            scaling_group = scaling_group_config["custom"][self.username]
+        else:
+            scaling_group = scaling_group_config["default"]
 
         self.spec.add_scaling_group(scaling_group)
 
