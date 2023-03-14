@@ -46,26 +46,6 @@ stream = pkg_resources.open_text(argo_workflows_templates, WF_HEADER)
 workflow_yaml = yaml.safe_load(stream)
 
 
-def test_argo_engine_helper_prod_add_scaling_groups():
-    """tests scaling groups in prod are added"""
-    config = {"scaling_groups": {"test_user": (group := "group_1")}}
-
-    argo_engine_helper._get_argo_config_dict = mock.MagicMock(return_value=config)
-    argo_engine_helper.add_scaling_groups("test_user", workflow_yaml)
-
-    assert workflow_yaml["spec"]["nodeSelector"]["role"] == group
-
-
-def test_argo_engine_helper_qa_add_scaling_groups():
-    """tests scaling groups in qa do not exist"""
-    config = {"qa_scaling_groups": {"test_user": (group := "group_1")}}
-
-    argo_engine_helper._get_argo_config_dict = mock.MagicMock(return_value=config)
-    argo_engine_helper.add_scaling_groups("test_user", workflow_yaml)
-
-    assert workflow_yaml["spec"].get("nodeSelector") is None
-
-
 UsernameLabelPair = namedtuple("UsernameLabelPair", "username label")
 user_label_data = [
     UsernameLabelPair("abc123", "user-abc123"),
@@ -110,24 +90,21 @@ def test_parse_status(parsed_phase, shutdown, phase):
     archived_wf_status_dict = {
         "metadata": {
             "name": "test_archived_wf",
-            "annotations": {
-                "workflow_name": "archived_wf_name"
-            }
+            "annotations": {"workflow_name": "archived_wf_name"},
         },
-        "spec": {
-            "arguments": "test_args"
-        },
+        "spec": {"arguments": "test_args"},
         "status": {
             "phase": "Succeeded",
             "startedAt": "test_starttime",
             "finishedAt": "test_finishtime",
             "progress": "7/7",
-            "outputs": {}
-        }
-
+            "outputs": {},
+        },
     }
     parsed_status = argo_engine_helper.parse_status(wf_status_dict, "active_workflow")
-    archived_parsed_status = argo_engine_helper.parse_status(archived_wf_status_dict, "archived_workflow")
+    archived_parsed_status = argo_engine_helper.parse_status(
+        archived_wf_status_dict, "archived_workflow"
+    )
     assert parsed_status.get("phase") == parsed_phase
     assert archived_parsed_status.get("wf_name") == "archived_wf_name"
 
@@ -139,37 +116,35 @@ def test_parse_list_item():
             "name": "test_wf",
             "uid": "test_uid",
             "namespace": "argo",
-            "creationTimestamp": "test_starttime"
-
+            "creationTimestamp": "test_starttime",
         },
-        "spec": {
-            "arguments": "test_args",
-            "shutdown": "Terminate"
-        },
+        "spec": {"arguments": "test_args", "shutdown": "Terminate"},
         "status": {
             "phase": "Running",
             "startedAt": "test_starttime",
-            "finishedAt": "test_finishtime"
-        }
+            "finishedAt": "test_finishtime",
+        },
     }
     archived_workflow_list_item = {
-        "metadata" : {
+        "metadata": {
             "name": "test_wf_archived",
             "uid": "test_uid_archived",
             "namespace": "argo",
-            "creationTimestamp": "test_starttime_archived"
+            "creationTimestamp": "test_starttime_archived",
         },
-        "spec": {
-            "arguments": {}
-        },
+        "spec": {"arguments": {}},
         "status": {
             "phase": "Succeeded",
             "startedAt": "test_starttime",
-            "finishedAt": "test_finishtime"
-        }
+            "finishedAt": "test_finishtime",
+        },
     }
-    parsed_list_item = argo_engine_helper.parse_list_item(wf_list_item, "active_workflow")
-    parsed_list_item_archived = argo_engine_helper.parse_list_item(archived_workflow_list_item, "archived_workflow")
+    parsed_list_item = argo_engine_helper.parse_list_item(
+        wf_list_item, "active_workflow"
+    )
+    parsed_list_item_archived = argo_engine_helper.parse_list_item(
+        archived_workflow_list_item, "archived_workflow"
+    )
     assert parsed_list_item.get("phase") == "Canceling"
     assert parsed_list_item_archived.get("name") == "test_wf_archived"
 
@@ -182,7 +157,7 @@ def test_remove_list_duplicates():
             "uid": "test_wf_1_uid",
             "phase": "Succeeded",
             "startedAt": "test_start",
-            "finishedAt": "test_end"
+            "finishedAt": "test_end",
         }
     ]
     archived_wf_list = [
@@ -191,25 +166,31 @@ def test_remove_list_duplicates():
             "uid": "test_wf_1_uid",
             "phase": "Succeeded",
             "startedAt": "test_start",
-            "finishedAt": "test_end"
+            "finishedAt": "test_end",
         },
         {
             "name": "test_wf_2",
             "uid": "test_wf_2_uid",
             "phase": "Succeeded",
             "startedAt": "test_start",
-            "finishedAt": "test_end"
-        }
+            "finishedAt": "test_end",
+        },
     ]
-    uniq_wf_list = argo_engine_helper.remove_list_duplicate(active_wf_list, archived_wf_list)
+    uniq_wf_list = argo_engine_helper.remove_list_duplicate(
+        active_wf_list, archived_wf_list
+    )
     assert len(uniq_wf_list) == 2
+
 
 def test_remove_list_duplicates_both_empty():
     """Test that remove_list_duplicates is able to handle empty list input"""
     active_wf_list = []
     archived_wf_list = []
-    uniq_wf_list = argo_engine_helper.remove_list_duplicate(active_wf_list, archived_wf_list)
+    uniq_wf_list = argo_engine_helper.remove_list_duplicate(
+        active_wf_list, archived_wf_list
+    )
     assert len(uniq_wf_list) == 0
+
 
 def test_remove_list_duplicates_one_empty():
     """Test that remove_list_duplicates is able to handle a single empty list input"""
@@ -219,20 +200,23 @@ def test_remove_list_duplicates_one_empty():
             "uid": "test_wf_1_uid",
             "phase": "Succeeded",
             "startedAt": "test_start",
-            "finishedAt": "test_end"
+            "finishedAt": "test_end",
         },
         {
             "name": "test_wf_2",
             "uid": "test_wf_2_uid",
             "phase": "Succeeded",
             "startedAt": "test_start",
-            "finishedAt": "test_end"
-        }
+            "finishedAt": "test_end",
+        },
     ]
     active_wf_list = []
-    uniq_wf_list = argo_engine_helper.remove_list_duplicate(active_wf_list, archived_wf_list)
+    uniq_wf_list = argo_engine_helper.remove_list_duplicate(
+        active_wf_list, archived_wf_list
+    )
     assert len(uniq_wf_list) == 2
     assert "test_wf_2" == uniq_wf_list[1]["name"]
+
 
 def test_get_username_from_token():
     """tests context["user"]["name"] can be parsed from example auth header"""

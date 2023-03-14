@@ -94,7 +94,9 @@ def remove_list_duplicate(
         return uniq_list
     else:
         uniq_list = workflow_list[:]
-        uid_list = tuple([single_workflow.get("uid") for single_workflow in workflow_list])
+        uid_list = tuple(
+            [single_workflow.get("uid") for single_workflow in workflow_list]
+        )
         for archive_workflow in archived_workflow_list:
             archive_workflow_uid = archive_workflow.get("uid")
             if archive_workflow_uid not in uid_list:
@@ -108,25 +110,6 @@ def _get_argo_config_dict() -> Dict:
     with open(ARGO_CONFIG_PATH, encoding="utf-8") as file_stream:
         data = json.load(file_stream)
         return data
-
-
-def add_scaling_groups(gen3_user_name: str, workflow: Dict) -> None:
-    if "qa_scaling_groups" in _get_argo_config_dict():
-        del workflow["spec"]["nodeSelector"]
-        logger.info("we are in qa, removing node selector from header")
-        return
-
-    user_to_scaling_groups = _get_argo_config_dict().get("scaling_groups", {})
-    scaling_group = user_to_scaling_groups.get(gen3_user_name)
-    if not scaling_group:
-        logger.error(
-            f"user {gen3_user_name} is not a part of any scaling group, setting group to automatically be workflow"
-        )
-        scaling_group = "workflow"
-
-    # Note: when nodeSelector is returned from argo template, it becomes node_selector
-    workflow["spec"]["nodeSelector"]["role"] = scaling_group
-    workflow["spec"]["tolerations"][0]["value"] = scaling_group
 
 
 def _convert_to_hex(special_character_match: str) -> str:
