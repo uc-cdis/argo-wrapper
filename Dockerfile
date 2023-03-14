@@ -1,8 +1,8 @@
-FROM quay.io/cdis/python:3.9-slim-buster
+FROM quay.io/cdis/python:3.10-slim-buster
 
 ENV appname=src
 
-RUN pip install --no-cache-dir --upgrade pip poetry
+RUN pip install --no-cache-dir --upgrade pip poetry==1.3.2
 
 WORKDIR /$appname
 
