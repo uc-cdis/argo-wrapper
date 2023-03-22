@@ -174,6 +174,19 @@ class ArgoEngine:
                 f"could not cancel {workflow_name} because workflow not found"
             )
 
+    def __get_archived_workflow_given_name(self, archived_workflow_uid) -> str:
+        """Gets the details for the given archived workflow and parses
+        out the 'workflow_name' from the annotations section (aka 'workflow given name' or
+        'workflow name given by the user'). Active workflows will list annotations,
+        so this method is really only needed as a workaround for archived workflows."""
+        # TODO - build up a cache/map of uid and respective workflow_name to avoid
+        # unnecessary repeated calls to self.get_workflow_status()
+        workflow_details = self.get_workflow_status(None, archived_workflow_uid)
+        given_name = (
+            workflow_details["metadata"].get("annotations", {}).get("workflow_name")
+        )
+        return given_name
+
     def get_workflows_for_user(self, auth_header: str) -> List[Dict]:
         """
         Get a list of all workflows for a new user. Each item in the list
@@ -224,7 +237,9 @@ class ArgoEngine:
             if archived_workflow_list_return.items:
                 archived_workflow_list = [
                     argo_engine_helper.parse_list_item(
-                        workflow, workflow_type="archived_workflow"
+                        workflow,
+                        workflow_type="archived_workflow",
+                        get_archived_workflow_given_name=self.__get_archived_workflow_given_name,
                     )
                     for workflow in archived_workflow_list_return.items
                 ]

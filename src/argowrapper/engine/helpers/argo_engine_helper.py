@@ -58,7 +58,11 @@ def parse_status(status_dict: Dict[str, any], workflow_type: str) -> Dict[str, a
     }
 
 
-def parse_list_item(list_dict: Dict[str, any], workflow_type: str) -> Dict[str, any]:
+def parse_list_item(
+    list_dict: Dict[str, any],
+    workflow_type: str,
+    get_archived_workflow_given_name: function = None,
+) -> Dict[str, any]:
     """Parse the return of workflow list view"""
     phase = list_dict["status"].get("phase")
     if workflow_type == "active_workflow":
@@ -74,8 +78,8 @@ def parse_list_item(list_dict: Dict[str, any], workflow_type: str) -> Dict[str, 
     return {
         "name": list_dict["metadata"].get("name"),
         "wf_name": list_dict["metadata"].get("annotations", {}).get("workflow_name")
-        if workflow_type == "active_workflow"
-        else "",
+        if get_archived_workflow_given_name is None
+        else get_archived_workflow_given_name(list_dict["metadata"].get("uid")),
         "uid": list_dict["metadata"].get("uid"),
         "phase": phase,
         "submittedAt": list_dict["metadata"].get("creationTimestamp"),
