@@ -106,7 +106,7 @@ def test_cancel_workflow(client):
 
 def test_get_user_workflows(client):
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
-        "argowrapper.routes.routes.argo_engine.get_workfows_for_user"
+        "argowrapper.routes.routes.argo_engine.get_workflows_for_user"
     ) as mock_engine:
         mock_auth.return_value = True
         mock_engine.return_value = ["wf_1", "wf_2"]

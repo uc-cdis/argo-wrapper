@@ -205,7 +205,7 @@ def test_argo_engine_get_workflows_for_user_suceeded():
     ), mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_label"
     ):
-        uniq_workflow_list = engine.get_workfows_for_user("test_jwt_token")
+        uniq_workflow_list = engine.get_workflows_for_user("test_jwt_token")
         assert len(uniq_workflow_list) == 3
         assert "Canceled" == uniq_workflow_list[0]["phase"]
         assert "workflow_three" == uniq_workflow_list[2]["name"]
@@ -221,7 +221,7 @@ def test_argo_engine_get_workflows_for_user_failed():
         side_effect=Exception("user does not exist")
     )
     with pytest.raises(Exception):
-        engine.get_workfows_for_user("test")
+        engine.get_workflows_for_user("test")
 
 
 def test_argo_engine_get_workflows_for_user_empty():
@@ -259,7 +259,7 @@ def test_argo_engine_get_workflows_for_user_empty():
     ), mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_label"
     ):
-        uniq_workflow_list = engine.get_workfows_for_user("test_jwt_token")
+        uniq_workflow_list = engine.get_workflows_for_user("test_jwt_token")
         assert len(uniq_workflow_list) == 2
         assert "Succeeded" == uniq_workflow_list[0]["phase"]
         assert "workflow_three" == uniq_workflow_list[1]["name"]
@@ -281,7 +281,7 @@ def test_argo_engine_get_workflows_for_user_empty_both():
     ), mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_label"
     ):
-        uniq_workflow_list = engine.get_workfows_for_user("test_jwt_token")
+        uniq_workflow_list = engine.get_workflows_for_user("test_jwt_token")
         assert len(uniq_workflow_list) == 0
 
 

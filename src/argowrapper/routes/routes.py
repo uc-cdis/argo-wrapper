@@ -111,7 +111,7 @@ def get_workflows(
     """returns the list of workflows the user has ran"""
 
     try:
-        return argo_engine.get_workfows_for_user(request.headers.get("Authorization"))
+        return argo_engine.get_workflows_for_user(request.headers.get("Authorization"))
 
     except Exception as exception:
         return HTMLResponse(

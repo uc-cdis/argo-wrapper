@@ -174,7 +174,7 @@ class ArgoEngine:
                 f"could not cancel {workflow_name} because workflow not found"
             )
 
-    def get_workfows_for_user(self, auth_header: str) -> List[Dict]:
+    def get_workflows_for_user(self, auth_header: str) -> List[Dict]:
         """
         Get a list of all workflows for a new user. Each item in the list
         contains the workflow name, its status, start and end time.
