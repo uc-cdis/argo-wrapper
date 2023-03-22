@@ -17,6 +17,11 @@ kubectl create ns argo
 kubectl apply -n argo -f https://raw.githubusercontent.com/argoproj/argo-workflows/master/manifests/quick-start-postgres.yaml
 ```
 
+Monitor progress with:
+```
+kubectl get pods --all-namespaces
+```
+
 To see the argo dashboard run:
 ```
 kubectl -n argo port-forward deployment/argo-server 2746:2746
@@ -81,7 +86,7 @@ and using this as payload:
 
 Export this token to a local var:
 ```
-export DUMMY_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb250ZXh0Ijp7InVzZXIiOnsibmFtZSI6ImR1bW15dXNlciJ9fX0.NoDt4Bq8e0YB3eizJSGNpqC8eX-lz_jnWGmnhef47F0
+export DUMMY_TOKEN=<token value from step above>
 ```
 
 Now you are ready to try out one of the endpoints:
