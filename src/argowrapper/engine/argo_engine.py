@@ -34,6 +34,8 @@ class ArgoEngine:
 
     def __init__(self, dry_run: bool = False):
         self.dry_run = dry_run
+        # workflow "given names" by uid cache:
+        self.workflow_given_names_cache = {}
 
         configuration = argo_workflows.Configuration(
             host=ARGO_HOST,
@@ -174,17 +176,33 @@ class ArgoEngine:
                 f"could not cancel {workflow_name} because workflow not found"
             )
 
-    def __get_archived_workflow_given_name(self, archived_workflow_uid) -> str:
-        """Gets the details for the given archived workflow and parses
-        out the 'workflow_name' from the annotations section (aka 'workflow given name' or
-        'workflow name given by the user'). Active workflows will list annotations,
-        so this method is really only needed as a workaround for archived workflows."""
-        # TODO - build up a cache/map of uid and respective workflow_name to avoid
-        # unnecessary repeated calls to self.get_workflow_status()
+    def _get_archived_workflow_given_name(self, archived_workflow_uid) -> str:
+        """
+        Gets the name details for the given archived workflow
+
+        It tries to get it from cache first. If not in cache, it will query the
+        argo endpoint for archived workflows and parse out the 'workflow_name'
+        from the annotations section (aka 'workflow given name' or
+        'workflow name given by the user').
+
+        **Only for archived workflows**: active workflows return in the /workflows
+        list with their annotations, so this method of getting the annotations
+        via a second request is really only needed as a workaround for archived
+        workflows.
+
+        Returns:
+            str: the custom, user given, workflow name found in the annotations
+                 section of the workflow
+        """
+        if archived_workflow_uid in self.workflow_given_names_cache.keys():
+            return self.workflow_given_names_cache[archived_workflow_uid]
+        # call workflow details endpoint:
         workflow_details = self.get_workflow_status(None, archived_workflow_uid)
+        #  get the workflow given name from the annotations metadata:
         given_name = (
             workflow_details["metadata"].get("annotations", {}).get("workflow_name")
         )
+        self.workflow_given_names_cache[archived_workflow_uid] = given_name
         return given_name
 
     def get_workflows_for_user(self, auth_header: str) -> List[Dict]:
@@ -196,9 +214,11 @@ class ArgoEngine:
             auth_header: authorization header that contains the user's jwt token
 
         Returns:
-            List[str]: List of workflow names that the user
-            has ran if sucess, error message if fails
+            List[Dict]: List of workflow dictionaries with details of workflows
+            that the user has ran.
 
+        Raises:
+            raises Exception in case of any error.
         """
         username = argo_engine_helper.get_username_from_token(auth_header)
         user_label = argo_engine_helper.convert_gen3username_to_label(username)
@@ -239,7 +259,7 @@ class ArgoEngine:
                     argo_engine_helper.parse_list_item(
                         workflow,
                         workflow_type="archived_workflow",
-                        get_archived_workflow_given_name=self.__get_archived_workflow_given_name,
+                        get_archived_workflow_given_name=self._get_archived_workflow_given_name,
                     )
                     for workflow in archived_workflow_list_return.items
                 ]

@@ -2,7 +2,7 @@ import json
 import random
 import re
 import string
-from typing import Dict, List
+from typing import Callable, Dict, List
 
 import jwt
 
@@ -61,7 +61,7 @@ def parse_status(status_dict: Dict[str, any], workflow_type: str) -> Dict[str, a
 def parse_list_item(
     list_dict: Dict[str, any],
     workflow_type: str,
-    get_archived_workflow_given_name: function = None,
+    get_archived_workflow_given_name: Callable = None,
 ) -> Dict[str, any]:
     """Parse the return of workflow list view"""
     phase = list_dict["status"].get("phase")
