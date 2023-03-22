@@ -51,6 +51,7 @@ def parse_status(status_dict: Dict[str, any], workflow_type: str) -> Dict[str, a
         "arguments": status_dict["spec"].get("arguments"),
         "phase": phase,
         "progress": status_dict["status"].get("progress"),
+        "submittedAt": status_dict["metadata"].get("creationTimestamp"),
         "startedAt": status_dict["status"].get("startedAt"),
         "finishedAt": status_dict["status"].get("finishedAt"),
         "outputs": status_dict["status"].get("outputs", {}),
@@ -72,8 +73,12 @@ def parse_list_item(list_dict: Dict[str, any], workflow_type: str) -> Dict[str, 
 
     return {
         "name": list_dict["metadata"].get("name"),
+        "wf_name": list_dict["metadata"].get("annotations", {}).get("workflow_name")
+        if workflow_type == "active_workflow"
+        else "",
         "uid": list_dict["metadata"].get("uid"),
         "phase": phase,
+        "submittedAt": list_dict["metadata"].get("creationTimestamp"),
         "startedAt": list_dict["status"].get("startedAt"),
         "finishedAt": list_dict["status"].get("finishedAt"),
     }
