@@ -198,10 +198,8 @@ class ArgoEngine:
             return self.workflow_given_names_cache[archived_workflow_uid]
         # call workflow details endpoint:
         workflow_details = self.get_workflow_details(None, archived_workflow_uid)
-        #  get the workflow given name from the annotations metadata:
-        given_name = (
-            workflow_details["metadata"].get("annotations", {}).get("workflow_name")
-        )
+        #  get the workflow given name from the parsed details:
+        given_name = workflow_details["wf_name"]
         self.workflow_given_names_cache[archived_workflow_uid] = given_name
         return given_name
 

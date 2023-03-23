@@ -150,7 +150,13 @@ def test_argo_engine_get_workflows_for_user_suceeded():
     engine = ArgoEngine()
     argo_workflows_mock_raw_response = [
         {
-            "metadata": {"name": "workflow_one", "namespace": "argo", "uid": "uid_one"},
+            "metadata": {
+                "annotations": {"workflow_name": "custom_name_active1"},
+                "name": "workflow_one",
+                "namespace": "argo",
+                "uid": "uid_one",
+                "creationTimestamp": "2023-03-22T16:48:51Z",
+            },
             "spec": {"arguments": {}, "shutdown": "Terminate"},
             "status": {
                 "phase": "Failed",
@@ -159,7 +165,13 @@ def test_argo_engine_get_workflows_for_user_suceeded():
             },
         },
         {
-            "metadata": {"name": "workflow_two", "namespace": "argo", "uid": "uid_2"},
+            "metadata": {
+                "annotations": {"workflow_name": "custom_name_active2"},
+                "name": "workflow_two",
+                "namespace": "argo",
+                "uid": "uid_2",
+                "creationTimestamp": "2023-03-22T17:47:51Z",
+            },
             "spec": {"arguments": {}},
             "status": {
                 "phase": "Succeeded",
@@ -168,9 +180,16 @@ def test_argo_engine_get_workflows_for_user_suceeded():
             },
         },
     ]
+    # archived workflows list response is slightly different from above (main relevant difference is the
+    # missing "annotations" section in "metadata"):
     argo_archived_workflows_mock_raw_response = [
         {
-            "metadata": {"name": "workflow_two", "namespace": "argo", "uid": "uid_2"},
+            "metadata": {
+                "name": "workflow_two",
+                "namespace": "argo",
+                "uid": "uid_2",
+                "creationTimestamp": "2023-03-22T18:57:51Z",
+            },
             "spec": {"arguments": {}},
             "status": {
                 "phase": "Succeeded",
@@ -179,7 +198,12 @@ def test_argo_engine_get_workflows_for_user_suceeded():
             },
         },
         {
-            "metadata": {"name": "workflow_three", "namespace": "argo", "uid": "uid_3"},
+            "metadata": {
+                "name": "workflow_three",
+                "namespace": "argo",
+                "uid": "uid_3",
+                "creationTimestamp": "2023-03-22T19:59:59Z",
+            },
             "spec": {"arguments": {}},
             "status": {
                 "phase": "Succeeded",
@@ -188,6 +212,18 @@ def test_argo_engine_get_workflows_for_user_suceeded():
             },
         },
     ]
+    # for archived workflows, the "annotations" section needs to be retrieved from a
+    # separate endpoint, which is mocked here:
+    mock_return_archived_wf = {
+        "metadata": {
+            "annotations": {"workflow_name": "custom_name_archived"},
+        },
+        "spec": {},
+        "status": {},
+    }
+    engine._get_archived_workflow_details_dict = mock.MagicMock(
+        return_value=mock_return_archived_wf
+    )
 
     engine.api_instance.list_workflows = mock.MagicMock(
         return_value=WorkFlow(argo_workflows_mock_raw_response)
@@ -203,8 +239,17 @@ def test_argo_engine_get_workflows_for_user_suceeded():
     ):
         uniq_workflow_list = engine.get_workflows_for_user("test_jwt_token")
         assert len(uniq_workflow_list) == 3
+        # assert on values as mapped in argo_engine_helper.parse_details():
         assert "Canceled" == uniq_workflow_list[0]["phase"]
         assert "workflow_three" == uniq_workflow_list[2]["name"]
+        assert "custom_name_active1" == uniq_workflow_list[0]["wf_name"]
+        assert "2023-03-22T16:48:51Z" == uniq_workflow_list[0]["submittedAt"]
+        # preference is given to active workflows, so we expect [1] to have this name instead of custom_name_archived:
+        assert "custom_name_active2" == uniq_workflow_list[1]["wf_name"]
+        assert "2023-03-22T17:47:51Z" == uniq_workflow_list[1]["submittedAt"]
+        # workflow [2] is archived:
+        assert "custom_name_archived" == uniq_workflow_list[2]["wf_name"]
+        assert "2023-03-22T19:59:59Z" == uniq_workflow_list[2]["submittedAt"]
 
 
 def test_argo_engine_get_workflows_for_user_failed():
