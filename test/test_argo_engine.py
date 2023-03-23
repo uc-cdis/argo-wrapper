@@ -295,6 +295,20 @@ def test_argo_engine_get_workflows_for_user_empty():
     engine.archive_api_instance.list_archived_workflows = mock.MagicMock(
         return_value=WorkFlow(argo_archived_workflows_mock_raw_response)
     )
+    # for archived workflows, an extra "get details" call goes out
+    # to complement missing parts that are not in the list call above,
+    # so we need to mock an extra response:
+    mock_return_archived_wf = {
+        "metadata": {
+            "annotations": {"workflow_name": "custom_name_archived"},
+        },
+        "spec": {},
+        "status": {},
+    }
+    engine._get_archived_workflow_details_dict = mock.MagicMock(
+        return_value=mock_return_archived_wf
+    )
+
     with mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.get_username_from_token"
     ), mock.patch(
@@ -304,6 +318,9 @@ def test_argo_engine_get_workflows_for_user_empty():
         assert len(uniq_workflow_list) == 2
         assert "Succeeded" == uniq_workflow_list[0]["phase"]
         assert "workflow_three" == uniq_workflow_list[1]["name"]
+        # we return same mock reponse for both, so they end up getting the same mock wf_name:
+        assert "custom_name_archived" == uniq_workflow_list[0]["wf_name"]
+        assert "custom_name_archived" == uniq_workflow_list[1]["wf_name"]
 
 
 def test_argo_engine_get_workflows_for_user_empty_both():
