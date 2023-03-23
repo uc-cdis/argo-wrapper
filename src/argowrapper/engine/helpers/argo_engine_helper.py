@@ -79,7 +79,9 @@ def parse_list_item(
         "name": list_dict["metadata"].get("name"),
         "wf_name": list_dict["metadata"].get("annotations", {}).get("workflow_name")
         if get_archived_workflow_given_name is None
-        else get_archived_workflow_given_name(list_dict["metadata"].get("uid")),
+        else get_archived_workflow_given_name(
+            list_dict["metadata"].get("uid")
+        ),  # this is needed because archived list items to not have metadata.annotations returned by the list service...so we need to call another service to get it
         "uid": list_dict["metadata"].get("uid"),
         "phase": phase,
         "submittedAt": list_dict["metadata"].get("creationTimestamp"),

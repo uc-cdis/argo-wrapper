@@ -63,6 +63,7 @@ class ArgoEngine:
 
     def _get_archived_workflow_details_dict(self, uid: str) -> Dict:
 
+        # good to know: this one by default already includes some of the necessary fields like metadata.annotations,metadata.creationTimestamp ...and unfortunately we can't control the fields like in the call to get_workflow() above with "fields" parameter...
         return self.archive_api_instance.get_archived_workflow(
             uid=uid, _check_return_type=False
         ).to_dict()
