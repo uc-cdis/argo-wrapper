@@ -195,7 +195,7 @@ class ArgoEngine:
             str: the custom, user given, workflow name found in the annotations
                  section of the workflow
         """
-        if archived_workflow_uid in self.workflow_given_names_cache.keys():
+        if archived_workflow_uid in self.workflow_given_names_cache:
             return self.workflow_given_names_cache[archived_workflow_uid]
         # call workflow details endpoint:
         workflow_details = self.get_workflow_details(None, archived_workflow_uid)
