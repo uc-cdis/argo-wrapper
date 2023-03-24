@@ -2,7 +2,7 @@ import json
 import random
 import re
 import string
-from typing import Dict, List
+from typing import Callable, Dict, List
 
 import jwt
 
@@ -33,7 +33,7 @@ def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
     return dict_with_stringified_items
 
 
-def parse_status(status_dict: Dict[str, any], workflow_type: str) -> Dict[str, any]:
+def parse_details(status_dict: Dict[str, any], workflow_type: str) -> Dict[str, any]:
     phase = status_dict["status"].get("phase")
     if workflow_type == "active_workflow":
         shutdown = status_dict["spec"].get("shutdown")
@@ -51,13 +51,18 @@ def parse_status(status_dict: Dict[str, any], workflow_type: str) -> Dict[str, a
         "arguments": status_dict["spec"].get("arguments"),
         "phase": phase,
         "progress": status_dict["status"].get("progress"),
+        "submittedAt": status_dict["metadata"].get("creationTimestamp"),
         "startedAt": status_dict["status"].get("startedAt"),
         "finishedAt": status_dict["status"].get("finishedAt"),
         "outputs": status_dict["status"].get("outputs", {}),
     }
 
 
-def parse_list_item(list_dict: Dict[str, any], workflow_type: str) -> Dict[str, any]:
+def parse_list_item(
+    list_dict: Dict[str, any],
+    workflow_type: str,
+    get_archived_workflow_given_name: Callable = None,
+) -> Dict[str, any]:
     """Parse the return of workflow list view"""
     phase = list_dict["status"].get("phase")
     if workflow_type == "active_workflow":
@@ -72,8 +77,14 @@ def parse_list_item(list_dict: Dict[str, any], workflow_type: str) -> Dict[str, 
 
     return {
         "name": list_dict["metadata"].get("name"),
+        "wf_name": list_dict["metadata"].get("annotations", {}).get("workflow_name")
+        if get_archived_workflow_given_name is None
+        else get_archived_workflow_given_name(
+            list_dict["metadata"].get("uid")
+        ),  # this is needed because archived list items to not have metadata.annotations returned by the list service...so we need to call another service to get it
         "uid": list_dict["metadata"].get("uid"),
         "phase": phase,
+        "submittedAt": list_dict["metadata"].get("creationTimestamp"),
         "startedAt": list_dict["status"].get("startedAt"),
         "finishedAt": list_dict["status"].get("finishedAt"),
     }

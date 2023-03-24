@@ -101,12 +101,12 @@ def test_parse_status(parsed_phase, shutdown, phase):
             "outputs": {},
         },
     }
-    parsed_status = argo_engine_helper.parse_status(wf_status_dict, "active_workflow")
-    archived_parsed_status = argo_engine_helper.parse_status(
+    parsed_details = argo_engine_helper.parse_details(wf_status_dict, "active_workflow")
+    archived_parsed_details = argo_engine_helper.parse_details(
         archived_wf_status_dict, "archived_workflow"
     )
-    assert parsed_status.get("phase") == parsed_phase
-    assert archived_parsed_status.get("wf_name") == "archived_wf_name"
+    assert parsed_details.get("phase") == parsed_phase
+    assert archived_parsed_details.get("wf_name") == "archived_wf_name"
 
 
 def test_parse_list_item():

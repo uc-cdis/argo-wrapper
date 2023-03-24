@@ -13,6 +13,10 @@ spec:
 #=======================
 # the workflow:
 #=======================
+  arguments:
+    parameters:
+    - name: test_argument
+      value: test-agument-value
   entrypoint: whalesay
   templates:
   - name: whalesay
