@@ -66,15 +66,15 @@ def submit_workflow(
 # get status
 @router.get("/status/{workflow_name}", status_code=HTTP_200_OK)
 @check_auth
-def get_workflow_status(
+def get_workflow_details(
     workflow_name: str,
     uid: str,
     request: Request,  # pylint: disable=unused-argument
 ) -> Dict[str, any]:
-    """returns current status of a workflow"""
+    """returns details of a workflow"""
 
     try:
-        return argo_engine.get_workflow_status(workflow_name, uid)
+        return argo_engine.get_workflow_details(workflow_name, uid)
 
     except Exception as exception:
         return HTMLResponse(
@@ -111,7 +111,7 @@ def get_workflows(
     """returns the list of workflows the user has ran"""
 
     try:
-        return argo_engine.get_workfows_for_user(request.headers.get("Authorization"))
+        return argo_engine.get_workflows_for_user(request.headers.get("Authorization"))
 
     except Exception as exception:
         return HTMLResponse(

@@ -1,12 +1,8 @@
-import importlib.resources as pkg_resources
-import json
 import unittest.mock as mock
 
 import pytest
-import yaml
 
 from argo_workflows.exceptions import NotFoundException
-from argowrapper import argo_workflows_templates
 from argowrapper.constants import *
 from argowrapper.engine.argo_engine import *
 from test.constants import EXAMPLE_AUTH_HEADER
@@ -103,16 +99,16 @@ def test_argo_engine_get_status_archived_workflow_succeeded():
             "outputs": {},
         },
     }
-    engine._get_archived_workflow_status_dict = mock.MagicMock(
+    engine._get_archived_workflow_details_dict = mock.MagicMock(
         return_value=mock_return_archived_wf
     )
-    archived_wf_status = engine.get_workflow_status("archived_wf", "archived_uid")
-    assert archived_wf_status["wf_name"] == "custom_name"
-    assert archived_wf_status["progress"] == "7/7"
-    assert archived_wf_status["outputs"] == {}
+    archived_wf_details = engine.get_workflow_details("archived_wf", "archived_uid")
+    assert archived_wf_details["wf_name"] == "custom_name"
+    assert archived_wf_details["progress"] == "7/7"
+    assert archived_wf_details["outputs"] == {}
 
 
-def test_argo_engine_get_status_workflow_succeeded():
+def test_argo_engine_get_workflow_details_succeeded():
     """Test active workflow status when uid is not found in archive workflow endpoint"""
     engine = ArgoEngine()
     mock_return_wf = {
@@ -129,24 +125,24 @@ def test_argo_engine_get_status_workflow_succeeded():
             "outputs": {},
         },
     }
-    engine._get_archived_workflow_status_dict = mock.MagicMock(
+    engine._get_archived_workflow_details_dict = mock.MagicMock(
         side_effect=NotFoundException
     )
-    engine._get_workflow_status_dict = mock.MagicMock(return_value=mock_return_wf)
-    wf_status = engine.get_workflow_status("test_wf", "wf_uid")
-    assert wf_status["wf_name"] == "custome_wf_name"
-    assert wf_status["phase"] == "Running"
-    assert wf_status["progress"] == "0/1"
+    engine._get_workflow_details_dict = mock.MagicMock(return_value=mock_return_wf)
+    wf_details = engine.get_workflow_details("test_wf", "wf_uid")
+    assert wf_details["wf_name"] == "custome_wf_name"
+    assert wf_details["phase"] == "Running"
+    assert wf_details["progress"] == "0/1"
 
 
 def test_argo_engine_get_status_failed():
     """returns empty string if workflow get status fails at archived workflow endpoint"""
     engine = ArgoEngine()
-    engine._get_archived_workflow_status_dict = mock.MagicMock(
+    engine._get_archived_workflow_details_dict = mock.MagicMock(
         side_effect=Exception("workflow does not exist")
     )
     with pytest.raises(Exception):
-        engine.get_workflow_status("test_wf")
+        engine.get_workflow_details("test_wf")
 
 
 def test_argo_engine_get_workflows_for_user_suceeded():
@@ -154,7 +150,13 @@ def test_argo_engine_get_workflows_for_user_suceeded():
     engine = ArgoEngine()
     argo_workflows_mock_raw_response = [
         {
-            "metadata": {"name": "workflow_one", "namespace": "argo", "uid": "uid_one"},
+            "metadata": {
+                "annotations": {"workflow_name": "custom_name_active1"},
+                "name": "workflow_one",
+                "namespace": "argo",
+                "uid": "uid_one",
+                "creationTimestamp": "2023-03-22T16:48:51Z",
+            },
             "spec": {"arguments": {}, "shutdown": "Terminate"},
             "status": {
                 "phase": "Failed",
@@ -163,7 +165,13 @@ def test_argo_engine_get_workflows_for_user_suceeded():
             },
         },
         {
-            "metadata": {"name": "workflow_two", "namespace": "argo", "uid": "uid_2"},
+            "metadata": {
+                "annotations": {"workflow_name": "custom_name_active2"},
+                "name": "workflow_two",
+                "namespace": "argo",
+                "uid": "uid_2",
+                "creationTimestamp": "2023-03-22T17:47:51Z",
+            },
             "spec": {"arguments": {}},
             "status": {
                 "phase": "Succeeded",
@@ -172,9 +180,16 @@ def test_argo_engine_get_workflows_for_user_suceeded():
             },
         },
     ]
+    # archived workflows list response is slightly different from above (main relevant difference is the
+    # missing "annotations" section in "metadata"):
     argo_archived_workflows_mock_raw_response = [
         {
-            "metadata": {"name": "workflow_two", "namespace": "argo", "uid": "uid_2"},
+            "metadata": {
+                "name": "workflow_two",
+                "namespace": "argo",
+                "uid": "uid_2",
+                "creationTimestamp": "2023-03-22T18:57:51Z",
+            },
             "spec": {"arguments": {}},
             "status": {
                 "phase": "Succeeded",
@@ -183,7 +198,12 @@ def test_argo_engine_get_workflows_for_user_suceeded():
             },
         },
         {
-            "metadata": {"name": "workflow_three", "namespace": "argo", "uid": "uid_3"},
+            "metadata": {
+                "name": "workflow_three",
+                "namespace": "argo",
+                "uid": "uid_3",
+                "creationTimestamp": "2023-03-22T19:59:59Z",
+            },
             "spec": {"arguments": {}},
             "status": {
                 "phase": "Succeeded",
@@ -192,6 +212,18 @@ def test_argo_engine_get_workflows_for_user_suceeded():
             },
         },
     ]
+    # for archived workflows, the "annotations" section needs to be retrieved from a
+    # separate endpoint, which is mocked here:
+    mock_return_archived_wf = {
+        "metadata": {
+            "annotations": {"workflow_name": "custom_name_archived"},
+        },
+        "spec": {},
+        "status": {},
+    }
+    engine._get_archived_workflow_details_dict = mock.MagicMock(
+        return_value=mock_return_archived_wf
+    )
 
     engine.api_instance.list_workflows = mock.MagicMock(
         return_value=WorkFlow(argo_workflows_mock_raw_response)
@@ -205,10 +237,19 @@ def test_argo_engine_get_workflows_for_user_suceeded():
     ), mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_label"
     ):
-        uniq_workflow_list = engine.get_workfows_for_user("test_jwt_token")
+        uniq_workflow_list = engine.get_workflows_for_user("test_jwt_token")
         assert len(uniq_workflow_list) == 3
+        # assert on values as mapped in argo_engine_helper.parse_details():
         assert "Canceled" == uniq_workflow_list[0]["phase"]
         assert "workflow_three" == uniq_workflow_list[2]["name"]
+        assert "custom_name_active1" == uniq_workflow_list[0]["wf_name"]
+        assert "2023-03-22T16:48:51Z" == uniq_workflow_list[0]["submittedAt"]
+        # preference is given to active workflows, so we expect [1] to have this name instead of custom_name_archived:
+        assert "custom_name_active2" == uniq_workflow_list[1]["wf_name"]
+        assert "2023-03-22T17:47:51Z" == uniq_workflow_list[1]["submittedAt"]
+        # workflow [2] is archived:
+        assert "custom_name_archived" == uniq_workflow_list[2]["wf_name"]
+        assert "2023-03-22T19:59:59Z" == uniq_workflow_list[2]["submittedAt"]
 
 
 def test_argo_engine_get_workflows_for_user_failed():
@@ -221,7 +262,7 @@ def test_argo_engine_get_workflows_for_user_failed():
         side_effect=Exception("user does not exist")
     )
     with pytest.raises(Exception):
-        engine.get_workfows_for_user("test")
+        engine.get_workflows_for_user("test")
 
 
 def test_argo_engine_get_workflows_for_user_empty():
@@ -254,15 +295,32 @@ def test_argo_engine_get_workflows_for_user_empty():
     engine.archive_api_instance.list_archived_workflows = mock.MagicMock(
         return_value=WorkFlow(argo_archived_workflows_mock_raw_response)
     )
+    # for archived workflows, an extra "get details" call goes out
+    # to complement missing parts that are not in the list call above,
+    # so we need to mock an extra response:
+    mock_return_archived_wf = {
+        "metadata": {
+            "annotations": {"workflow_name": "custom_name_archived"},
+        },
+        "spec": {},
+        "status": {},
+    }
+    engine._get_archived_workflow_details_dict = mock.MagicMock(
+        return_value=mock_return_archived_wf
+    )
+
     with mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.get_username_from_token"
     ), mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_label"
     ):
-        uniq_workflow_list = engine.get_workfows_for_user("test_jwt_token")
+        uniq_workflow_list = engine.get_workflows_for_user("test_jwt_token")
         assert len(uniq_workflow_list) == 2
         assert "Succeeded" == uniq_workflow_list[0]["phase"]
         assert "workflow_three" == uniq_workflow_list[1]["name"]
+        # we return same mock reponse for both, so they end up getting the same mock wf_name:
+        assert "custom_name_archived" == uniq_workflow_list[0]["wf_name"]
+        assert "custom_name_archived" == uniq_workflow_list[1]["wf_name"]
 
 
 def test_argo_engine_get_workflows_for_user_empty_both():
@@ -281,7 +339,7 @@ def test_argo_engine_get_workflows_for_user_empty_both():
     ), mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_label"
     ):
-        uniq_workflow_list = engine.get_workfows_for_user("test_jwt_token")
+        uniq_workflow_list = engine.get_workflows_for_user("test_jwt_token")
         assert len(uniq_workflow_list) == 0
 
 
@@ -387,7 +445,7 @@ def test_argo_engine_get_archived_workflow_log_succeeded():
             },
         },
     }
-    engine._get_archived_workflow_status_dict = mock.MagicMock(
+    engine._get_archived_workflow_details_dict = mock.MagicMock(
         return_value=mock_return_archived_wf
     )
     archived_workflow_errors = engine.get_workflow_logs("archived_wf", "archived_uid")
@@ -416,7 +474,7 @@ def test_argo_engine_get_workflow_log_succeeded():
             },
         }
     }
-    engine._get_archived_workflow_status_dict = mock.MagicMock(
+    engine._get_archived_workflow_details_dict = mock.MagicMock(
         return_value=mock_return_archived_wf
     )
     engine._get_workflow_log_dict = mock.MagicMock(return_value=mock_return_wf)

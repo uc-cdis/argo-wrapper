@@ -34,6 +34,8 @@ class ArgoEngine:
 
     def __init__(self, dry_run: bool = False):
         self.dry_run = dry_run
+        # workflow "given names" by uid cache:
+        self.workflow_given_names_cache = {}
 
         configuration = argo_workflows.Configuration(
             host=ARGO_HOST,
@@ -49,18 +51,19 @@ class ArgoEngine:
     def _get_all_workflows(self):
         return self.api_instance.list_workflows(namespace=ARGO_NAMESPACE).to_str()
 
-    def _get_workflow_status_dict(self, workflow_name: str) -> Dict:
+    def _get_workflow_details_dict(self, workflow_name: str) -> Dict:
 
         return self.api_instance.get_workflow(
             namespace=ARGO_NAMESPACE,
             name=workflow_name,
-            fields="metadata.name,metadata.annotations,spec.arguments,spec.shutdown,status.phase,status.progress,status.startedAt,status.finishedAt,status.outputs",
+            fields="metadata.name,metadata.annotations,metadata.creationTimestamp,spec.arguments,spec.shutdown,status.phase,status.progress,status.startedAt,status.finishedAt,status.outputs",
             # Note that _check_return_type=False avoids an existing issue with OpenAPI generator.
             _check_return_type=False,
         ).to_dict()
 
-    def _get_archived_workflow_status_dict(self, uid: str) -> Dict:
+    def _get_archived_workflow_details_dict(self, uid: str) -> Dict:
 
+        # good to know: this one by default already includes some of the necessary fields like metadata.annotations,metadata.creationTimestamp ...and unfortunately we can't control the fields like in the call to get_workflow() above with "fields" parameter...
         return self.archive_api_instance.get_archived_workflow(
             uid=uid, _check_return_type=False
         ).to_dict()
@@ -91,7 +94,7 @@ class ArgoEngine:
                 pass
         return errors
 
-    def get_workflow_status(self, workflow_name: str, uid: str) -> Dict[str, any]:
+    def get_workflow_details(self, workflow_name: str, uid: str) -> Dict[str, any]:
         """
         Gets the workflow status
 
@@ -114,21 +117,21 @@ class ArgoEngine:
         if self.dry_run:
             return "workflow status"
         try:
-            archived_workflow_status = self._get_archived_workflow_status_dict(uid)
-            archived_wf_status_parsed = argo_engine_helper.parse_status(
-                archived_workflow_status, "archived_workflow"
+            archived_workflow_details = self._get_archived_workflow_details_dict(uid)
+            archived_wf_details_parsed = argo_engine_helper.parse_details(
+                archived_workflow_details, "archived_workflow"
             )
-            return archived_wf_status_parsed
+            return archived_wf_details_parsed
         except NotFoundException as exception:
             logger.info(
                 f"Can't find {workflow_name} workflow at archived workflow endpoint"
             )
             logger.info(f"Look up {workflow_name} workflow at workflow endpoint")
-            activate_workflow_status_parsed = self._get_workflow_status_dict(
+            activate_workflow_details_parsed = self._get_workflow_details_dict(
                 workflow_name
             )
-            return argo_engine_helper.parse_status(
-                activate_workflow_status_parsed, "active_workflow"
+            return argo_engine_helper.parse_details(
+                activate_workflow_details_parsed, "active_workflow"
             )
         except Exception as exception:
             logger.error(traceback.format_exc())
@@ -174,7 +177,34 @@ class ArgoEngine:
                 f"could not cancel {workflow_name} because workflow not found"
             )
 
-    def get_workfows_for_user(self, auth_header: str) -> List[Dict]:
+    def _get_archived_workflow_given_name(self, archived_workflow_uid) -> str:
+        """
+        Gets the name details for the given archived workflow
+
+        It tries to get it from cache first. If not in cache, it will query the
+        argo endpoint for archived workflows and parse out the 'workflow_name'
+        from the annotations section (aka 'workflow given name' or
+        'workflow name given by the user').
+
+        **Only for archived workflows**: active workflows return in the /workflows
+        list with their annotations, so this method of getting the annotations
+        via a second request is really only needed as a workaround for archived
+        workflows.
+
+        Returns:
+            str: the custom, user given, workflow name found in the annotations
+                 section of the workflow
+        """
+        if archived_workflow_uid in self.workflow_given_names_cache:
+            return self.workflow_given_names_cache[archived_workflow_uid]
+        # call workflow details endpoint:
+        workflow_details = self.get_workflow_details(None, archived_workflow_uid)
+        #  get the workflow given name from the parsed details:
+        given_name = workflow_details["wf_name"]
+        self.workflow_given_names_cache[archived_workflow_uid] = given_name
+        return given_name
+
+    def get_workflows_for_user(self, auth_header: str) -> List[Dict]:
         """
         Get a list of all workflows for a new user. Each item in the list
         contains the workflow name, its status, start and end time.
@@ -183,9 +213,11 @@ class ArgoEngine:
             auth_header: authorization header that contains the user's jwt token
 
         Returns:
-            List[str]: List of workflow names that the user
-            has ran if sucess, error message if fails
+            List[Dict]: List of workflow dictionaries with details of workflows
+            that the user has ran.
 
+        Raises:
+            raises Exception in case of any error.
         """
         username = argo_engine_helper.get_username_from_token(auth_header)
         user_label = argo_engine_helper.convert_gen3username_to_label(username)
@@ -196,7 +228,7 @@ class ArgoEngine:
                 namespace=ARGO_NAMESPACE,
                 list_options_label_selector=label_selector,
                 _check_return_type=False,
-                fields="items.metadata.name,items.metadata.namespace,items.metadata.uid,items.metadata.creationTimestamp,items.spec.arguments,items.spec.shutdown,items.status.phase,items.status.startedAt,items.status.finishedAt",
+                fields="items.metadata.name,items.metadata.namespace,items.metadata.annotations,items.metadata.uid,items.metadata.creationTimestamp,items.spec.arguments,items.spec.shutdown,items.status.phase,items.status.startedAt,items.status.finishedAt",
             )
             archived_workflow_list_return = (
                 self.archive_api_instance.list_archived_workflows(
@@ -224,7 +256,9 @@ class ArgoEngine:
             if archived_workflow_list_return.items:
                 archived_workflow_list = [
                     argo_engine_helper.parse_list_item(
-                        workflow, workflow_type="archived_workflow"
+                        workflow,
+                        workflow_type="archived_workflow",
+                        get_archived_workflow_given_name=self._get_archived_workflow_given_name,
                     )
                     for workflow in archived_workflow_list_return.items
                 ]
@@ -255,13 +289,13 @@ class ArgoEngine:
             Dict[str, any]: returns a list of dictionaries of errors
         """
         try:
-            archived_workflow_dict = self._get_archived_workflow_status_dict(uid)
+            archived_workflow_dict = self._get_archived_workflow_details_dict(uid)
             try:
-                archived_workflow_status_nodes = archived_workflow_dict["status"].get(
+                archived_workflow_details_nodes = archived_workflow_dict["status"].get(
                     "nodes"
                 )
                 archived_workflow_errors = self._get_log_errors(
-                    archived_workflow_status_nodes
+                    archived_workflow_details_nodes
                 )
                 return archived_workflow_errors
             except KeyError:
@@ -272,11 +306,11 @@ class ArgoEngine:
                     f"Look up the log of {workflow_name} workflow at workflow endpoint"
                 )
                 active_workflow_log_return = self._get_workflow_log_dict(workflow_name)
-                active_workflow_status_nodes = active_workflow_log_return["status"].get(
-                    "nodes"
-                )
+                active_workflow_details_nodes = active_workflow_log_return[
+                    "status"
+                ].get("nodes")
                 active_workflow_errors = self._get_log_errors(
-                    active_workflow_status_nodes
+                    active_workflow_details_nodes
                 )
                 return active_workflow_errors
         except Exception as exception:
