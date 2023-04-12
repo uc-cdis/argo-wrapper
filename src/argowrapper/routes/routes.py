@@ -83,6 +83,25 @@ def get_workflow_details(
         )
 
 
+# retry workflow
+@router.post("/retry/{workflow_name}", status_code=HTTP_200_OK)
+@check_auth
+def retry_workflow(
+    workflow_name: str,
+    request: Request,  # pylint: disable=unused-argument
+) -> str:
+    """retries a currently failed workflow"""
+
+    try:
+        return argo_engine.retry_workflow(workflow_name)
+
+    except Exception as exception:
+        return HTMLResponse(
+            content=str(exception),
+            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
 # cancel workflow
 @router.post("/cancel/{workflow_name}", status_code=HTTP_200_OK)
 @check_auth
