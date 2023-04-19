@@ -427,7 +427,7 @@ def test_argo_engine_new_submit_failed():
 
 def test_argo_engine_get_archived_workflow_log_succeeded():
     """
-    Fetch workflow details at archived workflow endpoint
+    Fetch workflow error logs at archived workflow endpoint
     """
     engine = ArgoEngine()
     mock_return_archived_wf = {
@@ -457,10 +457,9 @@ def test_argo_engine_get_archived_workflow_log_succeeded():
 
 def test_argo_engine_get_workflow_log_succeeded():
     """
-    Fetch workflow details at workflow endpoint, but failed to fetch at archived workflow endpoint
+    Fetch workflow error logs at workflow endpoint, but failed to fetch at archived workflow endpoint
     """
     engine = ArgoEngine()
-    mock_return_archived_wf = {"code": 5, "message": "not found"}
     mock_return_wf = {
         "status": {
             "phase": "Failed",
@@ -475,7 +474,7 @@ def test_argo_engine_get_workflow_log_succeeded():
         }
     }
     engine._get_archived_workflow_details_dict = mock.MagicMock(
-        return_value=mock_return_archived_wf
+        side_effect=NotFoundException("Not found")
     )
     engine._get_workflow_log_dict = mock.MagicMock(return_value=mock_return_wf)
     workflow_errors = engine.get_workflow_logs("active_wf", "wf_uid")
