@@ -460,7 +460,6 @@ def test_argo_engine_get_workflow_log_succeeded():
     Fetch workflow error logs at workflow endpoint, but failed to fetch at archived workflow endpoint
     """
     engine = ArgoEngine()
-    mock_return_archived_wf = {"code": 5, "message": "not found"}
     mock_return_wf = {
         "status": {
             "phase": "Failed",
