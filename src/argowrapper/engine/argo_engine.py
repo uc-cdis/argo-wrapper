@@ -290,29 +290,28 @@ class ArgoEngine:
         """
         try:
             archived_workflow_dict = self._get_archived_workflow_details_dict(uid)
-            try:
-                archived_workflow_details_nodes = archived_workflow_dict["status"].get(
-                    "nodes"
-                )
-                archived_workflow_errors = self._get_log_errors(
-                    archived_workflow_details_nodes
-                )
-                return archived_workflow_errors
-            except KeyError:
-                logger.info(
-                    f"Can't find the log of {workflow_name} workflow at archived workflow endpoint"
-                )
-                logger.info(
-                    f"Look up the log of {workflow_name} workflow at workflow endpoint"
-                )
-                active_workflow_log_return = self._get_workflow_log_dict(workflow_name)
-                active_workflow_details_nodes = active_workflow_log_return[
-                    "status"
-                ].get("nodes")
-                active_workflow_errors = self._get_log_errors(
-                    active_workflow_details_nodes
-                )
-                return active_workflow_errors
+            archived_workflow_details_nodes = archived_workflow_dict["status"].get(
+                "nodes"
+            )
+            archived_workflow_errors = self._get_log_errors(
+                archived_workflow_details_nodes
+            )
+            return archived_workflow_errors
+
+        except (KeyError, NotFoundException):
+            logger.info(
+                f"Can't find the log of {workflow_name} workflow at archived workflow endpoint"
+            )
+            logger.info(
+                f"Look up the log of {workflow_name} workflow at workflow endpoint"
+            )
+            active_workflow_log_return = self._get_workflow_log_dict(workflow_name)
+            active_workflow_details_nodes = active_workflow_log_return["status"].get(
+                "nodes"
+            )
+            active_workflow_errors = self._get_log_errors(active_workflow_details_nodes)
+            return active_workflow_errors
+
         except Exception as exception:
             logger.error(traceback.format_exc())
             logger.error(
