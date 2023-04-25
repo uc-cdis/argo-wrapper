@@ -104,6 +104,23 @@ def test_cancel_workflow(client):
         assert response.content.decode("utf-8") == '"workflow_123 canceled sucessfully"'
 
 
+def test_retry_workflow(client):
+    with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
+        "argowrapper.routes.routes.argo_engine.retry_workflow"
+    ) as mock_engine:
+        mock_auth.return_value = True
+        mock_engine.return_value = "workflow_123 retried sucessfully"
+        response = client.post(
+            "/retry/workflow_123",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": "bearer 1234",
+            },
+        )
+        assert response.status_code == 200
+        assert response.content.decode("utf-8") == '"workflow_123 retried sucessfully"'
+
+
 def test_get_user_workflows(client):
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
         "argowrapper.routes.routes.argo_engine.get_workflows_for_user"

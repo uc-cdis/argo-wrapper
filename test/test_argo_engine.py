@@ -83,6 +83,24 @@ def test_argo_engine_cancel_failed():
         engine.cancel_workflow("wf_name")
 
 
+def test_argo_engine_retry_succeeded():
+    """returns True if workflow retry suceeds"""
+    engine = ArgoEngine()
+    engine.api_instance.retry_workflow = mock.MagicMock(return_value=None)
+    result = engine.retry_workflow("wf_name")
+    assert result == "wf_name retried sucessfully"
+
+
+def test_argo_engine_retry_failed():
+    """returns False if workflow retry fails"""
+    engine = ArgoEngine()
+    engine.api_instance.retry_workflow = mock.MagicMock(
+        side_effect=Exception("workflow does not exist")
+    )
+    with pytest.raises(Exception):
+        engine.retry_workflow("wf_name")
+
+
 def test_argo_engine_get_status_archived_workflow_succeeded():
     engine = ArgoEngine()
     mock_return_archived_wf = {
