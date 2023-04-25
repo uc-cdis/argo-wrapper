@@ -197,7 +197,7 @@ class ArgoEngine:
                 namespace=ARGO_NAMESPACE,
                 name=workflow_name,
                 body=IoArgoprojWorkflowV1alpha1WorkflowRetryRequest(
-                    name=workflow_name,
+                    name=workflow_name,  # TODO - understand why we repeat these args
                     namespace=ARGO_NAMESPACE,
                     _check_type=False,
                 ),
@@ -364,7 +364,7 @@ class ArgoEngine:
         logger.debug(workflow_yaml)
         try:
             response = self.api_instance.create_workflow(
-                namespace="argo",
+                namespace=ARGO_NAMESPACE,
                 body=IoArgoprojWorkflowV1alpha1WorkflowCreateRequest(
                     workflow=workflow_yaml,
                     _check_return_type=False,
