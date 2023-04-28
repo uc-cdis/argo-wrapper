@@ -111,7 +111,7 @@ def test_retry_workflow(client):
         mock_auth.return_value = True
         mock_engine.return_value = "workflow_123 retried sucessfully"
         response = client.post(
-            "/retry/workflow_123",
+            "/retry/workflow_123?uid=wf_uid",
             headers={
                 "Content-Type": "application/json",
                 "Authorization": "bearer 1234",
