@@ -88,12 +88,13 @@ def get_workflow_details(
 @check_auth
 def retry_workflow(
     workflow_name: str,
+    uid: str,
     request: Request,  # pylint: disable=unused-argument
 ) -> str:
     """retries a currently failed workflow"""
 
     try:
-        return argo_engine.retry_workflow(workflow_name)
+        return argo_engine.retry_workflow(workflow_name, uid)
 
     except Exception as exception:
         return HTMLResponse(
