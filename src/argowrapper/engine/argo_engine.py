@@ -209,8 +209,9 @@ class ArgoEngine:
                 ),
                 _check_return_type=False,
             )
-            return f"{workflow_name} retried sucessfully"
+            return f"archived {workflow_name} retried sucessfully"
         except NotFoundException:
+            # Workflow not found as archived workflow, try active workflow endpoint:
             logger.info(
                 f"Can't find the {workflow_name} workflow at archived workflow endpoint"
             )
@@ -228,13 +229,6 @@ class ArgoEngine:
                 _check_return_type=False,
             )
             return f"{workflow_name} retried sucessfully"
-
-        except Exception as exception:
-            logger.error(traceback.format_exc())
-            logger.error(
-                f"could not retry {workflow_name}, failed with error {exception}"
-            )
-            raise Exception(f"could not retry {workflow_name}: workflow not found")
 
     def _get_archived_workflow_given_name(self, archived_workflow_uid) -> str:
         """
