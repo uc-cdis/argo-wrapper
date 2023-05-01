@@ -201,7 +201,7 @@ class ArgoEngine:
             logger.info(f"dry run for retrying {workflow_name}")
             return f"{workflow_name} retried sucessfully"
         try:
-            # Call the archived retry (will raise NotFoundException if workflow is not yet archived for example):
+            # Call the archived retry (will raise NotFoundException if workflow is not yet archived):
             self.archive_api_instance.retry_archived_workflow(
                 uid=uid,
                 body=IoArgoprojWorkflowV1alpha1RetryArchivedWorkflowRequest(
