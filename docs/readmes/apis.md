@@ -15,7 +15,7 @@ curl -d "@prod_body.json" -X POST -H "Content-Type: application/json" -H "$(cat 
 
 4. Check workflow status
 ```
-curl -H "Content-Type: application/json" -H "$(cat prod_auth)" https://{commons-url}/ga4gh/wes/v2/status/{workflow_id}
+curl -H "Content-Type: application/json" -H "$(cat prod_auth)" https://{commons-url}/ga4gh/wes/v2/status/{workflow_id}?uid={workflow_uid}
 ```
 
 5. Cancel workflow
@@ -28,6 +28,12 @@ curl -X POST  -H "Content-Type: application/json" -H "$(cat prod_auth)" https://
 curl -H "Content-Type: application/json" -H "$(cat prod_auth)" https://{commons_url}/ga4gh/wes/v2/workflows
 ```
 
-7. Cancel a run that's currently in-progress
+7. Retry a failed workflow
 ```
-curl -d "@request_body.json" -X POST -H "$(cat auth)" https://<replaceme>.planx-pla.net/ga4gh/wes/v1/runs/<runID>/cancel
+curl -H "Content-Type: application/json" -H "$(cat prod_auth)" https://{commons-url}/ga4gh/wes/v2/retry/{workflow_id}?uid={workflow_uid}
+```
+
+8. Check the logs of a workflow
+```
+curl -H "Content-Type: application/json" -H "$(cat prod_auth)" https://{commons-url}/ga4gh/wes/v2/logs/{workflow_id}?uid={workflow_uid}
+```
