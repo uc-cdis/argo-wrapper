@@ -10,6 +10,12 @@ from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_create_request 
 from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_terminate_request import (
     IoArgoprojWorkflowV1alpha1WorkflowTerminateRequest,
 )
+from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_retry_request import (
+    IoArgoprojWorkflowV1alpha1WorkflowRetryRequest,
+)
+from argo_workflows.model.io_argoproj_workflow_v1alpha1_retry_archived_workflow_request import (
+    IoArgoprojWorkflowV1alpha1RetryArchivedWorkflowRequest,
+)
 from argo_workflows.exceptions import NotFoundException
 
 from argowrapper import logger
@@ -62,7 +68,11 @@ class ArgoEngine:
         ).to_dict()
 
     def _get_archived_workflow_details_dict(self, uid: str) -> Dict:
-
+        """
+        Queries the archived workflows api.
+        Raises a argo_workflows.exceptions.NotFoundException if the workflow uid cannot be found
+        as an archived workflow
+        """
         # good to know: this one by default already includes some of the necessary fields like metadata.annotations,metadata.creationTimestamp ...and unfortunately we can't control the fields like in the call to get_workflow() above with "fields" parameter...
         return self.archive_api_instance.get_archived_workflow(
             uid=uid, _check_return_type=False
@@ -142,7 +152,7 @@ class ArgoEngine:
                 f"could not get status of {workflow_name}, workflow does not exist"
             )
 
-    def cancel_workflow(self, workflow_name: str) -> string:
+    def cancel_workflow(self, workflow_name: str) -> str:
         """
         Cancels a workflow that's running, this will delete the workflow
 
@@ -150,7 +160,7 @@ class ArgoEngine:
             workflow_name (str): name of the workflow whose status will be canceled
 
         Returns:
-            string : "{workflow_name} canceled sucessfully" if suceed, error message if not
+            str : "{workflow_name} canceled sucessfully" if suceed, error message if not
         """
         if self.dry_run:
             logger.info(f"dry run for canceling {workflow_name}")
@@ -176,6 +186,49 @@ class ArgoEngine:
             raise Exception(
                 f"could not cancel {workflow_name} because workflow not found"
             )
+
+    def retry_workflow(self, workflow_name: str, uid: str) -> str:
+        """
+        Retries a failed workflow
+
+        Args:
+            workflow_name (str): name of the failed workflow to retry
+            uid (str): uid of an failed AND archived workflow to retry
+        Returns:
+            str : "{workflow_name} retried sucessfully" if suceed, error message if not
+        """
+        if self.dry_run:
+            logger.info(f"dry run for retrying {workflow_name}")
+            return f"{workflow_name} retried sucessfully"
+        try:
+            # Call the archived retry (will raise NotFoundException if workflow is not yet archived):
+            self.archive_api_instance.retry_archived_workflow(
+                uid=uid,
+                body=IoArgoprojWorkflowV1alpha1RetryArchivedWorkflowRequest(
+                    _check_type=False,
+                ),
+                _check_return_type=False,
+            )
+            return f"archived {workflow_name} retried sucessfully"
+        except NotFoundException:
+            # Workflow not found as archived workflow, try active workflow endpoint:
+            logger.info(
+                f"Can't find the {workflow_name} workflow at archived workflow endpoint"
+            )
+            logger.info(
+                f"Will try to retry the {workflow_name} workflow using the normal workflow endpoint"
+            )
+            self.api_instance.retry_workflow(
+                namespace=ARGO_NAMESPACE,
+                name=workflow_name,
+                body=IoArgoprojWorkflowV1alpha1WorkflowRetryRequest(
+                    name=workflow_name,  # TODO - understand why we repeat these args
+                    namespace=ARGO_NAMESPACE,
+                    _check_type=False,
+                ),
+                _check_return_type=False,
+            )
+            return f"{workflow_name} retried sucessfully"
 
     def _get_archived_workflow_given_name(self, archived_workflow_uid) -> str:
         """
@@ -329,7 +382,7 @@ class ArgoEngine:
         logger.debug(workflow_yaml)
         try:
             response = self.api_instance.create_workflow(
-                namespace="argo",
+                namespace=ARGO_NAMESPACE,
                 body=IoArgoprojWorkflowV1alpha1WorkflowCreateRequest(
                     workflow=workflow_yaml,
                     _check_return_type=False,

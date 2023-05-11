@@ -1,6 +1,7 @@
 import unittest.mock as mock
 
 import pytest
+from argowrapper import logger
 
 from argo_workflows.exceptions import NotFoundException
 from argowrapper.constants import *
@@ -81,6 +82,59 @@ def test_argo_engine_cancel_failed():
     )
     with pytest.raises(Exception):
         engine.cancel_workflow("wf_name")
+
+
+def test_argo_engine_retry_succeeded_non_archived_workflow():
+    """returns True if workflow retry suceeds"""
+    engine = ArgoEngine()
+    engine.archive_api_instance.retry_archived_workflow = mock.MagicMock(
+        side_effect=NotFoundException("workflow does not exist")
+    )
+    engine.api_instance.retry_workflow = mock.MagicMock(return_value=None)
+    result = engine.retry_workflow("wf_name", "uid")
+    assert result == "wf_name retried sucessfully"
+
+
+def test_argo_engine_retry_succeeded_archived_workflow():
+    """checks if expected exception is raised when retry fails"""
+    engine = ArgoEngine()
+    engine.api_instance.retry_workflow = mock.MagicMock(
+        side_effect=NotFoundException("workflow does not exist")
+    )
+    engine.archive_api_instance.retry_archived_workflow = mock.MagicMock(
+        return_value=None
+    )
+    result = engine.retry_workflow("wf_name", "uid")
+    assert result == "archived wf_name retried sucessfully"
+
+
+def test_argo_engine_retry_failed_scenario1(caplog):
+    """checks if expected exception is raised when retry fails"""
+    engine = ArgoEngine()
+    engine.archive_api_instance.retry_archived_workflow = mock.MagicMock(
+        side_effect=Exception("other exception")
+    )
+    engine.api_instance.retry_workflow = mock.MagicMock(return_value=None)
+    # we expect "other exception" in this case:
+    with pytest.raises(Exception) as exception:
+        engine.retry_workflow("wf_name", "uid")
+    assert "other exception" in str(exception)
+
+
+def test_argo_engine_retry_failed_scenario2(caplog):
+    """returns False if workflow retry fails"""
+    engine = ArgoEngine()
+    engine.archive_api_instance.retry_archived_workflow = mock.MagicMock(
+        side_effect=NotFoundException("workflow not found")
+    )
+    engine.api_instance.retry_workflow = mock.MagicMock(
+        side_effect=Exception("workflow does not exist")
+    )
+    # because the archived endpoint throws NotFoundException, and
+    # this is handled in retry_workflow, we expect the second Exception:
+    with pytest.raises(Exception) as exception:
+        engine.retry_workflow("wf_name", "uid")
+    assert "workflow does not exist" in str(exception)
 
 
 def test_argo_engine_get_status_archived_workflow_succeeded():

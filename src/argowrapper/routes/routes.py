@@ -1,3 +1,4 @@
+import traceback
 from functools import wraps
 from typing import Dict, List, Any
 
@@ -9,6 +10,7 @@ from starlette.status import (
     HTTP_500_INTERNAL_SERVER_ERROR,
 )
 
+from argowrapper import logger
 from argowrapper.auth import Auth
 from argowrapper.engine.argo_engine import ArgoEngine
 
@@ -77,6 +79,28 @@ def get_workflow_details(
         return argo_engine.get_workflow_details(workflow_name, uid)
 
     except Exception as exception:
+        return HTMLResponse(
+            content=str(exception),
+            status_code=HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+# retry workflow
+@router.post("/retry/{workflow_name}", status_code=HTTP_200_OK)
+@check_auth
+def retry_workflow(
+    workflow_name: str,
+    uid: str,
+    request: Request,  # pylint: disable=unused-argument
+) -> str:
+    """retries a currently failed workflow"""
+
+    try:
+        return argo_engine.retry_workflow(workflow_name, uid)
+
+    except Exception as exception:
+        logger.error(traceback.format_exc())
+        logger.error(f"could not retry {workflow_name}, failed with error {exception}")
         return HTMLResponse(
             content=str(exception),
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
