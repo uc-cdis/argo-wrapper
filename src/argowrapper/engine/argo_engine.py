@@ -205,6 +205,8 @@ class ArgoEngine:
             self.archive_api_instance.retry_archived_workflow(
                 uid=uid,
                 body=IoArgoprojWorkflowV1alpha1RetryArchivedWorkflowRequest(
+                    uid=uid,
+                    namespace=ARGO_NAMESPACE,
                     _check_type=False,
                 ),
                 _check_return_type=False,
