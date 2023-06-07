@@ -109,12 +109,14 @@ def test_argo_engine_retry_succeeded_archived_workflow():
 
 
 def test_argo_engine_retry_failed_scenario1(caplog):
-    """checks if expected exception is raised when retry fails"""
+    """checks if expected exception is raised when archived retry fails"""
     engine = ArgoEngine()
+    engine.api_instance.retry_workflow = mock.MagicMock(
+        side_effect=NotFoundException("workflow does not exist")
+    )
     engine.archive_api_instance.retry_archived_workflow = mock.MagicMock(
         side_effect=Exception("other exception")
     )
-    engine.api_instance.retry_workflow = mock.MagicMock(return_value=None)
     # we expect "other exception" in this case:
     with pytest.raises(Exception) as exception:
         engine.retry_workflow("wf_name", "uid")
@@ -122,7 +124,7 @@ def test_argo_engine_retry_failed_scenario1(caplog):
 
 
 def test_argo_engine_retry_failed_scenario2(caplog):
-    """returns False if workflow retry fails"""
+    """checks if expected exception is raised when regular retry fails"""
     engine = ArgoEngine()
     engine.archive_api_instance.retry_archived_workflow = mock.MagicMock(
         side_effect=NotFoundException("workflow not found")
