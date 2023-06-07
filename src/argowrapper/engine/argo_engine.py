@@ -203,9 +203,9 @@ class ArgoEngine:
         try:
             # Call the archived retry (will raise NotFoundException if workflow is not yet archived):
             self.archive_api_instance.retry_archived_workflow(
-                uid=uid,
+                name=workflow_name,
                 body=IoArgoprojWorkflowV1alpha1RetryArchivedWorkflowRequest(
-                    uid=uid,
+                    name=workflow_name,
                     namespace=ARGO_NAMESPACE,
                     _check_type=False,
                 ),
