@@ -201,25 +201,7 @@ class ArgoEngine:
             logger.info(f"dry run for retrying {workflow_name}")
             return f"{workflow_name} retried sucessfully"
         try:
-            # Call the archived retry (will raise NotFoundException if workflow is not yet archived):
-            self.archive_api_instance.retry_archived_workflow(
-                uid=uid,
-                body=IoArgoprojWorkflowV1alpha1RetryArchivedWorkflowRequest(
-                    name=workflow_name,
-                    namespace=ARGO_NAMESPACE,
-                    _check_type=False,
-                ),
-                _check_return_type=False,
-            )
-            return f"archived {workflow_name} retried sucessfully"
-        except NotFoundException:
-            # Workflow not found as archived workflow, try active workflow endpoint:
-            logger.info(
-                f"Can't find the {workflow_name} workflow at archived workflow endpoint"
-            )
-            logger.info(
-                f"Will try to retry the {workflow_name} workflow using the normal workflow endpoint"
-            )
+            # Try the regular retry first (will raise NotFoundException if workflow is not on cluster anymore):
             self.api_instance.retry_workflow(
                 namespace=ARGO_NAMESPACE,
                 name=workflow_name,
@@ -231,6 +213,22 @@ class ArgoEngine:
                 _check_return_type=False,
             )
             return f"{workflow_name} retried sucessfully"
+        except NotFoundException:
+            # Workflow not found on cluster, try archived workflow endpoint:
+            logger.info(f"Can't find the {workflow_name} workflow on the cluster")
+            logger.info(
+                f"Will try to retry the {workflow_name} workflow using the archived workflow endpoint"
+            )
+            self.archive_api_instance.retry_archived_workflow(
+                uid=uid,
+                body=IoArgoprojWorkflowV1alpha1RetryArchivedWorkflowRequest(
+                    uid=uid,
+                    namespace=ARGO_NAMESPACE,
+                    _check_type=False,
+                ),
+                _check_return_type=False,
+            )
+            return f"archived {workflow_name} retried sucessfully"
 
     def _get_archived_workflow_given_name(self, archived_workflow_uid) -> str:
         """
