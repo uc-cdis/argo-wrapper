@@ -98,7 +98,8 @@ spec:
             "/commons-data/gds/chr19.merged.vcf.gz.gds",
             "/commons-data/gds/chr20.merged.vcf.gz.gds",
             "/commons-data/gds/chr21.merged.vcf.gz.gds",
-            "/commons-data/gds/chr22.merged.vcf.gz.gds"
+            "/commons-data/gds/chr22.merged.vcf.gz.gds"，
+            "/commons-data/gds/chrX.merged.vcf.gz.gds"
           ]
   volumes:
     - name: workdir
