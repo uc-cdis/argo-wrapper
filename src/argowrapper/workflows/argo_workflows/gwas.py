@@ -21,9 +21,10 @@ class GWAS(WorkflowBase):
     """
 
     def __create_gds_files() -> str:
+        chr_list = list(range(1, 23)) + ["X"]
         gds_files = [
             f'"/commons-data/gds/chr{chrom_num}.merged.vcf.gz.gds"'
-            for chrom_num in range(1, 23)
+            for chrom_num in chr_list
         ]
         return f'[{", ".join(gds_files)}]'
 
