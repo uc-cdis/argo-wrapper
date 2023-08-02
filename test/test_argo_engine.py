@@ -7,6 +7,7 @@ from argo_workflows.exceptions import NotFoundException
 from argowrapper.constants import *
 from argowrapper.engine.argo_engine import *
 from test.constants import EXAMPLE_AUTH_HEADER
+from argowrapper.workflows.argo_workflows.gwas import *
 
 
 class WorkFlow:
@@ -522,6 +523,8 @@ def test_argo_engine_get_workflow_log_succeeded():
             "nodes": {
                 "step_one_name": {
                     "name": "step_one_name",
+                    "type": "Retry",
+                    "displayName": "generate-attrition-csv",
                     "templateName": "step_one_template",
                     "message": "Error (exit code 126)",
                     "phase": "Failed",
@@ -532,9 +535,16 @@ def test_argo_engine_get_workflow_log_succeeded():
     engine._get_archived_workflow_details_dict = mock.MagicMock(
         side_effect=NotFoundException("Not found")
     )
+    engine._get_workflow_phase = mock.MagicMock(
+        return_value="Failed"
+    )
+    engine._get_workflow_node_artifact = mock.MagicMock(
+        return_value="requests.exceptions.ReadTimeout\nHTTPConnectionPool"
+    )
+    
     engine._get_workflow_log_dict = mock.MagicMock(return_value=mock_return_wf)
     workflow_errors = engine.get_workflow_logs("active_wf", "wf_uid")
     assert len(workflow_errors) == 1
     assert workflow_errors[0]["name"] == "step_one_name"
-    assert workflow_errors[0]["step_template"] == "step_one_template"
+    assert workflow_errors[0]["error_interpreted"] == "Timeout on cohort-widdleware request"
     assert workflow_errors[0]["error_message"] == "Error (exit code 126)"

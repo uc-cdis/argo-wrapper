@@ -1,9 +1,9 @@
 import string
 import traceback
-from typing import Dict, List
+from typing import Dict, List, Literal
 
 import argo_workflows
-from argo_workflows.api import archived_workflow_service_api, workflow_service_api
+from argo_workflows.api import archived_workflow_service_api, workflow_service_api, artifact_service_api
 from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_create_request import (
     IoArgoprojWorkflowV1alpha1WorkflowCreateRequest,
 )
@@ -22,6 +22,7 @@ from argowrapper import logger
 from argowrapper.constants import ARGO_HOST, ARGO_NAMESPACE, WORKFLOW
 from argowrapper.engine.helpers import argo_engine_helper
 from argowrapper.engine.helpers.workflow_factory import WorkflowFactory
+from argowrapper.workflows.argo_workflows.gwas import GWAS
 
 
 class ArgoEngine:
@@ -53,6 +54,7 @@ class ArgoEngine:
         self.archive_api_instance = (
             archived_workflow_service_api.ArchivedWorkflowServiceApi(api_client)
         )
+        self.artifact_api_instance = artifact_service_api.ArtifactServiceApi(api_client)
 
     def _get_all_workflows(self):
         return self.api_instance.list_workflows(namespace=ARGO_NAMESPACE).to_str()
@@ -86,18 +88,56 @@ class ArgoEngine:
             _check_return_type=False,
         ).to_dict()
 
-    def _get_log_errors(self, status_nodes_dict: Dict) -> List[Dict]:
+    def _get_workflow_phase(self, workflow_name: str) -> str:
+        phase_return = self.api_instance.get_workflow(
+            namespace=ARGO_NAMESPACE,
+            name=workflow_name,
+            fields="status.phase",
+            _check_return_type=False,    
+        ).to_dict()
+        return phase_return["status"].get("phase")
+    
+    def _get_workflow_node_artifact(self, id_discriminator: Literal['workflow', 'archived-workflows'], wf_id: str, node_id: str) -> str:
+        api_response = self.archive_api_instance.get_artifact_file(
+            namespace=ARGO_NAMESPACE,
+            id_discriminator=id_discriminator,
+            id=wf_id,
+            node_id=node_id,
+            artifact_discriminator="outputs",
+            artifact_name="main-logs"
+        )
+        return api_response
+
+    def _get_log_errors(self, id_discrimator: str, wf_id: str, status_nodes_dict: Dict) -> List[Dict]:
         errors = []
-        for _, step in status_nodes_dict.items():
-            if step.get("phase") in ("Failed", "Error"):
+        for pod_id, step in status_nodes_dict.items():
+            if step.get("phase") in ("Failed", "Error") and step.get("type")=="Retry":
                 message = (
                     step["message"] if step.get("message") else "No message provided"
+                )
+                pod_type = step.get("type")
+                pod_step = step.get("displayName")
+                pod_step_template =  step.get("templateName")
+                pod_phase = step.get("phase")
+                pod_outputs_mainlog = self._get_workflow_node_artifact(
+                    id_discriminator=id_discrimator,
+                    wf_id=wf_id,
+                    node_id=pod_id
+                )
+                pod_log_interpreted = GWAS.interpret_gwas_workflow_error(
+                    step_name=pod_step,
+                    main_log=pod_outputs_mainlog
                 )
                 errors.append(
                     {
                         "name": step.get("name"),
-                        "step_template": step.get("templateName"),
+                        "pod_id": pod_id,
+                        "pod_type": pod_type,
+                        "pod_phase": pod_phase,
+                        "step_name": pod_step,
+                        "step_template": pod_step_template,
                         "error_message": message,
+                        "error_interpreted": pod_log_interpreted
                     }
                 )
             else:
@@ -332,24 +372,32 @@ class ArgoEngine:
 
     def get_workflow_logs(self, workflow_name: str, uid: str) -> List[Dict]:
         """
-        Gets the workflow errors
+        Gets the workflow errors from failed workflow
 
         Args:
             workflow_name (str): name of an active workflow to get status of
             uid (str): uid of an archived workflow to get status of
 
         Returns:
-            Dict[str, any]: returns a list of dictionaries of errors
+            Dict[str, any]: returns a list of dictionaries of errors of Retry nodes
         """
         try:
             archived_workflow_dict = self._get_archived_workflow_details_dict(uid)
-            archived_workflow_details_nodes = archived_workflow_dict["status"].get(
-                "nodes"
-            )
-            archived_workflow_errors = self._get_log_errors(
-                archived_workflow_details_nodes
-            )
-            return archived_workflow_errors
+            archived_workflow_phase = archived_workflow_dict["status"].get("phase")
+            if archived_workflow_phase in ("Failed", "Error"):
+                archived_workflow_details_nodes = archived_workflow_dict["status"].get(
+                "nodes")
+                archived_workflow_errors = self._get_log_errors(
+                    id_discrimator="archived-workflows",
+                    wf_id=uid,
+                    status_nodes_dict=archived_workflow_details_nodes
+                    )
+                return archived_workflow_errors
+            else:
+                logger.info(
+                    f"Workflow {workflow_name} with uid {uid} doesn't have a Failed or Error phase"
+                )
+                return []
 
         except (KeyError, NotFoundException):
             logger.info(
@@ -358,12 +406,23 @@ class ArgoEngine:
             logger.info(
                 f"Look up the log of {workflow_name} workflow at workflow endpoint"
             )
-            active_workflow_log_return = self._get_workflow_log_dict(workflow_name)
-            active_workflow_details_nodes = active_workflow_log_return["status"].get(
-                "nodes"
-            )
-            active_workflow_errors = self._get_log_errors(active_workflow_details_nodes)
-            return active_workflow_errors
+            active_workflow_phase = self._get_workflow_phase(workflow_name)
+            if active_workflow_phase in ("Failed", "Error"):
+                active_workflow_log_return = self._get_workflow_log_dict(workflow_name)
+                active_workflow_details_nodes = active_workflow_log_return["status"].get(
+                    "nodes"
+                    )
+                active_workflow_errors = self._get_log_errors(
+                    id_discrimator="workflow",
+                    wf_id=workflow_name,
+                    status_nodes_dict=active_workflow_details_nodes
+                    )
+                return active_workflow_errors
+            else:
+                logger.info(
+                    f"Workflow {workflow_name} with uid {uid} doesn't have a Failed or Error phase"
+                )
+                return []
 
         except Exception as exception:
             logger.error(traceback.format_exc())
