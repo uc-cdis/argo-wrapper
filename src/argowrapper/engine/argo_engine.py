@@ -104,7 +104,8 @@ class ArgoEngine:
             id=wf_id,
             node_id=node_id,
             artifact_discriminator="outputs",
-            artifact_name="main-logs"
+            artifact_name="main-logs",
+            _check_return_type=False,
         )
         return api_response
 
