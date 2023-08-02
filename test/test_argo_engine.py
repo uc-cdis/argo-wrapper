@@ -495,6 +495,8 @@ def test_argo_engine_get_archived_workflow_log_succeeded():
             "nodes": {
                 "step_one_name": {
                     "name": "step_one_name",
+                    "type": "Retry",
+                    "displayName": "run-plots",
                     "templateName": "step_one_template",
                     "message": "Error (exit code 126)",
                     "phase": "Failed",
@@ -505,11 +507,14 @@ def test_argo_engine_get_archived_workflow_log_succeeded():
     engine._get_archived_workflow_details_dict = mock.MagicMock(
         return_value=mock_return_archived_wf
     )
+    engine._get_workflow_node_artifact = mock.MagicMock(
+        return_value="Problem with mutate()"
+    )
     archived_workflow_errors = engine.get_workflow_logs("archived_wf", "archived_uid")
     assert len(archived_workflow_errors) == 1
-    assert archived_workflow_errors[0]["name"] == "step_one_name"
+    assert archived_workflow_errors[0]["type"] == "Retry"
     assert archived_workflow_errors[0]["step_template"] == "step_one_template"
-    assert archived_workflow_errors[0]["error_message"] == "Error (exit code 126)"
+    assert archived_workflow_errors[0]["error_interpreted"] == "Small cohort size or unbalanced cohort sizes."
 
 
 def test_argo_engine_get_workflow_log_succeeded():
@@ -546,5 +551,5 @@ def test_argo_engine_get_workflow_log_succeeded():
     workflow_errors = engine.get_workflow_logs("active_wf", "wf_uid")
     assert len(workflow_errors) == 1
     assert workflow_errors[0]["name"] == "step_one_name"
-    assert workflow_errors[0]["error_interpreted"] == "Timeout on cohort-widdleware request"
+    assert workflow_errors[0]["error_interpreted"] == "Timeout on cohort-widdleware request."
     assert workflow_errors[0]["error_message"] == "Error (exit code 126)"
