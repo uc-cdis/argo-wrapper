@@ -98,7 +98,7 @@ class ArgoEngine:
         return phase_return["status"].get("phase")
     
     def _get_workflow_node_artifact(self, id_discriminator: Literal['workflow', 'archived-workflows'], wf_id: str, node_id: str) -> str:
-        api_response = self.archive_api_instance.get_artifact_file(
+        api_response = self.artifact_api_instance.get_artifact_file(
             namespace=ARGO_NAMESPACE,
             id_discriminator=id_discriminator,
             id=wf_id,
