@@ -104,6 +104,8 @@ class ArgoEngine:
             artifact_name="main-logs",
             _check_return_type=False,
         )
+        print(type(api_response))
+        print(api_response)
         return api_response
 
     def _get_log_errors(self, uid: str, status_nodes_dict: Dict) -> List[Dict]:
