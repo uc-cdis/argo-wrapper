@@ -389,7 +389,7 @@ class ArgoEngine:
                 archived_workflow_details_nodes = archived_workflow_dict["status"].get(
                 "nodes")
                 archived_workflow_errors = self._get_log_errors(
-                    id_discrimator="archived-workflows",
+                    id_discrimator="archived-workflows ",
                     wf_id=uid,
                     status_nodes_dict=archived_workflow_details_nodes
                     )
