@@ -97,19 +97,16 @@ class ArgoEngine:
         ).to_dict()
         return phase_return["status"].get("phase")
     
-    def _get_workflow_node_artifact(self, id_discriminator: Literal['workflow', 'archived-workflows'], wf_id: str, node_id: str) -> str:
-        api_response = self.artifact_api_instance.get_artifact_file(
-            namespace=ARGO_NAMESPACE,
-            id_discriminator=id_discriminator,
-            id=wf_id,
+    def _get_workflow_node_artifact(self, uid: str, node_id: str) -> str:
+        api_response = self.artifact_api_instance.get_output_artifact_by_uid(
+            uid=uid,
             node_id=node_id,
-            artifact_discriminator="outputs",
             artifact_name="main-logs",
             _check_return_type=False,
         )
         return api_response
 
-    def _get_log_errors(self, id_discrimator: str, wf_id: str, status_nodes_dict: Dict) -> List[Dict]:
+    def _get_log_errors(self, uid: str, status_nodes_dict: Dict) -> List[Dict]:
         errors = []
         for pod_id, step in status_nodes_dict.items():
             if step.get("phase") in ("Failed", "Error") and step.get("type")=="Retry":
@@ -121,8 +118,7 @@ class ArgoEngine:
                 pod_step_template =  step.get("templateName")
                 pod_phase = step.get("phase")
                 pod_outputs_mainlog = self._get_workflow_node_artifact(
-                    id_discriminator=id_discrimator,
-                    wf_id=wf_id,
+                    uid=uid,
                     node_id=pod_id
                 )
                 pod_log_interpreted = GWAS.interpret_gwas_workflow_error(
@@ -389,8 +385,7 @@ class ArgoEngine:
                 archived_workflow_details_nodes = archived_workflow_dict["status"].get(
                 "nodes")
                 archived_workflow_errors = self._get_log_errors(
-                    id_discrimator="archived-workflows ",
-                    wf_id=uid,
+                    uid=uid,
                     status_nodes_dict=archived_workflow_details_nodes
                     )
                 return archived_workflow_errors
@@ -414,8 +409,7 @@ class ArgoEngine:
                     "nodes"
                     )
                 active_workflow_errors = self._get_log_errors(
-                    id_discrimator="workflow",
-                    wf_id=workflow_name,
+                    uid=uid,
                     status_nodes_dict=active_workflow_details_nodes
                     )
                 return active_workflow_errors
