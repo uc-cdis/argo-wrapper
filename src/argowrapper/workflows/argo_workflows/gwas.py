@@ -167,15 +167,15 @@ class GWAS(WorkflowBase):
         return super()._to_dict()
     
     @staticmethod
-    def interpret_gwas_workflow_error(step_name: str, main_log: str) -> str:
+    def interpret_gwas_workflow_error(step_name: str, step_log: str) -> str:
         """A static method to interpret the error message in the main-log file 
         of Failed Retry node
         """
-        if step_name=="run-plots" and "mutate" in main_log:
+        if step_name=="run-plots" and "mutate" in step_log:
             show_error = "Small cohort size or unbalanced cohort sizes."
-        elif step_name=="run-single-assoc" and "system is computationally singular" in main_log:
+        elif step_name=="run-single-assoc" and "system is computationally singular" in step_log:
             show_error = "Unbalanced cohort sizes."
-        elif step_name=="generate-attrition-csv" and "ReadTimeout" in main_log:
+        elif step_name=="generate-attrition-csv" and "ReadTimeout" in step_log:
             show_error = "Timeout on cohort-widdleware request."
         else:
             show_error = "Please contact our help desk at vadc@lists.uchicago.edu for additional support."
