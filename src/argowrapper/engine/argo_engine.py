@@ -122,7 +122,7 @@ class ArgoEngine:
                 )
                 pod_log_interpreted = GWAS.interpret_gwas_workflow_error(
                     step_name=pod_step,
-                    main_log=pod_outputs_mainlog
+                    step_log=pod_outputs_mainlog
                 )
                 errors.append(
                     {
