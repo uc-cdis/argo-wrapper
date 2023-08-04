@@ -98,16 +98,12 @@ class ArgoEngine:
         return phase_return["status"].get("phase")
     
     def _get_workflow_node_artifact(self, uid: str, node_id: str) -> str:
-        api_response = self.artifact_api_instance.get_output_artifact_by_uid(
+        return self.artifact_api_instance.get_output_artifact_by_uid(
             uid=uid,
             node_id=node_id,
             artifact_name="main-logs",
             _check_return_type=False,
-        )
-        print(type(api_response))
-        print(type(api_response.read()))
-        print(api_response.read())
-        return api_response.read()
+        ).read().decode()
 
     def _get_log_errors(self, uid: str, status_nodes_dict: Dict) -> List[Dict]:
         errors = []
