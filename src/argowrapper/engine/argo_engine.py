@@ -105,8 +105,9 @@ class ArgoEngine:
             _check_return_type=False,
         )
         print(type(api_response))
-        print(api_response)
-        return api_response
+        print(type(api_response.read()))
+        print(api_response.read())
+        return api_response.read()
 
     def _get_log_errors(self, uid: str, status_nodes_dict: Dict) -> List[Dict]:
         errors = []
