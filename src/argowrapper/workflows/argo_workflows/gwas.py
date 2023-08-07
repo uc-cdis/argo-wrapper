@@ -68,7 +68,6 @@ class GWAS(WorkflowBase):
             self.username
         )
         self._request_body = request_body
-
         super().__init__(namespace, WORKFLOW_ENTRYPOINT.GWAS_ENTRYPOINT, dry_run)
 
     def _add_metadata_annotations(self):
@@ -81,25 +80,9 @@ class GWAS(WorkflowBase):
         super()._add_metadata_labels()
         self.metadata.add_metadata_label("gen3username", self.gen3username_label)
 
-    def _add_spec_scaling_group(self):
-        # Check if default or custom are confined
-        scaling_group_config = argo_engine_helper._get_argo_config_dict().get(
-            "scaling_groups", {}
-        )
-
-        # If not we are in QA
-        if not scaling_group_config.get("default") and not scaling_group_config.get(
-            "custom"
-        ):
-            return
-
-        # First check if name in custom config, else use default
-        if scaling_group_config.get("custom", {}).get(self.username):
-            scaling_group = scaling_group_config["custom"][self.username]
-        else:
-            scaling_group = scaling_group_config["default"]
-
-        self.spec.add_scaling_group(scaling_group)
+    def _add_node_taint(self):
+        taint = self._request_body.get("workflow_name")
+        self.spec.add_node_taint(taint)
 
     def _add_param_helper(self, parameters: Dict) -> None:
         for parameter_name, parameter_val in parameters.items():
@@ -156,7 +139,7 @@ class GWAS(WorkflowBase):
     def setup_spec(self):
         super().setup_spec()
         self.spec.set_podGC_strategy(POD_COMPLETION_STRATEGY.ONPODCOMPLETION.value)
-        self._add_spec_scaling_group()
+        self._add_node_taint()
         self._add_spec_podMetadata_annotations()
         self._add_spec_podMetadata_labels()
         self._add_spec_parameters()

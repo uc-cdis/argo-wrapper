@@ -17,14 +17,14 @@ class WorkflowSpec:
     def set_entry_point(self, entrypoint: str) -> None:
         self.entrypoint = entrypoint
 
-    def add_scaling_group(self, scaling_group: str) -> None:
-        self.nodeSelector = {"role": scaling_group}
+    def add_node_taint(self, taint: str) -> None:
+        self.nodeSelector = {"role": taint}
 
         self.tolerations = [
             {
                 "key": "role",
                 "operator": "Equal",
-                "value": scaling_group,
+                "value": taint,
                 "effect": "NoSchedule",
             }
         ]

@@ -27,7 +27,7 @@ request_body = {
     "workflow_name": "wf_name",
 }
 
-config = {"environment": "default", "scaling_groups": {"default": "group_1"}}
+config = {"environment": "default"}
 with mock.patch(
     "argowrapper.workflows.argo_workflows.gwas.argo_engine_helper._get_argo_config_dict"
 ) as mock_config_dict:
@@ -67,45 +67,12 @@ def test_gwas_yaml_spec_podGC():
     )
 
 
-def test_gwas_yaml_spec_nodeSelector():
+def test_gwas_yaml_node_taint():
     node_selector = gwas_spec.get("nodeSelector")
-    assert node_selector.get("role") == "group_1"
+    assert node_selector.get("role") == "wf_name"
 
     tolerations = gwas_spec.get("tolerations")
-    assert tolerations[0].get("value") == "group_1"
-
-    local_config = {"environment": "default", "scaling_groups": {}}
-    with mock.patch(
-        "argowrapper.workflows.argo_workflows.gwas.argo_engine_helper._get_argo_config_dict"
-    ) as local_mock_config_dict:
-        local_mock_config_dict.return_value = local_config
-        loc_gwas = GWAS(ARGO_NAMESPACE, request_body, EXAMPLE_AUTH_HEADER)
-        loc_gwas_yaml = loc_gwas._to_dict()
-        loc_gwas_metadata = loc_gwas_yaml.get("metadata")
-        loc_gwas_spec = loc_gwas_yaml.get("spec")
-
-        assert "nodeSelector" not in loc_gwas_spec
-        assert "tolerations" not in loc_gwas_spec
-
-    local_config = {
-        "environment": "default",
-        "scaling_groups": {"default": "blah", "custom": {"test user": "group_10"}},
-    }
-    with mock.patch(
-        "argowrapper.workflows.argo_workflows.gwas.argo_engine_helper._get_argo_config_dict"
-    ) as local_mock_config_dict:
-        local_mock_config_dict.return_value = local_config
-        loc_gwas = GWAS(ARGO_NAMESPACE, request_body, EXAMPLE_AUTH_HEADER)
-        loc_gwas_yaml = loc_gwas._to_dict()
-        loc_gwas_metadata = loc_gwas_yaml.get("metadata")
-        loc_gwas_spec = loc_gwas_yaml.get("spec")
-
-        node_selector = loc_gwas_spec.get("nodeSelector")
-        assert node_selector.get("role") == "group_10"
-
-        tolerations = loc_gwas_spec.get("tolerations")
-        assert tolerations[0].get("value") == "group_10"
-
+    assert tolerations[0].get("value") == "wf_name"
 
 def test_gwas_yaml_spec_podMetadata():
     podMetadata = gwas_spec.get("podMetadata")
