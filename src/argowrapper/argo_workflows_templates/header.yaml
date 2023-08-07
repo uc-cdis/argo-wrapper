@@ -24,6 +24,7 @@ spec:
       gen3username: "user-test-user"
     annotations:
       gen3username: "test-user@uchicago.edu"
+      karpenter.sh/do-not-evict: "true"
   arguments:
     parameters:
       - name: internal_api_env

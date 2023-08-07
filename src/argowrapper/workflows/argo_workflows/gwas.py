@@ -132,6 +132,7 @@ class GWAS(WorkflowBase):
 
     def _add_spec_podMetadata_annotations(self):
         self.spec.add_pod_metadata_annotation("gen3username", self.username)
+        self.spec.add_pod_metadata_annotation("karpenter.sh/do-not-evict", "true")
 
     def _add_spec_podMetadata_labels(self):
         self.spec.add_pod_metadata_label("gen3username", self.gen3username_label)

@@ -77,6 +77,7 @@ def test_gwas_yaml_node_taint():
 def test_gwas_yaml_spec_podMetadata():
     podMetadata = gwas_spec.get("podMetadata")
     assert podMetadata.get("annotations").get("gen3username") == "test user"
+    assert podMetadata.get("annotations").get("karpenter.sh/do-not-evict") == "true"
     assert podMetadata.get("labels").get("gen3username") == "user-test user"
 
 
