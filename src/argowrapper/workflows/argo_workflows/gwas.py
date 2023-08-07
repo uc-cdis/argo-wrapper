@@ -177,5 +177,5 @@ class GWAS(WorkflowBase):
         elif step_name=="generate-attrition-csv" and "ReadTimeout" in step_log:
             show_error = "Timeout on cohort-widdleware request."
         else:
-            show_error = "Please contact our help desk at vadc@lists.uchicago.edu for additional support."
+            show_error = ""
         return show_error
