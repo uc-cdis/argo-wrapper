@@ -160,5 +160,5 @@ def test_gwas_yaml_spec_arguments():
 def test_interpret_gwas_workflow_error():
     step_name="generate-attrition-csv"
     main_log="requests.exceptions.ReadTimeout\nHTTPConnectionPool"
-    expected_error="Timeout occurred while fetching attrition table information"
+    expected_error="Timeout occurred while fetching attrition table information."
     assert expected_error == GWAS.interpret_gwas_workflow_error(step_name, main_log)
