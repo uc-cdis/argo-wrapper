@@ -512,7 +512,7 @@ def test_argo_engine_get_archived_workflow_log_succeeded():
     )
     archived_workflow_errors = engine.get_workflow_logs("archived_wf", "archived_uid")
     assert len(archived_workflow_errors) == 1
-    assert archived_workflow_errors[0]["pod_type"] == "Retry"
+    assert archived_workflow_errors[0]["node_type"] == "Retry"
     assert archived_workflow_errors[0]["step_template"] == "step_one_template"
     assert archived_workflow_errors[0]["error_interpreted"] == "Small cohort size or unbalanced cohort sizes."
 
