@@ -175,7 +175,7 @@ class GWAS(WorkflowBase):
         elif step_name=="run-single-assoc" and "system is computationally singular" in step_log:
             show_error = "Unbalanced cohort sizes."
         elif step_name=="generate-attrition-csv" and "ReadTimeout" in step_log:
-            show_error = "Timeout on cohort-widdleware request."
+            show_error = "Timeout occurred while fetching attrition table information."
         else:
             show_error = ""
         return show_error
