@@ -551,5 +551,5 @@ def test_argo_engine_get_workflow_log_succeeded():
     workflow_errors = engine.get_workflow_logs("active_wf", "wf_uid")
     assert len(workflow_errors) == 1
     assert workflow_errors[0]["name"] == "step_one_name"
-    assert workflow_errors[0]["error_interpreted"] == "Timeout on cohort-widdleware request."
+    assert workflow_errors[0]["error_interpreted"] == "Timeout occurred while fetching attrition table information."
     assert workflow_errors[0]["error_message"] == "Error (exit code 126)"
