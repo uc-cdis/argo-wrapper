@@ -107,33 +107,33 @@ class ArgoEngine:
 
     def _get_log_errors(self, uid: str, status_nodes_dict: Dict) -> List[Dict]:
         errors = []
-        for pod_id, step in status_nodes_dict.items():
+        for node_id, step in status_nodes_dict.items():
             if step.get("phase") in ("Failed", "Error") and step.get("type")=="Retry":
                 message = (
                     step["message"] if step.get("message") else "No message provided"
                 )
-                pod_type = step.get("type")
-                pod_step = step.get("displayName")
-                pod_step_template =  step.get("templateName")
-                pod_phase = step.get("phase")
-                pod_outputs_mainlog = self._get_workflow_node_artifact(
+                node_type = step.get("type")
+                node_step = step.get("displayName")
+                node_step_template =  step.get("templateName")
+                node_phase = step.get("phase")
+                node_outputs_mainlog = self._get_workflow_node_artifact(
                     uid=uid,
-                    node_id=pod_id
+                    node_id=node_id
                 )
-                pod_log_interpreted = GWAS.interpret_gwas_workflow_error(
-                    step_name=pod_step,
-                    step_log=pod_outputs_mainlog
+                node_log_interpreted = GWAS.interpret_gwas_workflow_error(
+                    step_name=node_step,
+                    step_log=node_outputs_mainlog
                 )
                 errors.append(
                     {
                         "name": step.get("name"),
-                        "pod_id": pod_id,
-                        "pod_type": pod_type,
-                        "pod_phase": pod_phase,
-                        "step_name": pod_step,
-                        "step_template": pod_step_template,
+                        "pod_id": node_id,
+                        "pod_type": node_type,
+                        "pod_phase": node_phase,
+                        "step_name": node_step,
+                        "step_template": node_step_template,
                         "error_message": message,
-                        "error_interpreted": pod_log_interpreted
+                        "error_interpreted": node_log_interpreted
                     }
                 )
             else:
