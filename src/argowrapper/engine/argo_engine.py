@@ -127,9 +127,9 @@ class ArgoEngine:
                 errors.append(
                     {
                         "name": step.get("name"),
-                        "pod_id": node_id,
-                        "pod_type": node_type,
-                        "pod_phase": node_phase,
+                        "node_id": node_id,
+                        "node_type": node_type,
+                        "node_phase": node_phase,
                         "step_name": node_step,
                         "step_template": node_step_template,
                         "error_message": message,
