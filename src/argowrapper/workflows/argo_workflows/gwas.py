@@ -164,3 +164,18 @@ class GWAS(WorkflowBase):
 
     def generate_argo_workflow(self):
         return super()._to_dict()
+    
+    @staticmethod
+    def interpret_gwas_workflow_error(step_name: str, step_log: str) -> str:
+        """A static method to interpret the error message in the main-log file 
+        of Failed Retry node
+        """
+        if step_name=="run-plots" and "mutate" in step_log:
+            show_error = "Small cohort size or unbalanced cohort sizes."
+        elif step_name=="run-single-assoc" and "system is computationally singular" in step_log:
+            show_error = "Unbalanced cohort sizes."
+        elif step_name=="generate-attrition-csv" and "ReadTimeout" in step_log:
+            show_error = "Timeout occurred while fetching attrition table information."
+        else:
+            show_error = ""
+        return show_error
