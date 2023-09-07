@@ -170,12 +170,14 @@ class GWAS(WorkflowBase):
         """A static method to interpret the error message in the main-log file 
         of Failed Retry node
         """
-        if step_name=="run-plots" and "mutate" in step_log:
+        if step_name=="run-null-model" and "solve.default" in step_log:
+            show_error = "Small cohort size or unbalanced cohort sizes."
+        elif step_name=="run-plots" and "mutate" in step_log:
             show_error = "Small cohort size or unbalanced cohort sizes."
         elif step_name=="run-single-assoc" and "system is computationally singular" in step_log:
             show_error = "Unbalanced cohort sizes."
         elif step_name=="generate-attrition-csv" and "ReadTimeout" in step_log:
-            show_error = "Timeout occurred while fetching attrition table information."
+            show_error = "Timeout occurred while fetching attrition table information. Please retry."
         else:
             show_error = ""
         return show_error
