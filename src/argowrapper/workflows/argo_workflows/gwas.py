@@ -171,7 +171,7 @@ class GWAS(WorkflowBase):
         of Failed Retry node
         """
         if step_name=="run-null-model" and "solve.default" in step_log:
-            show_error = "Small cohort size or unbalanced cohort sizes."
+            show_error = "Small cohort size or unbalanced cohort sizes. A cohort size of about 700 or below may fail for continuous outcome workflow."
         elif step_name=="run-plots" and "mutate" in step_log:
             show_error = "Small cohort size or unbalanced cohort sizes."
         elif step_name=="run-single-assoc" and "system is computationally singular" in step_log:
