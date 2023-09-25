@@ -326,7 +326,10 @@ class ArgoEngine:
             raises Exception in case of any error.
         """
         label_selector = f"{GEN3_TEAM_PROJECT_METADATA_LABEL}={team_project}"
-        return self.get_workflows_for_label_selector(label_selector=label_selector)
+        workflows = self.get_workflows_for_label_selector(label_selector=label_selector)
+        for workflow in workflows:
+            workflow["team_project"] = team_project
+        return workflows
 
     def get_workflows_for_user(self, auth_header: str) -> List[Dict]:
         """
