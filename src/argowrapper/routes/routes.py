@@ -9,25 +9,38 @@ from starlette.status import (
     HTTP_401_UNAUTHORIZED,
     HTTP_500_INTERNAL_SERVER_ERROR,
 )
+from argowrapper.constants import TEAM_PROJECT_FIELD_NAME
 
 from argowrapper import logger
 from argowrapper.auth import Auth
 from argowrapper.engine.argo_engine import ArgoEngine
+import argowrapper.engine.helpers.argo_engine_helper as argo_engine_helper
 
 router = APIRouter()
 argo_engine = ArgoEngine()
 auth = Auth()
 
 
-def check_auth(fn):
+def check_auth(fn, check_team_project=False):
     """custom annotation to authenticate user request"""
 
     @wraps(fn)
     def wrapper(*args, **kwargs):
         request = kwargs["request"]
         token = request.headers.get("Authorization")
-
-        if not auth.authenticate(token=token):
+        team_project = None
+        if check_team_project:
+            request_body = argo_engine_helper._convert_request_body_to_parameter_dict(
+                kwargs["request_body"]
+            )
+            team_project = request_body.get(TEAM_PROJECT_FIELD_NAME)
+            if not team_project:
+                raise Exception(
+                    "the '{}' field is required for this endpoint, but was not found in the request body".format(
+                        TEAM_PROJECT_FIELD_NAME
+                    )
+                )
+        if not auth.authenticate(token=token, team_project=team_project):
             return HTMLResponse(
                 content="token is missing, not authorized, out of date, or malformed",
                 status_code=HTTP_401_UNAUTHORIZED,
@@ -38,6 +51,11 @@ def check_auth(fn):
     return wrapper
 
 
+def check_auth_and_team_project(fn):
+    """custom annotation to authenticate user request AND check teamproject authorization"""
+    return check_auth(fn=fn, check_team_project=True)
+
+
 @router.get("/test")
 def test():
     """route to test that the argo-workflow is correctly running"""
@@ -46,7 +64,7 @@ def test():
 
 # submit argo workflow
 @router.post("/submit", status_code=HTTP_200_OK)
-@check_auth
+@check_auth_and_team_project
 def submit_workflow(
     request_body: Dict[Any, Any],
     request: Request,  # pylint: disable=unused-argument

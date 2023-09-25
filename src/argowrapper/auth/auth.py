@@ -8,6 +8,8 @@ from argowrapper.constants import (
     ARGO_ACCESS_METHOD,
     ARGO_ACCESS_RESOURCES,
     ARGO_ACCESS_SERVICE,
+    TEAM_PROJECT_ACCESS_SERVICE,
+    TEAM_PROJECT_ACCESS_METHOD,
     TOKEN_REGEX,
 )
 
@@ -35,7 +37,7 @@ class Auth:
 
         return parsed_token
 
-    def authenticate(self, token: str) -> bool:
+    def authenticate(self, token: str, team_project=None) -> bool:
         """
 
         jwt token authentication for mariner access
@@ -56,12 +58,21 @@ class Auth:
             if ARGO_ACCESS_METHOD == "NONE":
                 return True
             else:
+                # check if user has been granted access to argo-wrapper itself:
                 authorized = self.arborist_client.auth_request(
                     jwt,
                     ARGO_ACCESS_SERVICE,
                     ARGO_ACCESS_METHOD,
                     resources=ARGO_ACCESS_RESOURCES,
                 )
+                if team_project:
+                    # check if user has been granted access to this teamproject:
+                    authorized = self.arborist_client.auth_request(
+                        jwt,
+                        TEAM_PROJECT_ACCESS_SERVICE,
+                        TEAM_PROJECT_ACCESS_METHOD,
+                        resources=team_project,
+                    )
 
         except ArboristError as exception:
             logger.error(f"error while talking to arborist with error {exception}")
