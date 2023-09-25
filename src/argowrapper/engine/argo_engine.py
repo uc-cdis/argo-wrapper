@@ -3,7 +3,11 @@ import traceback
 from typing import Dict, List, Literal
 
 import argo_workflows
-from argo_workflows.api import archived_workflow_service_api, workflow_service_api, artifact_service_api
+from argo_workflows.api import (
+    archived_workflow_service_api,
+    workflow_service_api,
+    artifact_service_api,
+)
 from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_create_request import (
     IoArgoprojWorkflowV1alpha1WorkflowCreateRequest,
 )
@@ -19,7 +23,13 @@ from argo_workflows.model.io_argoproj_workflow_v1alpha1_retry_archived_workflow_
 from argo_workflows.exceptions import NotFoundException
 
 from argowrapper import logger
-from argowrapper.constants import ARGO_HOST, ARGO_NAMESPACE, WORKFLOW
+from argowrapper.constants import (
+    ARGO_HOST,
+    ARGO_NAMESPACE,
+    WORKFLOW,
+    GEN3_USER_METADATA_LABEL,
+    GEN3_TEAM_PROJECT_METADATA_LABEL,
+)
 from argowrapper.engine.helpers import argo_engine_helper
 from argowrapper.engine.helpers.workflow_factory import WorkflowFactory
 from argowrapper.workflows.argo_workflows.gwas import GWAS
@@ -93,36 +103,38 @@ class ArgoEngine:
             namespace=ARGO_NAMESPACE,
             name=workflow_name,
             fields="status.phase",
-            _check_return_type=False,    
+            _check_return_type=False,
         ).to_dict()
         return phase_return["status"].get("phase")
-    
+
     def _get_workflow_node_artifact(self, uid: str, node_id: str) -> str:
-        return self.artifact_api_instance.get_output_artifact_by_uid(
-            uid=uid,
-            node_id=node_id,
-            artifact_name="main-logs",
-            _check_return_type=False,
-        ).read().decode()
+        return (
+            self.artifact_api_instance.get_output_artifact_by_uid(
+                uid=uid,
+                node_id=node_id,
+                artifact_name="main-logs",
+                _check_return_type=False,
+            )
+            .read()
+            .decode()
+        )
 
     def _get_log_errors(self, uid: str, status_nodes_dict: Dict) -> List[Dict]:
         errors = []
         for node_id, step in status_nodes_dict.items():
-            if step.get("phase") in ("Failed", "Error") and step.get("type")=="Retry":
+            if step.get("phase") in ("Failed", "Error") and step.get("type") == "Retry":
                 message = (
                     step["message"] if step.get("message") else "No message provided"
                 )
                 node_type = step.get("type")
                 node_step = step.get("displayName")
-                node_step_template =  step.get("templateName")
+                node_step_template = step.get("templateName")
                 node_phase = step.get("phase")
                 node_outputs_mainlog = self._get_workflow_node_artifact(
-                    uid=uid,
-                    node_id=node_id
+                    uid=uid, node_id=node_id
                 )
                 node_log_interpreted = GWAS.interpret_gwas_workflow_error(
-                    step_name=node_step,
-                    step_log=node_outputs_mainlog
+                    step_name=node_step, step_log=node_outputs_mainlog
                 )
                 errors.append(
                     {
@@ -133,7 +145,7 @@ class ArgoEngine:
                         "step_name": node_step,
                         "step_template": node_step_template,
                         "error_message": message,
-                        "error_interpreted": node_log_interpreted
+                        "error_interpreted": node_log_interpreted,
                     }
                 )
             else:
@@ -293,9 +305,32 @@ class ArgoEngine:
         self.workflow_given_names_cache[archived_workflow_uid] = given_name
         return given_name
 
+    def get_workflows_for_team_projects(self, team_projects: List[str]) -> List[Dict]:
+        result = []
+        for team_project in team_projects:
+            result.append(self.get_workflows_for_team_project(team_project))
+        return result
+
+    def get_workflows_for_team_project(self, team_project: str) -> List[Dict]:
+        """
+        Get the list of all workflows for the given team_project. Each item in the list
+        contains the workflow name, its status, start and end time.
+
+        Args:
+            team_project: team project name
+
+        Returns:
+            List[Dict]: List of workflow dictionaries.
+
+        Raises:
+            raises Exception in case of any error.
+        """
+        label_selector = f"{GEN3_TEAM_PROJECT_METADATA_LABEL}={team_project}"
+        return self.get_workflows_for_label_selector(label_selector=label_selector)
+
     def get_workflows_for_user(self, auth_header: str) -> List[Dict]:
         """
-        Get a list of all workflows for a new user. Each item in the list
+        Get the list of all workflows for the current user. Each item in the list
         contains the workflow name, its status, start and end time.
 
         Args:
@@ -310,8 +345,10 @@ class ArgoEngine:
         """
         username = argo_engine_helper.get_username_from_token(auth_header)
         user_label = argo_engine_helper.convert_gen3username_to_label(username)
-        label_selector = f"gen3username={user_label}"
+        label_selector = f"{GEN3_USER_METADATA_LABEL}={user_label}"
+        return self.get_workflows_for_label_selector(label_selector=label_selector)
 
+    def get_workflows_for_label_selector(self, label_selector: str) -> List[Dict]:
         try:
             workflow_list_return = self.api_instance.list_workflows(
                 namespace=ARGO_NAMESPACE,
@@ -328,7 +365,7 @@ class ArgoEngine:
 
             if not (workflow_list_return.items or archived_workflow_list_return.items):
                 logger.info(
-                    f"no active workflows or archived workflow exist for user {user_label}"
+                    f"no active workflows or archived workflow exist for label_selector {label_selector}"
                 )
                 return []
 
@@ -362,7 +399,7 @@ class ArgoEngine:
         except Exception as exception:
             logger.error(traceback.format_exc())
             logger.error(
-                f"could not get workflows for {username}, failed with error {exception}"
+                f"could not get workflows for label_selector={label_selector}, failed with error {exception}"
             )
             raise exception
 
@@ -382,11 +419,11 @@ class ArgoEngine:
             archived_workflow_phase = archived_workflow_dict["status"].get("phase")
             if archived_workflow_phase in ("Failed", "Error"):
                 archived_workflow_details_nodes = archived_workflow_dict["status"].get(
-                "nodes")
+                    "nodes"
+                )
                 archived_workflow_errors = self._get_log_errors(
-                    uid=uid,
-                    status_nodes_dict=archived_workflow_details_nodes
-                    )
+                    uid=uid, status_nodes_dict=archived_workflow_details_nodes
+                )
                 return archived_workflow_errors
             else:
                 logger.info(
@@ -404,13 +441,12 @@ class ArgoEngine:
             active_workflow_phase = self._get_workflow_phase(workflow_name)
             if active_workflow_phase in ("Failed", "Error"):
                 active_workflow_log_return = self._get_workflow_log_dict(workflow_name)
-                active_workflow_details_nodes = active_workflow_log_return["status"].get(
-                    "nodes"
-                    )
+                active_workflow_details_nodes = active_workflow_log_return[
+                    "status"
+                ].get("nodes")
                 active_workflow_errors = self._get_log_errors(
-                    uid=uid,
-                    status_nodes_dict=active_workflow_details_nodes
-                    )
+                    uid=uid, status_nodes_dict=active_workflow_details_nodes
+                )
                 return active_workflow_errors
             else:
                 logger.info(

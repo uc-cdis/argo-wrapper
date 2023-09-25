@@ -9,7 +9,7 @@ from starlette.status import (
     HTTP_401_UNAUTHORIZED,
     HTTP_500_INTERNAL_SERVER_ERROR,
 )
-from argowrapper.constants import TEAM_PROJECT_FIELD_NAME
+from argowrapper.constants import TEAM_PROJECT_FIELD_NAME, TEAM_PROJECT_LIST_FIELD_NAME
 
 from argowrapper import logger
 from argowrapper.auth import Auth
@@ -21,26 +21,14 @@ argo_engine = ArgoEngine()
 auth = Auth()
 
 
-def check_auth(fn, check_team_project=False):
+def check_auth(fn):
     """custom annotation to authenticate user request"""
 
     @wraps(fn)
     def wrapper(*args, **kwargs):
         request = kwargs["request"]
         token = request.headers.get("Authorization")
-        team_project = None
-        if check_team_project:
-            request_body = argo_engine_helper._convert_request_body_to_parameter_dict(
-                kwargs["request_body"]
-            )
-            team_project = request_body.get(TEAM_PROJECT_FIELD_NAME)
-            if not team_project:
-                raise Exception(
-                    "the '{}' field is required for this endpoint, but was not found in the request body".format(
-                        TEAM_PROJECT_FIELD_NAME
-                    )
-                )
-        if not auth.authenticate(token=token, team_project=team_project):
+        if not auth.authenticate(token=token):
             return HTMLResponse(
                 content="token is missing, not authorized, out of date, or malformed",
                 status_code=HTTP_401_UNAUTHORIZED,
@@ -53,7 +41,59 @@ def check_auth(fn, check_team_project=False):
 
 def check_auth_and_team_project(fn):
     """custom annotation to authenticate user request AND check teamproject authorization"""
-    return check_auth(fn=fn, check_team_project=True)
+
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        request = kwargs["request"]
+        token = request.headers.get("Authorization")
+        request_body = argo_engine_helper._convert_request_body_to_parameter_dict(
+            kwargs["request_body"]
+        )
+        team_project = request_body.get(TEAM_PROJECT_FIELD_NAME)
+        if not team_project:
+            raise Exception(
+                "the '{}' field is required for this endpoint, but was not found in the request body".format(
+                    TEAM_PROJECT_FIELD_NAME
+                )
+            )
+        if not auth.authenticate(token=token, team_project=team_project):
+            return HTMLResponse(
+                content="token is missing, not authorized, out of date, or malformed, or team_project access not granted",
+                status_code=HTTP_401_UNAUTHORIZED,
+            )
+
+        return fn(*args, **kwargs)
+
+    return wrapper
+
+
+def check_auth_and_team_projects(fn):
+    """custom annotation to authenticate user request AND check teamproject authorizations"""
+
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        request = kwargs["request"]
+        token = request.headers.get("Authorization")
+        team_projects = kwargs[TEAM_PROJECT_LIST_FIELD_NAME]
+        if team_projects and len(team_projects) > 0:
+            # validate/ensure that user has been granted access to each of the given team_project codes:
+            for team_project in team_projects:
+                if not auth.authenticate(token=token, team_project=team_project):
+                    return HTMLResponse(
+                        content="token is missing, not authorized, out of date, or malformed, or team_project access not granted",
+                        status_code=HTTP_401_UNAUTHORIZED,
+                    )
+        else:
+            # fall back to just the general user authorization for argo-wrapper:
+            if not auth.authenticate(token=token):
+                return HTMLResponse(
+                    content="token is missing, not authorized, out of date, or malformed",
+                    status_code=HTTP_401_UNAUTHORIZED,
+                )
+
+        return fn(*args, **kwargs)
+
+    return wrapper
 
 
 @router.get("/test")
@@ -146,14 +186,23 @@ def cancel_workflow(
 
 # get workflows
 @router.get("/workflows", status_code=HTTP_200_OK)
-@check_auth
+@check_auth_and_team_projects
 def get_workflows(
+    team_projects: List[str],
     request: Request,  # pylint: disable=unused-argument
 ) -> List[str]:
     """returns the list of workflows the user has ran"""
 
     try:
-        return argo_engine.get_workflows_for_user(request.headers.get("Authorization"))
+        if team_projects and len(team_projects) > 0:
+            return argo_engine.get_workflows_for_team_projects(
+                team_projects=team_projects
+            )
+        else:
+            # no team_projects, so fall back to default behavior of returning just the user workflows:
+            return argo_engine.get_workflows_for_user(
+                request.headers.get("Authorization")
+            )
 
     except Exception as exception:
         return HTMLResponse(
