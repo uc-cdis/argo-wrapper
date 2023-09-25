@@ -28,12 +28,15 @@ ARGO_ACCESS_SERVICE: Final = "argo_workflow"
 ARGO_ACCESS_METHOD: Final = config["DEFAULT"]["ARGO_ACCESS_METHOD"]
 ARGO_ACCESS_RESOURCES: Final = "/services/workflow/argo/admin"
 TEAM_PROJECT_FIELD_NAME: Final = "team_project"
+TEAM_PROJECT_LIST_FIELD_NAME: Final = "team_projects"
 TEAM_PROJECT_ACCESS_SERVICE: Final = "atlas-argo-wrapper-and-cohort-middleware"
 TEAM_PROJECT_ACCESS_METHOD: Final = "access"
 ARGO_CONFIG_PATH: Final = "/argo.json"
 API_VERSION: Final = "argoproj.io/v1alpha1"
 BACKUP_PVC_NAME: Final = "va-input-nfs-pvc"
 WORKFLOW_KIND: Final = "workflow"
+GEN3_USER_METADATA_LABEL: Final = "gen3username"
+GEN3_TEAM_PROJECT_METADATA_LABEL: Final = "gen3teamproject"
 
 
 class POD_COMPLETION_STRATEGY(Enum):
