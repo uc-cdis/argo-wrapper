@@ -51,6 +51,7 @@ def test_submit_workflow(client):
         "case_cohort_definition_id": 70,
         "control_cohort_definition_id": -1,
         "workflow_name": "wf_name",
+        "team_project": "dummy-team-project",
     }
 
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(

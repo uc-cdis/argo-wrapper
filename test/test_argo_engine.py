@@ -41,6 +41,7 @@ def test_argo_engine_submit_succeeded():
             "template_version": "test",
             "gen3_user_name": "test_user",
             "variables": variables,
+            "team_project": "dummy-team-project",
         }
         result = engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
         assert "gwas" in result
@@ -411,6 +412,7 @@ def test_argo_engine_submit_yaml_succeeded():
         "gen3_user_name": "test_user",
         "variables": variables,
         "outcome": outcome,
+        "team_project": "dummy-team-project",
     }
     with mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
@@ -446,6 +448,7 @@ def test_argo_engine_new_submit_succeeded():
         "template_version": "gwas-template-6226080403eb62585981d9782aec0f3a82a7e906",
         "source_id": 4,
         "cohort_definition_id": 70,
+        "team_project": "dummy-team-project",
     }
 
     config = {"environment": "default", "scaling_groups": {"default": "group_1"}}
@@ -472,6 +475,7 @@ def test_argo_engine_new_submit_failed():
         "template_version": "gwas-template-6226080403eb62585981d9782aec0f3a82a7e906",
         "source_id": 4,
         "cohort_definition_id": 70,
+        "team_project": "dummy-team-project",
     }
 
     config = {"environment": "default", "scaling_groups": {"default": "group_1"}}
@@ -514,7 +518,10 @@ def test_argo_engine_get_archived_workflow_log_succeeded():
     assert len(archived_workflow_errors) == 1
     assert archived_workflow_errors[0]["node_type"] == "Retry"
     assert archived_workflow_errors[0]["step_template"] == "step_one_template"
-    assert archived_workflow_errors[0]["error_interpreted"] == "Small cohort size or unbalanced cohort sizes."
+    assert (
+        archived_workflow_errors[0]["error_interpreted"]
+        == "Small cohort size or unbalanced cohort sizes."
+    )
 
 
 def test_argo_engine_get_workflow_log_succeeded():
@@ -540,16 +547,17 @@ def test_argo_engine_get_workflow_log_succeeded():
     engine._get_archived_workflow_details_dict = mock.MagicMock(
         side_effect=NotFoundException("Not found")
     )
-    engine._get_workflow_phase = mock.MagicMock(
-        return_value="Failed"
-    )
+    engine._get_workflow_phase = mock.MagicMock(return_value="Failed")
     engine._get_workflow_node_artifact = mock.MagicMock(
         return_value="requests.exceptions.ReadTimeout\nHTTPConnectionPool"
     )
-    
+
     engine._get_workflow_log_dict = mock.MagicMock(return_value=mock_return_wf)
     workflow_errors = engine.get_workflow_logs("active_wf", "wf_uid")
     assert len(workflow_errors) == 1
     assert workflow_errors[0]["name"] == "step_one_name"
-    assert workflow_errors[0]["error_interpreted"] == "Timeout occurred while fetching attrition table information. Please retry."
+    assert (
+        workflow_errors[0]["error_interpreted"]
+        == "Timeout occurred while fetching attrition table information. Please retry."
+    )
     assert workflow_errors[0]["error_message"] == "Error (exit code 126)"

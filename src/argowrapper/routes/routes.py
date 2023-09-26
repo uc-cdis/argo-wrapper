@@ -188,8 +188,8 @@ def cancel_workflow(
 @router.get("/workflows", status_code=HTTP_200_OK)
 @check_auth_and_team_projects
 def get_workflows(
-    team_projects: List[str],
     request: Request,  # pylint: disable=unused-argument
+    team_projects: List[str] = None,
 ) -> List[str]:
     """returns the list of workflows the user has ran"""
 

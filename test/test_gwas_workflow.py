@@ -25,6 +25,7 @@ request_body = {
     "case_cohort_definition_id": 70,
     "control_cohort_definition_id": -1,
     "workflow_name": "wf_name",
+    "team_project": "dummy-team-project",
 }
 
 config = {"environment": "default", "scaling_groups": {"default": "group_1"}}
@@ -157,8 +158,11 @@ def test_gwas_yaml_spec_arguments():
     for param_name, param_val in hardcoded_params.items():
         assert param_val == parameters[param_name]
 
+
 def test_interpret_gwas_workflow_error():
-    step_name="generate-attrition-csv"
-    main_log="requests.exceptions.ReadTimeout\nHTTPConnectionPool"
-    expected_error="Timeout occurred while fetching attrition table information. Please retry."
+    step_name = "generate-attrition-csv"
+    main_log = "requests.exceptions.ReadTimeout\nHTTPConnectionPool"
+    expected_error = (
+        "Timeout occurred while fetching attrition table information. Please retry."
+    )
     assert expected_error == GWAS.interpret_gwas_workflow_error(step_name, main_log)
