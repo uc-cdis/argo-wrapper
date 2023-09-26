@@ -2,7 +2,7 @@ import traceback
 from functools import wraps
 from typing import Dict, List, Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Query
 from fastapi.responses import HTMLResponse
 from starlette.status import (
     HTTP_200_OK,
@@ -189,7 +189,7 @@ def cancel_workflow(
 @check_auth_and_team_projects
 def get_workflows(
     request: Request,  # pylint: disable=unused-argument
-    team_projects: List[str] = None,
+    team_projects: List[str] | None = Query(default=None),
 ) -> List[str]:
     """returns the list of workflows the user has ran"""
 

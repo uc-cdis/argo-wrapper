@@ -139,6 +139,28 @@ def test_get_user_workflows(client):
         assert response.content.decode("utf-8") == '["wf_1","wf_2"]'
 
 
+def test_get_user_workflows_with_team_projects(client):
+    def mock_get_workflows_for_team_projects(team_projects):
+        # dummy implementation...but allows us to check if the team_projects were
+        # successfully parsed from the request parameters:
+        return team_projects
+
+    with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
+        "argowrapper.routes.routes.argo_engine.get_workflows_for_team_projects",
+        mock_get_workflows_for_team_projects,
+    ):
+        mock_auth.return_value = True
+        response = client.get(
+            "/workflows?team_projects=team1&team_projects=team2",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": "bearer 1234",
+            },
+        )
+        assert response.status_code == 200
+        assert response.content.decode("utf-8") == '["team1","team2"]'
+
+
 def test_get_workflow_logs(client):
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
         "argowrapper.routes.routes.argo_engine.get_workflow_logs"
