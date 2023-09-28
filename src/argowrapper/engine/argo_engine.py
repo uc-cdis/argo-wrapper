@@ -66,15 +66,12 @@ class ArgoEngine:
         )
         self.artifact_api_instance = artifact_service_api.ArtifactServiceApi(api_client)
 
-    def _get_all_workflows(self):
-        return self.api_instance.list_workflows(namespace=ARGO_NAMESPACE).to_str()
-
     def _get_workflow_details_dict(self, workflow_name: str) -> Dict:
 
         return self.api_instance.get_workflow(
             namespace=ARGO_NAMESPACE,
             name=workflow_name,
-            fields="metadata.name,metadata.annotations,metadata.creationTimestamp,spec.arguments,spec.shutdown,status.phase,status.progress,status.startedAt,status.finishedAt,status.outputs",
+            fields="metadata.name,metadata.annotations,metadata.creationTimestamp,metadata.labels,spec.arguments,spec.shutdown,status.phase,status.progress,status.startedAt,status.finishedAt,status.outputs",
             # Note that _check_return_type=False avoids an existing issue with OpenAPI generator.
             _check_return_type=False,
         ).to_dict()

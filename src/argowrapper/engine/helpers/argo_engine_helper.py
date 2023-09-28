@@ -8,7 +8,11 @@ import jwt
 
 from argowrapper import logger
 from argowrapper.auth import Auth
-from argowrapper.constants import ARGO_CONFIG_PATH
+from argowrapper.constants import (
+    ARGO_CONFIG_PATH,
+    GEN3_USER_METADATA_LABEL,
+    GEN3_TEAM_PROJECT_METADATA_LABEL,
+)
 
 auth = Auth()
 
@@ -33,10 +37,12 @@ def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
     return dict_with_stringified_items
 
 
-def parse_details(status_dict: Dict[str, any], workflow_type: str) -> Dict[str, any]:
-    phase = status_dict["status"].get("phase")
+def parse_details(
+    workflow_details: Dict[str, any], workflow_type: str
+) -> Dict[str, any]:
+    phase = workflow_details["status"].get("phase")
     if workflow_type == "active_workflow":
-        shutdown = status_dict["spec"].get("shutdown")
+        shutdown = workflow_details["spec"].get("shutdown")
         if shutdown == "Terminate":
             if phase == "Running":
                 phase = "Canceling"
@@ -46,15 +52,23 @@ def parse_details(status_dict: Dict[str, any], workflow_type: str) -> Dict[str, 
         pass
 
     return {
-        "name": status_dict["metadata"].get("name"),
-        "wf_name": status_dict["metadata"].get("annotations", {}).get("workflow_name"),
-        "arguments": status_dict["spec"].get("arguments"),
+        "name": workflow_details["metadata"].get("name"),
+        "wf_name": workflow_details["metadata"]
+        .get("annotations", {})
+        .get("workflow_name"),
+        "arguments": workflow_details["spec"].get("arguments"),
         "phase": phase,
-        "progress": status_dict["status"].get("progress"),
-        "submittedAt": status_dict["metadata"].get("creationTimestamp"),
-        "startedAt": status_dict["status"].get("startedAt"),
-        "finishedAt": status_dict["status"].get("finishedAt"),
-        "outputs": status_dict["status"].get("outputs", {}),
+        "progress": workflow_details["status"].get("progress"),
+        "submittedAt": workflow_details["metadata"].get("creationTimestamp"),
+        "startedAt": workflow_details["status"].get("startedAt"),
+        "finishedAt": workflow_details["status"].get("finishedAt"),
+        "outputs": workflow_details["status"].get("outputs", {}),
+        GEN3_USER_METADATA_LABEL: workflow_details["metadata"]
+        .get("labels")
+        .get(GEN3_USER_METADATA_LABEL),
+        GEN3_TEAM_PROJECT_METADATA_LABEL: workflow_details["metadata"]
+        .get("labels")
+        .get(GEN3_TEAM_PROJECT_METADATA_LABEL),
     }
 
 
@@ -151,16 +165,16 @@ def convert_gen3username_to_label(username: str) -> str:
     return f"user-{label}"
 
 
-def get_username_from_token(auth_header: str) -> str:
+def get_username_from_token(header_and_or_token: str) -> str:
     """
 
     Args:
-        header (str): authorization header that contains a jwt token
+        header (str): authorization header that contains a jwt token, or just the jwt token
 
     Returns:
         str: username
     """
-    jwt_token = auth._parse_jwt(auth_header)
+    jwt_token = auth._parse_jwt(header_and_or_token)
     decoded = jwt.decode(jwt_token, options={"verify_signature": False})
     username = decoded.get("context", {}).get("user", {}).get("name")
     logger.info(f"{username} is submitting a workflow")

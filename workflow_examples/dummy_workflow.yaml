@@ -4,6 +4,7 @@ metadata:
   generateName: dummy-example-
   labels:
     gen3username: "user-dummyuser"
+    gen3teamproject: "teamproject-123"
     workflows.argoproj.io/archive-strategy: "false"
   annotations:
     workflows.argoproj.io/description: |

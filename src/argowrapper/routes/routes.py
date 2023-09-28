@@ -9,7 +9,12 @@ from starlette.status import (
     HTTP_401_UNAUTHORIZED,
     HTTP_500_INTERNAL_SERVER_ERROR,
 )
-from argowrapper.constants import TEAM_PROJECT_FIELD_NAME, TEAM_PROJECT_LIST_FIELD_NAME
+from argowrapper.constants import (
+    TEAM_PROJECT_FIELD_NAME,
+    TEAM_PROJECT_LIST_FIELD_NAME,
+    GEN3_TEAM_PROJECT_METADATA_LABEL,
+    GEN3_USER_METADATA_LABEL,
+)
 
 from argowrapper import logger
 from argowrapper.auth import Auth
@@ -22,17 +27,44 @@ auth = Auth()
 
 
 def check_auth(fn):
-    """custom annotation to authenticate user request"""
+    """custom annotation to authenticate user request and check whether the
+    user is authorized to access argo-wrapper and the workflow in question"""
 
     @wraps(fn)
     def wrapper(*args, **kwargs):
         request = kwargs["request"]
         token = request.headers.get("Authorization")
+        # check authentication and basic argo-wrapper authorization:
         if not auth.authenticate(token=token):
             return HTMLResponse(
                 content="token is missing, not authorized, out of date, or malformed",
                 status_code=HTTP_401_UNAUTHORIZED,
             )
+        # get workflow details. If the workflow has a "team project" label, check if the
+        # user is authorized to this "team project":
+        workflow_name = kwargs["workflow_name"]
+        uid = kwargs["uid"]
+        workflow_details = argo_engine.get_workflow_details(workflow_name, uid)
+        if workflow_details[GEN3_TEAM_PROJECT_METADATA_LABEL]:
+            if not auth.authenticate(
+                token=token,
+                team_project=workflow_details[GEN3_TEAM_PROJECT_METADATA_LABEL],
+            ):
+                return HTMLResponse(
+                    content="token is missing, not authorized, out of date, or malformed, or team_project access not granted",
+                    status_code=HTTP_401_UNAUTHORIZED,
+                )
+        else:
+            # If the "team project"label is not there, check if
+            # the workflow is one of the user's own workflows:
+            workflow_user = workflow_details[GEN3_USER_METADATA_LABEL]
+            username = argo_engine_helper.get_username_from_token(token)
+            current_user = argo_engine_helper.convert_gen3username_to_label(username)
+            if current_user != workflow_user:
+                return HTMLResponse(
+                    content="user is not the author of this workflow, and hence cannot access it",
+                    status_code=HTTP_401_UNAUTHORIZED,
+                )
 
         return fn(*args, **kwargs)
 
