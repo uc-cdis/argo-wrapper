@@ -73,14 +73,14 @@ def parse_details(
 
 
 def parse_list_item(
-    list_dict: Dict[str, any],
+    workflow_details: Dict[str, any],
     workflow_type: str,
     get_archived_workflow_given_name: Callable = None,
 ) -> Dict[str, any]:
     """Parse the return of workflow list view"""
-    phase = list_dict["status"].get("phase")
+    phase = workflow_details["status"].get("phase")
     if workflow_type == "active_workflow":
-        shutdown = list_dict["spec"].get("shutdown")
+        shutdown = workflow_details["spec"].get("shutdown")
         if shutdown == "Terminate":
             if phase == "Running":
                 phase = "Canceling"
@@ -90,17 +90,19 @@ def parse_list_item(
         pass
 
     return {
-        "name": list_dict["metadata"].get("name"),
-        "wf_name": list_dict["metadata"].get("annotations", {}).get("workflow_name")
+        "name": workflow_details["metadata"].get("name"),
+        "wf_name": workflow_details["metadata"]
+        .get("annotations", {})
+        .get("workflow_name")
         if get_archived_workflow_given_name is None
         else get_archived_workflow_given_name(
-            list_dict["metadata"].get("uid")
+            workflow_details["metadata"].get("uid")
         ),  # this is needed because archived list items to not have metadata.annotations returned by the list service...so we need to call another service to get it
-        "uid": list_dict["metadata"].get("uid"),
+        "uid": workflow_details["metadata"].get("uid"),
         "phase": phase,
-        "submittedAt": list_dict["metadata"].get("creationTimestamp"),
-        "startedAt": list_dict["status"].get("startedAt"),
-        "finishedAt": list_dict["status"].get("finishedAt"),
+        "submittedAt": workflow_details["metadata"].get("creationTimestamp"),
+        "startedAt": workflow_details["status"].get("startedAt"),
+        "finishedAt": workflow_details["status"].get("finishedAt"),
     }
 
 
