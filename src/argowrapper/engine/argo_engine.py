@@ -149,7 +149,9 @@ class ArgoEngine:
                 pass
         return errors
 
-    def get_workflow_details(self, workflow_name: str, uid: str) -> Dict[str, any]:
+    def get_workflow_details(
+        self, workflow_name: str, uid: str = None
+    ) -> Dict[str, any]:
         """
         Gets the workflow status
 

@@ -5,6 +5,7 @@ from unittest.mock import patch
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from argowrapper.constants import *
 
 from argowrapper.routes.routes import router
 
@@ -76,7 +77,10 @@ def test_get_workflow_details(client):
         "argowrapper.routes.routes.argo_engine.get_workflow_details"
     ) as mock_engine:
         mock_auth.return_value = True
-        mock_engine.return_value = "running"
+        mock_engine.return_value = {
+            GEN3_USER_METADATA_LABEL: "dummyuser",
+            GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam",
+        }
         response = client.get(
             "/status/workflow_123?uid=workflow_uid",
             headers={
@@ -84,16 +88,24 @@ def test_get_workflow_details(client):
                 "Authorization": "bearer 1234",
             },
         )
+        expected_reponse = '"{}":"dummyuser","{}":"dummyteam"'.format(
+            GEN3_USER_METADATA_LABEL, GEN3_TEAM_PROJECT_METADATA_LABEL
+        )
         assert response.status_code == 200
-        assert response.content.decode("utf-8") == '"running"'
+        assert response.content.decode("utf-8") == "{" + expected_reponse + "}"
 
 
 def test_cancel_workflow(client):
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
         "argowrapper.routes.routes.argo_engine.cancel_workflow"
-    ) as mock_engine:
+    ) as mock_engine, patch(
+        "argowrapper.routes.routes.argo_engine.get_workflow_details"
+    ) as mock_workflow_details:
         mock_auth.return_value = True
         mock_engine.return_value = "workflow_123 canceled sucessfully"
+        mock_workflow_details.return_value = {
+            GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam"
+        }
         response = client.post(
             "/cancel/workflow_123",
             headers={
@@ -108,9 +120,14 @@ def test_cancel_workflow(client):
 def test_retry_workflow(client):
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
         "argowrapper.routes.routes.argo_engine.retry_workflow"
-    ) as mock_engine:
+    ) as mock_engine, patch(
+        "argowrapper.routes.routes.argo_engine.get_workflow_details"
+    ) as mock_workflow_details:
         mock_auth.return_value = True
         mock_engine.return_value = "workflow_123 retried sucessfully"
+        mock_workflow_details.return_value = {
+            GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam"
+        }
         response = client.post(
             "/retry/workflow_123?uid=wf_uid",
             headers={
@@ -164,7 +181,9 @@ def test_get_user_workflows_with_team_projects(client):
 def test_get_workflow_logs(client):
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
         "argowrapper.routes.routes.argo_engine.get_workflow_logs"
-    ) as mock_engine:
+    ) as mock_engine, patch(
+        "argowrapper.routes.routes.argo_engine.get_workflow_details"
+    ) as mock_workflow_details:
         mock_auth.return_value = True
         mock_engine.return_value = [
             {
@@ -173,6 +192,9 @@ def test_get_workflow_logs(client):
                 "error_message": "wf_error",
             }
         ]
+        mock_workflow_details.return_value = {
+            GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam"
+        }
         response = client.get(
             "/logs/wf_123?uid=wf_uid",
             headers={

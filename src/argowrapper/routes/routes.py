@@ -43,7 +43,7 @@ def check_auth(fn):
         # get workflow details. If the workflow has a "team project" label, check if the
         # user is authorized to this "team project":
         workflow_name = kwargs["workflow_name"]
-        uid = kwargs["uid"]
+        uid = kwargs.get("uid")
         workflow_details = argo_engine.get_workflow_details(workflow_name, uid)
         if workflow_details[GEN3_TEAM_PROJECT_METADATA_LABEL]:
             if not auth.authenticate(
