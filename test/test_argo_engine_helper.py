@@ -76,7 +76,10 @@ phase_shutdown_data = [
 def test_parse_status(parsed_phase, shutdown, phase):
     """tests that status workflow get correct phase based on workflow shutdown and phase"""
     wf_status_dict = {
-        "metadata": {"name": "test_wf"},
+        "metadata": {
+            "name": "test_wf",
+            "labels": {},
+        },
         "spec": {
             "arguments": "test_args",
             "shutdown": shutdown,
@@ -91,6 +94,7 @@ def test_parse_status(parsed_phase, shutdown, phase):
         "metadata": {
             "name": "test_archived_wf",
             "annotations": {"workflow_name": "archived_wf_name"},
+            "labels": {},
         },
         "spec": {"arguments": "test_args"},
         "status": {
