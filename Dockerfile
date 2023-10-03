@@ -23,6 +23,11 @@ COPY src /$appname/src
 RUN poetry install --without dev --no-interaction
 
 FROM base
+
+RUN dnf install -y python3 python3-pip \
+    && dnf clean all \
+    && rm -rf /var/cache/yum/
+
 COPY --from=builder /venv /venv
 COPY --from=builder /$appname /$appname
 WORKDIR /$appname
