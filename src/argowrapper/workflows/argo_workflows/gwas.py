@@ -25,12 +25,15 @@ class GWAS(WorkflowBase):
             f'"/commons-data/gds/chr{chrom_num}.merged.vcf.gz.gds"'
             for chrom_num in range(1, 23)
         ]
+        # add chrX VCF
+        gds_files.append('"/commons-data/gds/chrX.merged.vcf.gz.gds"')
         return f'[{", ".join(gds_files)}]'
 
     HARD_CODED_PARAMETERS = {
         "genome_build": "hg19",
         "pca_file": "/commons-data/pcs.RData",
         "relatedness_matrix_file": "/commons-data/KINGmatDeg3.RData",
+        "sex_table": "/commons-data/mvp_sex_table.csv",
         "n_segments": 0,
         "segment_length": 2000,
         "variant_block_size": 100,
@@ -164,19 +167,22 @@ class GWAS(WorkflowBase):
 
     def generate_argo_workflow(self):
         return super()._to_dict()
-    
+
     @staticmethod
     def interpret_gwas_workflow_error(step_name: str, step_log: str) -> str:
-        """A static method to interpret the error message in the main-log file 
+        """A static method to interpret the error message in the main-log file
         of Failed Retry node
         """
-        if step_name=="run-null-model" and "solve.default" in step_log:
+        if step_name == "run-null-model" and "solve.default" in step_log:
             show_error = "Small cohort size or unbalanced cohort sizes. A cohort size of about 700 or below may fail for continuous outcome workflow."
-        elif step_name=="run-plots" and "mutate" in step_log:
+        elif step_name == "run-plots" and "mutate" in step_log:
             show_error = "Small cohort size or unbalanced cohort sizes."
-        elif step_name=="run-single-assoc" and "system is computationally singular" in step_log:
+        elif (
+            step_name == "run-single-assoc"
+            and "system is computationally singular" in step_log
+        ):
             show_error = "Unbalanced cohort sizes."
-        elif step_name=="generate-attrition-csv" and "ReadTimeout" in step_log:
+        elif step_name == "generate-attrition-csv" and "ReadTimeout" in step_log:
             show_error = "Timeout occurred while fetching attrition table information. Please retry."
         else:
             show_error = ""
