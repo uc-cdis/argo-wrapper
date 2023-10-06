@@ -37,7 +37,7 @@ def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
     return dict_with_stringified_items
 
 
-def parse_details(
+def parse_common_details(
     workflow_details: Dict[str, any], workflow_type: str
 ) -> Dict[str, any]:
     phase = workflow_details["status"].get("phase")
@@ -53,16 +53,10 @@ def parse_details(
 
     return {
         "name": workflow_details["metadata"].get("name"),
-        "wf_name": workflow_details["metadata"]
-        .get("annotations", {})
-        .get("workflow_name"),
-        "arguments": workflow_details["spec"].get("arguments"),
         "phase": phase,
-        "progress": workflow_details["status"].get("progress"),
         "submittedAt": workflow_details["metadata"].get("creationTimestamp"),
         "startedAt": workflow_details["status"].get("startedAt"),
         "finishedAt": workflow_details["status"].get("finishedAt"),
-        "outputs": workflow_details["status"].get("outputs", {}),
         GEN3_USER_METADATA_LABEL: workflow_details["metadata"]
         .get("labels")
         .get(GEN3_USER_METADATA_LABEL),
@@ -72,38 +66,42 @@ def parse_details(
     }
 
 
+def parse_details(
+    workflow_details: Dict[str, any], workflow_type: str
+) -> Dict[str, any]:
+    result = parse_common_details(
+        workflow_details=workflow_details, workflow_type=workflow_type
+    )
+    result["wf_name"] = (
+        workflow_details["metadata"].get("annotations", {}).get("workflow_name")
+    )
+    result["arguments"] = workflow_details["spec"].get("arguments")
+    result["progress"] = workflow_details["status"].get("progress")
+    result["outputs"] = workflow_details["status"].get("outputs", {})
+    return result
+
+
 def parse_list_item(
     workflow_details: Dict[str, any],
     workflow_type: str,
     get_archived_workflow_given_name: Callable = None,
 ) -> Dict[str, any]:
     """Parse the return of workflow list view"""
-    phase = workflow_details["status"].get("phase")
-    if workflow_type == "active_workflow":
-        shutdown = workflow_details["spec"].get("shutdown")
-        if shutdown == "Terminate":
-            if phase == "Running":
-                phase = "Canceling"
-            if phase == "Failed":
-                phase = "Canceled"
-    elif workflow_type == "archived_workflow":
-        pass
-
-    return {
-        "name": workflow_details["metadata"].get("name"),
-        "wf_name": workflow_details["metadata"]
-        .get("annotations", {})
-        .get("workflow_name")
-        if get_archived_workflow_given_name is None
-        else get_archived_workflow_given_name(
+    result = parse_common_details(
+        workflow_details=workflow_details, workflow_type=workflow_type
+    )
+    if get_archived_workflow_given_name is None:
+        result["wf_name"] = (
+            workflow_details["metadata"].get("annotations", {}).get("workflow_name")
+        )
+    else:
+        # this is needed because archived list items to not have metadata.annotations
+        # returned by the list service...so we need to call another service to get it:
+        result["wf_name"] = get_archived_workflow_given_name(
             workflow_details["metadata"].get("uid")
-        ),  # this is needed because archived list items to not have metadata.annotations returned by the list service...so we need to call another service to get it
-        "uid": workflow_details["metadata"].get("uid"),
-        "phase": phase,
-        "submittedAt": workflow_details["metadata"].get("creationTimestamp"),
-        "startedAt": workflow_details["status"].get("startedAt"),
-        "finishedAt": workflow_details["status"].get("finishedAt"),
-    }
+        )
+    result["uid"] = workflow_details["metadata"].get("uid")
+    return result
 
 
 def remove_list_duplicate(

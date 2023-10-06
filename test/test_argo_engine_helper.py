@@ -121,6 +121,7 @@ def test_parse_list_item():
             "uid": "test_uid",
             "namespace": "argo",
             "creationTimestamp": "test_starttime",
+            "labels": {},
         },
         "spec": {"arguments": "test_args", "shutdown": "Terminate"},
         "status": {
@@ -135,6 +136,7 @@ def test_parse_list_item():
             "uid": "test_uid_archived",
             "namespace": "argo",
             "creationTimestamp": "test_starttime_archived",
+            "labels": {},
         },
         "spec": {"arguments": {}},
         "status": {
