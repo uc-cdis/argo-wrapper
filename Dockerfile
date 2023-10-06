@@ -10,7 +10,6 @@ ENV POETRY_NO_INTERACTION=1 \
 
 FROM base as builder
 
-RUN python3 -m venv /venv
 RUN source /venv/bin/activate
 
 WORKDIR /$appname
