@@ -1,0 +1,9 @@
+name: Build Image and Push to Quay
+
+on: push
+
+jobs:
+  ci:
+    name: Build Image and Push to Quay
+    uses: uc-cdis/.github/.github/workflows/build-push-image.yaml@fix/new-version
+    secrets: inherit
