@@ -31,6 +31,4 @@ COPY --from=builder /$appname /$appname
 WORKDIR /$appname
 
 COPY config.ini .
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONIOENCODING=UTF-8
 CMD ["gunicorn", "argowrapper.asgi:app", "-b", "0.0.0.0:8000", "-k", "uvicorn.workers.UvicornWorker"]
