@@ -242,7 +242,7 @@ def test_argo_engine_get_status_failed():
         engine.get_workflow_details("test_wf")
 
 
-def test_argo_engine_get_workflows_for_user_suceeded():
+def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
     """returns list of workflow names if get workflows for user suceeds"""
     engine = ArgoEngine()
     argo_workflows_mock_raw_response = [
@@ -367,6 +367,9 @@ def test_argo_engine_get_workflows_for_user_suceeded():
         # workflow [2] is archived:
         assert "custom_name_archived" == uniq_workflow_list[2]["wf_name"]
         assert "2023-03-22T19:59:59Z" == uniq_workflow_list[2]["submittedAt"]
+        # test also the get_workflows_for_team_project:
+        uniq_workflow_list = engine.get_workflows_for_team_project("dummyteam")
+        assert len(uniq_workflow_list) == 3
 
 
 def test_argo_engine_get_workflows_for_user_failed():

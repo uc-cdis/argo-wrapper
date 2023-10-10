@@ -9,7 +9,7 @@ import yaml
 import argowrapper.engine.helpers.argo_engine_helper as argo_engine_helper
 from argowrapper import argo_workflows_templates
 from argowrapper.constants import *
-from test.constants import EXAMPLE_AUTH_HEADER
+from test.constants import EXAMPLE_AUTH_HEADER, EXAMPLE_JUST_TOKEN
 
 
 def _convert_to_label(special_character_match: str) -> str:
@@ -113,15 +113,18 @@ def test_parse_status(parsed_phase, shutdown, phase):
     assert archived_parsed_details.get("wf_name") == "archived_wf_name"
 
 
-def test_parse_list_item():
+def test_parse_common_details():
     """tests that workflow list item get correct phase based on workflow shutdown and phase"""
-    wf_list_item = {
+    workflow_item = {
         "metadata": {
             "name": "test_wf",
             "uid": "test_uid",
             "namespace": "argo",
             "creationTimestamp": "test_starttime",
-            "labels": {},
+            "labels": {
+                GEN3_USER_METADATA_LABEL: "dummyuser",
+                GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam",
+            },
         },
         "spec": {"arguments": "test_args", "shutdown": "Terminate"},
         "status": {
@@ -130,29 +133,96 @@ def test_parse_list_item():
             "finishedAt": "test_finishtime",
         },
     }
-    archived_workflow_list_item = {
+    archived_workflow_item = {
         "metadata": {
             "name": "test_wf_archived",
             "uid": "test_uid_archived",
             "namespace": "argo",
             "creationTimestamp": "test_starttime_archived",
-            "labels": {},
+            "labels": {
+                GEN3_USER_METADATA_LABEL: "dummyuser",
+            },
         },
-        "spec": {"arguments": {}},
         "status": {
             "phase": "Succeeded",
             "startedAt": "test_starttime",
             "finishedAt": "test_finishtime",
         },
     }
-    parsed_list_item = argo_engine_helper.parse_list_item(
-        wf_list_item, "active_workflow"
+    parsed_item = argo_engine_helper.parse_common_details(
+        workflow_item, "active_workflow"
     )
-    parsed_list_item_archived = argo_engine_helper.parse_list_item(
-        archived_workflow_list_item, "archived_workflow"
+    parsed_item_archived = argo_engine_helper.parse_common_details(
+        archived_workflow_item, "archived_workflow"
     )
-    assert parsed_list_item.get("phase") == "Canceling"
-    assert parsed_list_item_archived.get("name") == "test_wf_archived"
+    assert parsed_item.get("phase") == "Canceling"
+    assert parsed_item.get(GEN3_USER_METADATA_LABEL) == "dummyuser"
+    assert parsed_item.get(GEN3_TEAM_PROJECT_METADATA_LABEL) == "dummyteam"
+    assert parsed_item_archived.get("name") == "test_wf_archived"
+    assert parsed_item_archived.get(GEN3_USER_METADATA_LABEL) == "dummyuser"
+    assert parsed_item_archived.get(GEN3_TEAM_PROJECT_METADATA_LABEL) is None
+
+
+def test_parse_details():
+    workflow_item = {
+        "metadata": {
+            "name": "test_wf",
+            "annotations": {"workflow_name": "custom_name"},
+            "uid": "test_uid",
+            "namespace": "argo",
+            "creationTimestamp": "test_starttime",
+            "labels": {
+                GEN3_USER_METADATA_LABEL: "dummyuser",
+                GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam",
+            },
+        },
+        "spec": {"arguments": "test_args", "shutdown": "Terminate"},
+        "status": {
+            "phase": "Running",
+            "progress": "1/5",
+            "startedAt": "test_starttime",
+            "finishedAt": "test_finishtime",
+            "outputs": {"out1": "one"},
+        },
+    }
+
+    parsed_item = argo_engine_helper.parse_details(workflow_item, "active_workflow")
+    assert parsed_item.get("phase") == "Canceling"
+    assert parsed_item.get(GEN3_USER_METADATA_LABEL) == "dummyuser"
+    assert parsed_item.get(GEN3_TEAM_PROJECT_METADATA_LABEL) == "dummyteam"
+    assert parsed_item.get("wf_name") == "custom_name"
+    assert parsed_item.get("arguments") == "test_args"
+    assert parsed_item.get("progress") == "1/5"
+    assert parsed_item.get("outputs") == {"out1": "one"}
+
+
+def test_parse_list_item():
+    workflow_item = {
+        "metadata": {
+            "name": "test_wf",
+            "annotations": {"workflow_name": "custom_name"},
+            "uid": "test_uid",
+            "namespace": "argo",
+            "creationTimestamp": "test_starttime",
+            "labels": {
+                GEN3_USER_METADATA_LABEL: "dummyuser",
+                GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam",
+            },
+        },
+        "spec": {"shutdown": "Terminate"},
+        "status": {
+            "phase": "Running",
+            "startedAt": "test_starttime",
+            "finishedAt": "test_finishtime",
+        },
+    }
+
+    parsed_item = argo_engine_helper.parse_list_item(workflow_item, "active_workflow")
+    assert parsed_item.get("phase") == "Canceling"
+    assert parsed_item.get(GEN3_USER_METADATA_LABEL) == "dummyuser"
+    assert parsed_item.get(GEN3_TEAM_PROJECT_METADATA_LABEL) == "dummyteam"
+    assert parsed_item.get("wf_name") == "custom_name"
+    assert parsed_item.get("uid") == "test_uid"
 
 
 def test_remove_list_duplicates():
@@ -229,6 +299,7 @@ def test_get_username_from_token():
     assert (
         argo_engine_helper.get_username_from_token(EXAMPLE_AUTH_HEADER) == "test user"
     )
+    assert argo_engine_helper.get_username_from_token(EXAMPLE_JUST_TOKEN) == "test user"
 
 
 def test__convert_request_body_to_parameter_dict():

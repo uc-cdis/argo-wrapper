@@ -45,7 +45,10 @@ def check_auth(fn):
         workflow_name = kwargs["workflow_name"]
         uid = kwargs.get("uid")
         workflow_details = argo_engine.get_workflow_details(workflow_name, uid)
-        if workflow_details[GEN3_TEAM_PROJECT_METADATA_LABEL]:
+        if (
+            GEN3_TEAM_PROJECT_METADATA_LABEL in workflow_details
+            and workflow_details[GEN3_TEAM_PROJECT_METADATA_LABEL]
+        ):
             if not auth.authenticate(
                 token=token,
                 team_project=workflow_details[GEN3_TEAM_PROJECT_METADATA_LABEL],
