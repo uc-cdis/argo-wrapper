@@ -367,9 +367,34 @@ def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
         # workflow [2] is archived:
         assert "custom_name_archived" == uniq_workflow_list[2]["wf_name"]
         assert "2023-03-22T19:59:59Z" == uniq_workflow_list[2]["submittedAt"]
+        assert (
+            GEN3_USER_METADATA_LABEL
+            in engine.api_instance.list_workflows.call_args[1][
+                "list_options_label_selector"
+            ]
+        )
+        assert (
+            GEN3_USER_METADATA_LABEL
+            in engine.archive_api_instance.list_archived_workflows.call_args[1][
+                "list_options_label_selector"
+            ]
+        )
+
         # test also the get_workflows_for_team_project:
         uniq_workflow_list = engine.get_workflows_for_team_project("dummyteam")
         assert len(uniq_workflow_list) == 3
+        assert (
+            engine.api_instance.list_workflows.call_args[1][
+                "list_options_label_selector"
+            ]
+            == f"{GEN3_TEAM_PROJECT_METADATA_LABEL}=dummyteam"
+        )
+        assert (
+            engine.archive_api_instance.list_archived_workflows.call_args[1][
+                "list_options_label_selector"
+            ]
+            == f"{GEN3_TEAM_PROJECT_METADATA_LABEL}=dummyteam"
+        )
 
 
 def test_argo_engine_get_workflows_for_user_failed():
