@@ -52,12 +52,14 @@ def test_submit_workflow(client):
         "case_cohort_definition_id": 70,
         "control_cohort_definition_id": -1,
         "workflow_name": "wf_name",
-        "team_project": "dummy-team-project",
+        TEAM_PROJECT_FIELD_NAME: "dummy-team-project",
     }
 
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
         "argowrapper.routes.routes.argo_engine.workflow_submission"
-    ) as mock_engine:
+    ) as mock_engine, patch(
+        "argowrapper.routes.routes.log_auth_check_type"
+    ) as mock_log:
         mock_auth.return_value = True
         mock_engine.return_value = "workflow_123"
         response = client.post(
@@ -73,6 +75,7 @@ def test_submit_workflow(client):
         mock_auth.assert_called_with(
             token="bearer 1234", team_project="dummy-team-project"
         )
+        mock_log.assert_called_with("check_auth_and_team_project")
 
 
 def test_submit_workflow_missing_team_project(client):
@@ -89,15 +92,18 @@ def test_submit_workflow_missing_team_project(client):
                 "Authorization": "bearer 1234",
             },
         )
-        assert "the 'team_project' field is required for this endpoint" in str(
-            exception
+        assert (
+            f"the '{TEAM_PROJECT_FIELD_NAME}' field is required for this endpoint"
+            in str(exception)
         )
 
 
 def test_get_workflow_details_valid_team_project(client):
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
         "argowrapper.routes.routes.argo_engine.get_workflow_details"
-    ) as mock_engine:
+    ) as mock_engine, patch(
+        "argowrapper.routes.routes.log_auth_check_type"
+    ) as mock_log:
         mock_auth.return_value = True
         mock_engine.return_value = {
             GEN3_USER_METADATA_LABEL: "dummyuser",
@@ -116,6 +122,7 @@ def test_get_workflow_details_valid_team_project(client):
         assert response.status_code == 200
         assert response.content.decode("utf-8") == "{" + expected_reponse + "}"
         mock_auth.assert_called_with(token="bearer 1234", team_project="dummyteam")
+        mock_log.assert_called_with("check_auth")
 
 
 def test_get_workflow_details_valid_user(client):
@@ -196,7 +203,9 @@ def test_cancel_workflow(client):
         "argowrapper.routes.routes.argo_engine.cancel_workflow"
     ) as mock_engine, patch(
         "argowrapper.routes.routes.argo_engine.get_workflow_details"
-    ) as mock_workflow_details:
+    ) as mock_workflow_details, patch(
+        "argowrapper.routes.routes.log_auth_check_type"
+    ) as mock_log:
         mock_auth.return_value = True
         mock_engine.return_value = "workflow_123 canceled sucessfully"
         mock_workflow_details.return_value = {
@@ -212,6 +221,7 @@ def test_cancel_workflow(client):
         assert response.status_code == 200
         assert response.content.decode("utf-8") == '"workflow_123 canceled sucessfully"'
         mock_auth.assert_called_with(token="bearer 1234", team_project="dummyteam")
+        mock_log.assert_called_with("check_auth")
 
 
 def test_retry_workflow(client):
@@ -219,7 +229,9 @@ def test_retry_workflow(client):
         "argowrapper.routes.routes.argo_engine.retry_workflow"
     ) as mock_engine, patch(
         "argowrapper.routes.routes.argo_engine.get_workflow_details"
-    ) as mock_workflow_details:
+    ) as mock_workflow_details, patch(
+        "argowrapper.routes.routes.log_auth_check_type"
+    ) as mock_log:
         mock_auth.return_value = True
         mock_engine.return_value = "workflow_123 retried sucessfully"
         mock_workflow_details.return_value = {
@@ -235,12 +247,15 @@ def test_retry_workflow(client):
         assert response.status_code == 200
         assert response.content.decode("utf-8") == '"workflow_123 retried sucessfully"'
         mock_auth.assert_called_with(token="bearer 1234", team_project="dummyteam")
+        mock_log.assert_called_with("check_auth")
 
 
 def test_get_user_workflows(client):
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
         "argowrapper.routes.routes.argo_engine.get_workflows_for_user"
-    ) as mock_engine:
+    ) as mock_engine, patch(
+        "argowrapper.routes.routes.log_auth_check_type"
+    ) as mock_log:
         mock_auth.return_value = True
         mock_engine.return_value = ["wf_1", "wf_2"]
         response = client.get(
@@ -253,6 +268,7 @@ def test_get_user_workflows(client):
         assert response.status_code == 200
         assert response.content.decode("utf-8") == '["wf_1","wf_2"]'
         mock_auth.assert_called_with(token="bearer 1234")
+        mock_log.assert_called_with("check_auth_and_optional_team_projects")
 
 
 def test_get_user_workflows_with_team_projects(client):
@@ -283,7 +299,9 @@ def test_get_workflow_logs(client):
         "argowrapper.routes.routes.argo_engine.get_workflow_logs"
     ) as mock_engine, patch(
         "argowrapper.routes.routes.argo_engine.get_workflow_details"
-    ) as mock_workflow_details:
+    ) as mock_workflow_details, patch(
+        "argowrapper.routes.routes.log_auth_check_type"
+    ) as mock_log:
         mock_auth.return_value = True
         mock_engine.return_value = [
             {
@@ -307,3 +325,30 @@ def test_get_workflow_logs(client):
             response.content.decode("utf-8")
             == '[{"name":"wf_name","step_template":"wf_template","error_message":"wf_error"}]'
         )
+        mock_log.assert_called_with("check_auth")
+
+
+def test_if_endpoints_are_set_to_the_right_check_auth(client):
+    """one generic test method to test whether endpoints are
+    calling the right check_auth methods"""
+    with patch("argowrapper.routes.routes.log_auth_check_type") as mock_log:
+        client.post(
+            "/submit",
+            data=json.dumps({TEAM_PROJECT_FIELD_NAME: "abc"}),
+        )
+        mock_log.assert_called_with("check_auth_and_team_project")
+
+        client.get("/status/workflow_123?uid=workflow_uid")
+        mock_log.assert_called_with("check_auth")
+
+        client.post("/retry/workflow_123?uid=workflow_uid")
+        mock_log.assert_called_with("check_auth")
+
+        client.post("/cancel/workflow_123")
+        mock_log.assert_called_with("check_auth")
+
+        client.get("/workflows?team_projects=team1&team_projects=team2")
+        mock_log.assert_called_with("check_auth_and_optional_team_projects")
+
+        client.get("/logs/workflow_123?uid=workflow_uid")
+        mock_log.assert_called_with("check_auth")

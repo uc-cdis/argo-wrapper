@@ -2,6 +2,7 @@ from re import A
 import unittest.mock as mock
 
 from argowrapper.auth import Auth
+from gen3authz.client.arborist.errors import ArboristError
 
 
 def test_parse_token_suceed():
@@ -45,6 +46,25 @@ def test_authenticate_failed():
     auth = Auth()
     auth.arborist_client.auth_request = mock.MagicMock(return_value=False)
     token = "Bearer fail"
+
+    authorized = auth.authenticate(token)
+    assert authorized == False
+
+
+def test_authenticate_failed2():
+    auth = Auth()
+    token = None
+
+    authorized = auth.authenticate(token)
+    assert authorized == False
+
+
+def test_authenticate_failed3():
+    auth = Auth()
+    auth.arborist_client.auth_request = mock.MagicMock(
+        side_effect=ArboristError("Arborist Error", "error code")
+    )
+    token = "Bearer test.test.test"
 
     authorized = auth.authenticate(token)
     assert authorized == False

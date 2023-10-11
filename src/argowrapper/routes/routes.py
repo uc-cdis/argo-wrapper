@@ -26,12 +26,17 @@ argo_engine = ArgoEngine()
 auth = Auth()
 
 
+def log_auth_check_type(auth_check_type):
+    logger.info(f"Checking authentication and authorization using {auth_check_type}")
+
+
 def check_auth(fn):
     """custom annotation to authenticate user request and check whether the
     user is authorized to access argo-wrapper and the workflow in question"""
 
     @wraps(fn)
     def wrapper(*args, **kwargs):
+        log_auth_check_type("check_auth")
         request = kwargs["request"]
         token = request.headers.get("Authorization")
         # check authentication and basic argo-wrapper authorization:
@@ -79,6 +84,7 @@ def check_auth_and_team_project(fn):
 
     @wraps(fn)
     def wrapper(*args, **kwargs):
+        log_auth_check_type("check_auth_and_team_project")
         request = kwargs["request"]
         token = request.headers.get("Authorization")
         request_body = argo_engine_helper._convert_request_body_to_parameter_dict(
@@ -102,11 +108,12 @@ def check_auth_and_team_project(fn):
     return wrapper
 
 
-def check_auth_and_team_projects(fn):
+def check_auth_and_optional_team_projects(fn):
     """custom annotation to authenticate user request AND check teamproject authorizations"""
 
     @wraps(fn)
     def wrapper(*args, **kwargs):
+        log_auth_check_type("check_auth_and_optional_team_projects")
         request = kwargs["request"]
         token = request.headers.get("Authorization")
         team_projects = kwargs[TEAM_PROJECT_LIST_FIELD_NAME]
@@ -221,7 +228,7 @@ def cancel_workflow(
 
 # get workflows
 @router.get("/workflows", status_code=HTTP_200_OK)
-@check_auth_and_team_projects
+@check_auth_and_optional_team_projects
 def get_workflows(
     request: Request,  # pylint: disable=unused-argument
     team_projects: List[str] | None = Query(default=None),
@@ -234,7 +241,9 @@ def get_workflows(
                 team_projects=team_projects
             )
         else:
-            # no team_projects, so fall back to default behavior of returning just the user workflows:
+            # no team_projects, so fall back to default behavior of returning just the user workflows.
+            # (this does mean that users will still have access to the workflows _they_ executed, even
+            # if after get kicked out of a "team project"):
             return argo_engine.get_workflows_for_user(
                 request.headers.get("Authorization")
             )
