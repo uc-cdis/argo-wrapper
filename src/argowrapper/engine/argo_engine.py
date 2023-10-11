@@ -348,7 +348,9 @@ class ArgoEngine:
         username = argo_engine_helper.get_username_from_token(auth_header)
         user_label = argo_engine_helper.convert_gen3username_to_label(username)
         label_selector = f"{GEN3_USER_METADATA_LABEL}={user_label}"
-        return self.get_workflows_for_label_selector(label_selector=label_selector)
+        return self.get_workflows_for_label_selector(
+            label_selector=label_selector
+        )  # TODO - this part would benefit from a system test
 
     def get_workflows_for_label_selector(self, label_selector: str) -> List[Dict]:
         try:
