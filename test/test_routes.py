@@ -98,6 +98,30 @@ def test_submit_workflow_missing_team_project(client):
         )
 
 
+def test_submit_workflow_failing_auth(client):
+    with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
+        "argowrapper.routes.routes.log_auth_check_type"
+    ) as mock_log:
+        mock_auth.return_value = False
+        response = client.post(
+            "/submit",
+            data=json.dumps({TEAM_PROJECT_FIELD_NAME: "dummy-team-project"}),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": "bearer 1234",
+            },
+        )
+        assert response.status_code == 401
+        assert (
+            response.content.decode("utf-8")
+            == "token is missing, not authorized, out of date, or malformed, or team_project access not granted"
+        )
+        mock_auth.assert_called_with(
+            token="bearer 1234", team_project="dummy-team-project"
+        )
+        mock_log.assert_called_with("check_auth_and_team_project")
+
+
 def test_get_workflow_details_valid_team_project(client):
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
         "argowrapper.routes.routes.argo_engine.get_workflow_details"
@@ -170,7 +194,7 @@ def test_get_workflow_details_for_unauthorized_user_scenario1(client):
         assert response.status_code == 401
         assert (
             "token is missing, not authorized, out of date, or malformed"
-            in response.content.decode("utf-8")
+            == response.content.decode("utf-8")
         )
 
 
@@ -195,6 +219,41 @@ def test_get_workflow_details_for_unauthorized_user_scenario2(client):
         assert response.status_code == 401
         assert "user is not the author of this workflow" in response.content.decode(
             "utf-8"
+        )
+
+
+def test_get_workflow_details_for_unauthorized_user_scenario3(client):
+    def mock_authenticate(token, team_project=None):
+        """dummy implementation that fails if team_project is set"""
+        if team_project:
+            return False
+        else:
+            return True
+
+    with patch(
+        "argowrapper.routes.routes.auth.authenticate", mock_authenticate
+    ) as mock_auth, patch(
+        "argowrapper.routes.routes.argo_engine.get_workflow_details"
+    ) as mock_engine, patch(
+        "argowrapper.routes.routes.argo_engine_helper.get_username_from_token"
+    ) as mock_helper:
+        mock_auth.return_value = True
+        mock_engine.return_value = {
+            GEN3_USER_METADATA_LABEL: "user-dummyuser",
+            GEN3_TEAM_PROJECT_METADATA_LABEL: "user-dummy-team",
+        }
+        mock_helper.return_value = "otheruser"
+        response = client.get(
+            "/status/workflow_123?uid=workflow_uid",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": "bearer 1234",
+            },
+        )
+        assert response.status_code == 401
+        assert (
+            "token is missing, not authorized, out of date, or malformed, or team_project access not granted"
+            == response.content.decode("utf-8")
         )
 
 
@@ -267,6 +326,46 @@ def test_get_user_workflows(client):
         )
         assert response.status_code == 200
         assert response.content.decode("utf-8") == '["wf_1","wf_2"]'
+        mock_auth.assert_called_with(token="bearer 1234")
+        mock_log.assert_called_with("check_auth_and_optional_team_projects")
+
+
+def test_get_user_workflows_error_scenario1(client):
+    with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
+        "argowrapper.routes.routes.log_auth_check_type"
+    ) as mock_log:
+        mock_auth.return_value = False
+        response = client.get(
+            "/workflows?team_projects=team1&team_projects=team2",
+            headers={
+                "Authorization": "bearer 1234",
+            },
+        )
+        assert response.status_code == 401
+        assert (
+            response.content.decode("utf-8")
+            == "token is missing, not authorized, out of date, or malformed, or team_project access not granted"
+        )
+        mock_auth.assert_called_with(token="bearer 1234", team_project="team1")
+        mock_log.assert_called_with("check_auth_and_optional_team_projects")
+
+
+def test_get_user_workflows_error_scenario2(client):
+    with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
+        "argowrapper.routes.routes.log_auth_check_type"
+    ) as mock_log:
+        mock_auth.return_value = False
+        response = client.get(
+            "/workflows",
+            headers={
+                "Authorization": "bearer 1234",
+            },
+        )
+        assert response.status_code == 401
+        assert (
+            response.content.decode("utf-8")
+            == "token is missing, not authorized, out of date, or malformed"
+        )
         mock_auth.assert_called_with(token="bearer 1234")
         mock_log.assert_called_with("check_auth_and_optional_team_projects")
 
