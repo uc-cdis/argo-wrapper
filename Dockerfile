@@ -4,11 +4,6 @@ FROM 707767160287.dkr.ecr.us-east-1.amazonaws.com/gen3/python-build-base:${AZLIN
 # FROM quay.io/cdis/python-build-base:${AZLINUX_BASE_VERSION} as base
 
 ENV appname=argowrapper
-ENV POETRY_NO_INTERACTION=1 \
-    POETRY_VIRTUALENVS_IN_PROJECT=1 \
-    POETRY_VIRTUALENVS_CREATE=1
-ENV PATH="/venv/bin:$PATH"
-ENV VIRTUAL_ENV="/venv"
 
 FROM base as builder
 
