@@ -23,7 +23,8 @@ RUN poetry install --without dev --no-interaction
 
 FROM base
 
-RUN source /venv/bin/activate
+ENV PATH="/venv/bin:$PATH"
+ENV VIRTUAL_ENV="/venv"
 
 COPY --from=builder /venv /venv
 COPY --from=builder /$appname /$appname
