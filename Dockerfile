@@ -1,28 +1,27 @@
-FROM quay.io/cdis/python:3.10-alpine-master as base
+ARG AZLINUX_BASE_VERSION=master
+
+FROM 707767160287.dkr.ecr.us-east-1.amazonaws.com/gen3/python-build-base:${AZLINUX_BASE_VERSION} as base
+# FROM quay.io/cdis/python-build-base:${AZLINUX_BASE_VERSION} as base
+
+ENV appname=argowrapper
 
 FROM base as builder
-RUN apk add --no-cache --virtual .build-deps gcc musl-dev libffi-dev openssl-dev make postgresql-dev git curl
-RUN pip install --upgrade pip
-COPY pyproject.toml /src/pyproject.toml
-COPY poetry.lock /src/poetry.lock
-WORKDIR /src
-RUN python -m venv /env \
-    && . /env/bin/activate \
-    && pip install --upgrade pip poetry==1.3.2 \
+
+WORKDIR /$appname
+
+COPY poetry.lock pyproject.toml /$appname/
+RUN pip install --upgrade poetry \
     && poetry install --without dev --no-interaction
 
-# include code and run poetry again (this split allows for faster local builds when changing code and using docker cache):
-COPY src /src/src
-RUN . /env/bin/activate \
-    && poetry install --without dev --no-interaction
+COPY src /$appname/src
+RUN poetry install --without dev --no-interaction
 
 FROM base
-RUN apk add --no-cache postgresql-libs
-COPY --from=builder /env /env
-COPY --from=builder /src /src
-WORKDIR /src
+
+COPY --from=builder /venv /venv
+COPY --from=builder /$appname /$appname
+
+WORKDIR /$appname
+
 COPY config.ini .
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONIOENCODING=UTF-8
-CMD ["/env/bin/gunicorn", "src.argowrapper.asgi:app", "-b", "0.0.0.0:8000", "-k", "uvicorn.workers.UvicornWorker"]
-#CMD ["sleep", "100000"]
+CMD ["gunicorn", "argowrapper.asgi:app", "-b", "0.0.0.0:8000", "-k", "uvicorn.workers.UvicornWorker"]
