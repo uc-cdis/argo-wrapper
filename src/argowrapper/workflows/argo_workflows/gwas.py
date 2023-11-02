@@ -8,6 +8,11 @@ from argowrapper.constants import (
     WORKFLOW_ENTRYPOINT,
 )
 from argowrapper.workflows.workflow_base import WorkflowBase
+from argowrapper.constants import (
+    TEAM_PROJECT_FIELD_NAME,
+    GEN3_USER_METADATA_LABEL,
+    GEN3_TEAM_PROJECT_METADATA_LABEL,
+)
 
 
 class GWAS(WorkflowBase):
@@ -69,6 +74,14 @@ class GWAS(WorkflowBase):
         self.gen3username_label = argo_engine_helper.convert_gen3username_to_label(
             self.username
         )
+        team_project = request_body.get(TEAM_PROJECT_FIELD_NAME)
+        if not team_project:
+            raise Exception(
+                "the '{}' field is required for this endpoint, but was not found in the request body".format(
+                    TEAM_PROJECT_FIELD_NAME
+                )
+            )
+        self.gen3teamproject_label = team_project
         self._request_body = request_body
 
         super().__init__(namespace, WORKFLOW_ENTRYPOINT.GWAS_ENTRYPOINT, dry_run)
@@ -81,7 +94,12 @@ class GWAS(WorkflowBase):
 
     def _add_metadata_labels(self):
         super()._add_metadata_labels()
-        self.metadata.add_metadata_label("gen3username", self.gen3username_label)
+        self.metadata.add_metadata_label(
+            GEN3_USER_METADATA_LABEL, self.gen3username_label
+        )
+        self.metadata.add_metadata_label(
+            GEN3_TEAM_PROJECT_METADATA_LABEL, self.gen3teamproject_label
+        )
 
     def _add_spec_scaling_group(self):
         # Check if default or custom are confined

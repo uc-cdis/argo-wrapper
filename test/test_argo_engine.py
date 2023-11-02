@@ -41,6 +41,7 @@ def test_argo_engine_submit_succeeded():
             "template_version": "test",
             "gen3_user_name": "test_user",
             "variables": variables,
+            "team_project": "dummy-team-project",
         }
         result = engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
         assert "gwas" in result
@@ -146,6 +147,7 @@ def test_argo_engine_get_status_archived_workflow_succeeded():
         "metadata": {
             "name": "archived_wf",
             "annotations": {"workflow_name": "custom_name"},
+            "labels": {},
         },
         "spec": {"arguments": "test_args"},
         "status": {
@@ -172,6 +174,10 @@ def test_argo_engine_get_workflow_details_succeeded():
         "metadata": {
             "name": "hello-world-mwnw5",
             "annotations": {"workflow_name": "custome_wf_name"},
+            "labels": {
+                GEN3_USER_METADATA_LABEL: "dummyuser",
+                GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam",
+            },
         },
         "spec": {"arguments": {}},
         "status": {
@@ -190,6 +196,40 @@ def test_argo_engine_get_workflow_details_succeeded():
     assert wf_details["wf_name"] == "custome_wf_name"
     assert wf_details["phase"] == "Running"
     assert wf_details["progress"] == "0/1"
+    assert wf_details[GEN3_USER_METADATA_LABEL] == "dummyuser"
+    assert wf_details[GEN3_TEAM_PROJECT_METADATA_LABEL] == "dummyteam"
+
+
+def test_argo_engine_get_workflow_details_succeeded_no_team_project():
+    """Test active workflow status when uid is not found in archive workflow endpoint
+    and include a test for backwards compatibility regarding the optional
+    GEN3_TEAM_PROJECT_METADATA_LABEL"""
+    engine = ArgoEngine()
+    mock_return_wf = {
+        "metadata": {
+            "name": "hello-world-mwnw5",
+            "annotations": {"workflow_name": "custome_wf_name"},
+            "labels": {GEN3_USER_METADATA_LABEL: "dummyuser"},
+        },
+        "spec": {"arguments": {}},
+        "status": {
+            "finishedAt": None,
+            "phase": "Running",
+            "progress": "0/1",
+            "startedAt": "2022-03-22T18:56:48Z",
+            "outputs": {},
+        },
+    }
+    engine._get_archived_workflow_details_dict = mock.MagicMock(
+        side_effect=NotFoundException
+    )
+    engine._get_workflow_details_dict = mock.MagicMock(return_value=mock_return_wf)
+    wf_details = engine.get_workflow_details("test_wf", "wf_uid")
+    assert wf_details["wf_name"] == "custome_wf_name"
+    assert wf_details["phase"] == "Running"
+    assert wf_details["progress"] == "0/1"
+    assert wf_details[GEN3_USER_METADATA_LABEL] == "dummyuser"
+    assert wf_details[GEN3_TEAM_PROJECT_METADATA_LABEL] is None
 
 
 def test_argo_engine_get_status_failed():
@@ -202,7 +242,7 @@ def test_argo_engine_get_status_failed():
         engine.get_workflow_details("test_wf")
 
 
-def test_argo_engine_get_workflows_for_user_suceeded():
+def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
     """returns list of workflow names if get workflows for user suceeds"""
     engine = ArgoEngine()
     argo_workflows_mock_raw_response = [
@@ -213,6 +253,10 @@ def test_argo_engine_get_workflows_for_user_suceeded():
                 "namespace": "argo",
                 "uid": "uid_one",
                 "creationTimestamp": "2023-03-22T16:48:51Z",
+                "labels": {
+                    GEN3_USER_METADATA_LABEL: "dummyuser",
+                    GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam",
+                },
             },
             "spec": {"arguments": {}, "shutdown": "Terminate"},
             "status": {
@@ -228,6 +272,10 @@ def test_argo_engine_get_workflows_for_user_suceeded():
                 "namespace": "argo",
                 "uid": "uid_2",
                 "creationTimestamp": "2023-03-22T17:47:51Z",
+                "labels": {
+                    GEN3_USER_METADATA_LABEL: "dummyuser",
+                    GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam",
+                },
             },
             "spec": {"arguments": {}},
             "status": {
@@ -246,6 +294,10 @@ def test_argo_engine_get_workflows_for_user_suceeded():
                 "namespace": "argo",
                 "uid": "uid_2",
                 "creationTimestamp": "2023-03-22T18:57:51Z",
+                "labels": {
+                    GEN3_USER_METADATA_LABEL: "dummyuser",
+                    GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam",
+                },
             },
             "spec": {"arguments": {}},
             "status": {
@@ -260,6 +312,10 @@ def test_argo_engine_get_workflows_for_user_suceeded():
                 "namespace": "argo",
                 "uid": "uid_3",
                 "creationTimestamp": "2023-03-22T19:59:59Z",
+                "labels": {
+                    GEN3_USER_METADATA_LABEL: "dummyuser",
+                    GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam",
+                },
             },
             "spec": {"arguments": {}},
             "status": {
@@ -274,6 +330,10 @@ def test_argo_engine_get_workflows_for_user_suceeded():
     mock_return_archived_wf = {
         "metadata": {
             "annotations": {"workflow_name": "custom_name_archived"},
+            "labels": {
+                GEN3_USER_METADATA_LABEL: "dummyuser",
+                GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam",
+            },
         },
         "spec": {},
         "status": {},
@@ -307,6 +367,34 @@ def test_argo_engine_get_workflows_for_user_suceeded():
         # workflow [2] is archived:
         assert "custom_name_archived" == uniq_workflow_list[2]["wf_name"]
         assert "2023-03-22T19:59:59Z" == uniq_workflow_list[2]["submittedAt"]
+        assert (
+            GEN3_USER_METADATA_LABEL
+            in engine.api_instance.list_workflows.call_args[1][
+                "list_options_label_selector"
+            ]
+        )
+        assert (
+            GEN3_USER_METADATA_LABEL
+            in engine.archive_api_instance.list_archived_workflows.call_args[1][
+                "list_options_label_selector"
+            ]
+        )
+
+        # test also the get_workflows_for_team_project:
+        uniq_workflow_list = engine.get_workflows_for_team_project("dummyteam")
+        assert len(uniq_workflow_list) == 3
+        assert (
+            engine.api_instance.list_workflows.call_args[1][
+                "list_options_label_selector"
+            ]
+            == f"{GEN3_TEAM_PROJECT_METADATA_LABEL}=dummyteam"
+        )
+        assert (
+            engine.archive_api_instance.list_archived_workflows.call_args[1][
+                "list_options_label_selector"
+            ]
+            == f"{GEN3_TEAM_PROJECT_METADATA_LABEL}=dummyteam"
+        )
 
 
 def test_argo_engine_get_workflows_for_user_failed():
@@ -328,7 +416,12 @@ def test_argo_engine_get_workflows_for_user_empty():
     argo_workflows_mock_raw_response = None
     argo_archived_workflows_mock_raw_response = [
         {
-            "metadata": {"name": "workflow_two", "namespace": "argo", "uid": "uid_2"},
+            "metadata": {
+                "name": "workflow_two",
+                "namespace": "argo",
+                "uid": "uid_2",
+                "labels": {},
+            },
             "spec": {"arguments": {}},
             "status": {
                 "phase": "Succeeded",
@@ -337,7 +430,12 @@ def test_argo_engine_get_workflows_for_user_empty():
             },
         },
         {
-            "metadata": {"name": "workflow_three", "namespace": "argo", "uid": "uid_3"},
+            "metadata": {
+                "name": "workflow_three",
+                "namespace": "argo",
+                "uid": "uid_3",
+                "labels": {},
+            },
             "spec": {"arguments": {}},
             "status": {
                 "phase": "Succeeded",
@@ -358,6 +456,7 @@ def test_argo_engine_get_workflows_for_user_empty():
     mock_return_archived_wf = {
         "metadata": {
             "annotations": {"workflow_name": "custom_name_archived"},
+            "labels": {},
         },
         "spec": {},
         "status": {},
@@ -411,6 +510,7 @@ def test_argo_engine_submit_yaml_succeeded():
         "gen3_user_name": "test_user",
         "variables": variables,
         "outcome": outcome,
+        "team_project": "dummy-team-project",
     }
     with mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
@@ -446,6 +546,7 @@ def test_argo_engine_new_submit_succeeded():
         "template_version": "gwas-template-6226080403eb62585981d9782aec0f3a82a7e906",
         "source_id": 4,
         "cohort_definition_id": 70,
+        "team_project": "dummy-team-project",
     }
 
     config = {"environment": "default", "scaling_groups": {"default": "group_1"}}
@@ -472,6 +573,7 @@ def test_argo_engine_new_submit_failed():
         "template_version": "gwas-template-6226080403eb62585981d9782aec0f3a82a7e906",
         "source_id": 4,
         "cohort_definition_id": 70,
+        "team_project": "dummy-team-project",
     }
 
     config = {"environment": "default", "scaling_groups": {"default": "group_1"}}
@@ -514,7 +616,10 @@ def test_argo_engine_get_archived_workflow_log_succeeded():
     assert len(archived_workflow_errors) == 1
     assert archived_workflow_errors[0]["node_type"] == "Retry"
     assert archived_workflow_errors[0]["step_template"] == "step_one_template"
-    assert archived_workflow_errors[0]["error_interpreted"] == "Small cohort size or unbalanced cohort sizes."
+    assert (
+        archived_workflow_errors[0]["error_interpreted"]
+        == "Small cohort size or unbalanced cohort sizes."
+    )
 
 
 def test_argo_engine_get_workflow_log_succeeded():
@@ -540,16 +645,17 @@ def test_argo_engine_get_workflow_log_succeeded():
     engine._get_archived_workflow_details_dict = mock.MagicMock(
         side_effect=NotFoundException("Not found")
     )
-    engine._get_workflow_phase = mock.MagicMock(
-        return_value="Failed"
-    )
+    engine._get_workflow_phase = mock.MagicMock(return_value="Failed")
     engine._get_workflow_node_artifact = mock.MagicMock(
         return_value="requests.exceptions.ReadTimeout\nHTTPConnectionPool"
     )
-    
+
     engine._get_workflow_log_dict = mock.MagicMock(return_value=mock_return_wf)
     workflow_errors = engine.get_workflow_logs("active_wf", "wf_uid")
     assert len(workflow_errors) == 1
     assert workflow_errors[0]["name"] == "step_one_name"
-    assert workflow_errors[0]["error_interpreted"] == "Timeout occurred while fetching attrition table information. Please retry."
+    assert (
+        workflow_errors[0]["error_interpreted"]
+        == "Timeout occurred while fetching attrition table information. Please retry."
+    )
     assert workflow_errors[0]["error_message"] == "Error (exit code 126)"
