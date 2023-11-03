@@ -1,6 +1,6 @@
 import traceback
 from functools import wraps
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 from fastapi import APIRouter, Request, Query
 from fastapi.responses import HTMLResponse
@@ -231,7 +231,7 @@ def cancel_workflow(
 @check_auth_and_optional_team_projects
 def get_workflows(
     request: Request,  # pylint: disable=unused-argument
-    team_projects: List[str] | None = Query(default=None),
+    team_projects: Optional[List[str]] = Query(default=None),
 ) -> List[str]:
     """returns the list of workflows the user has ran"""
 
