@@ -6,7 +6,7 @@ authors = ["UchicagoZchen138 <zchen138@uchicago.edu>"]
 repository = "https://github.com/uc-cdis/argo-wrapper"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.10"
 fastapi = "^0.71.0"
 uvicorn = "^0.16.0"
 gunicorn = "^20.0.4"
