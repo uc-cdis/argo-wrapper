@@ -49,7 +49,7 @@ class Auth:
             bool: True if user is authorized to access resources in argo
         """
         if not token:
-            logger.error("authentication token required")
+            logger.error("authentication token required.")
             return False
 
         jwt = self._parse_jwt(token)
