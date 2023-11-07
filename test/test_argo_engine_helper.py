@@ -21,7 +21,7 @@ def _convert_to_label(special_character_match: str) -> str:
 
 def convert_username_label_to_gen3username(label: str) -> str:
     """this function will reverse the conversion of a username to label as
-    defined by the convert_gen3username_to_label function. eg "user--21" -> "!"
+    defined by the convert_gen3username_to_pod_label function. eg "user--21" -> "!"
 
     Args:
         label (str): _description_
@@ -56,12 +56,22 @@ user_label_data = [
 
 @pytest.mark.parametrize("username,label", user_label_data)
 def test_convert_username_label_to_gen3username(username, label):
-    assert argo_engine_helper.convert_gen3username_to_label(username) == label
+    assert argo_engine_helper.convert_gen3username_to_pod_label(username) == label
 
 
 @pytest.mark.parametrize("username,label", user_label_data)
-def test_convert_gen3username_to_label(username, label):
+def test_convert_gen3username_to_pod_label(username, label):
     assert convert_username_label_to_gen3username(label) == username
+
+
+def test_convert_gen3teamproject_to_pod_label_and_back():
+    team_project = "/gwas_projects/project2"
+    pod_label = argo_engine_helper.convert_gen3teamproject_to_pod_label(team_project)
+    assert pod_label == "2f677761735f70726f6a656374732f70726f6a65637432"
+    converted_team_project = argo_engine_helper.convert_pod_label_to_gen3teamproject(
+        pod_label
+    )
+    assert team_project == converted_team_project
 
 
 WorkflowStatusData = namedtuple("WorkflowStatusData", "parsed_phase shutdown phase")
@@ -169,7 +179,9 @@ def test_parse_details():
             "creationTimestamp": "test_starttime",
             "labels": {
                 GEN3_USER_METADATA_LABEL: "dummyuser",
-                GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam",
+                GEN3_TEAM_PROJECT_METADATA_LABEL: argo_engine_helper.convert_gen3teamproject_to_pod_label(
+                    "dummyteam"
+                ),
             },
         },
         "spec": {"arguments": "test_args", "shutdown": "Terminate"},

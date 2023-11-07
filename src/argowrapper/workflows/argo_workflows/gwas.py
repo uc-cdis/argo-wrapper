@@ -71,7 +71,7 @@ class GWAS(WorkflowBase):
         self, namespace: str, request_body: Dict, auth_header: str, dry_run=False
     ):
         self.username = argo_engine_helper.get_username_from_token(auth_header)
-        self.gen3username_label = argo_engine_helper.convert_gen3username_to_label(
+        self.gen3username_label = argo_engine_helper.convert_gen3username_to_pod_label(
             self.username
         )
         team_project = request_body.get(TEAM_PROJECT_FIELD_NAME)
@@ -81,7 +81,9 @@ class GWAS(WorkflowBase):
                     TEAM_PROJECT_FIELD_NAME
                 )
             )
-        self.gen3teamproject_label = team_project
+        self.gen3teamproject_label = (
+            argo_engine_helper.convert_gen3teamproject_to_pod_label(team_project)
+        )
         self._request_body = request_body
 
         super().__init__(namespace, WORKFLOW_ENTRYPOINT.GWAS_ENTRYPOINT, dry_run)

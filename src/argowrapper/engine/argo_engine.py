@@ -324,7 +324,10 @@ class ArgoEngine:
         Raises:
             raises Exception in case of any error.
         """
-        label_selector = f"{GEN3_TEAM_PROJECT_METADATA_LABEL}={team_project}"
+        team_project_label = argo_engine_helper.convert_gen3teamproject_to_pod_label(
+            team_project
+        )
+        label_selector = f"{GEN3_TEAM_PROJECT_METADATA_LABEL}={team_project_label}"
         workflows = self.get_workflows_for_label_selector(label_selector=label_selector)
         for workflow in workflows:
             workflow["team_project"] = team_project
@@ -346,7 +349,7 @@ class ArgoEngine:
             raises Exception in case of any error.
         """
         username = argo_engine_helper.get_username_from_token(auth_header)
-        user_label = argo_engine_helper.convert_gen3username_to_label(username)
+        user_label = argo_engine_helper.convert_gen3username_to_pod_label(username)
         label_selector = f"{GEN3_USER_METADATA_LABEL}={user_label}"
         return self.get_workflows_for_label_selector(
             label_selector=label_selector
