@@ -75,7 +75,7 @@ def parse_details(
     result[GEN3_USER_METADATA_LABEL] = (
         workflow_details["metadata"].get("labels").get(GEN3_USER_METADATA_LABEL)
     )
-    result[GEN3_TEAM_PROJECT_METADATA_LABEL] = (
+    result[GEN3_TEAM_PROJECT_METADATA_LABEL] = convert_pod_label_to_gen3teamproject(
         workflow_details["metadata"].get("labels").get(GEN3_TEAM_PROJECT_METADATA_LABEL)
     )
     return result
@@ -143,7 +143,7 @@ def _convert_to_hex(special_character_match: str) -> str:
         return f"-{hex_val}"
 
 
-def convert_gen3username_to_label(username: str) -> str:
+def convert_gen3username_to_pod_label(username: str) -> str:
     """a gen3username is an email and a label is a k8 pod label
        core issue this causes is that email can have special characters but
        pod labels can only have '-', '_' or '.'. This function will convert
@@ -156,13 +156,38 @@ def convert_gen3username_to_label(username: str) -> str:
     Returns:
         str: converted string where all special characters are replaced with "-{hex_value}"
     """
+    label = convert_string_to_pod_label(username)
+    return f"user-{label}"
 
-    # TODO: please not that there are more special characteres than this https://stackoverflow.com/questions/2049502/what-characters-are-allowed-in-an-email-address/2071250#2071250
-    # in order to address this have a list of accepted characters and regex match everything that is not accepted
+
+def convert_gen3teamproject_to_pod_label(team_project: str) -> str:
+    """
+    here we do a conversion of all to hex, as we need to be able to decode later on as well
+    """
+    label = team_project.encode("utf-8").hex()
+    return label
+
+
+def convert_pod_label_to_gen3teamproject(pod_label: str) -> str:
+    """
+    Reverse the conversion gen3teamproject to pod_label.
+    """
+    if pod_label:
+        team_project = bytes.fromhex(pod_label).decode("utf-8")
+        return team_project
+    else:
+        return None
+
+
+def convert_string_to_pod_label(value: str) -> str:
+    """
+    pod labels can only have '-', '_' or '.'. This function will convert
+    at least all of the string.punctuation characters to a hex_value representation.
+    """
     special_characters = re.escape(string.punctuation)
     regex = f"[{special_characters}]"
-    logger.debug((label := re.sub(regex, _convert_to_hex, username)))
-    return f"user-{label}"
+    logger.debug((label := re.sub(regex, _convert_to_hex, value)))
+    return label
 
 
 def get_username_from_token(header_and_or_token: str) -> str:
