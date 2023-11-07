@@ -156,11 +156,7 @@ def test_parse_common_details():
         archived_workflow_item, "archived_workflow"
     )
     assert parsed_item.get("phase") == "Canceling"
-    assert parsed_item.get(GEN3_USER_METADATA_LABEL) == "dummyuser"
-    assert parsed_item.get(GEN3_TEAM_PROJECT_METADATA_LABEL) == "dummyteam"
     assert parsed_item_archived.get("name") == "test_wf_archived"
-    assert parsed_item_archived.get(GEN3_USER_METADATA_LABEL) == "dummyuser"
-    assert parsed_item_archived.get(GEN3_TEAM_PROJECT_METADATA_LABEL) is None
 
 
 def test_parse_details():
@@ -195,6 +191,15 @@ def test_parse_details():
     assert parsed_item.get("progress") == "1/5"
     assert parsed_item.get("outputs") == {"out1": "one"}
 
+    parsed_item = argo_engine_helper.parse_details(workflow_item, "archived_workflow")
+    assert parsed_item.get("phase") == "Running"
+    assert parsed_item.get(GEN3_USER_METADATA_LABEL) == "dummyuser"
+    assert parsed_item.get(GEN3_TEAM_PROJECT_METADATA_LABEL) == "dummyteam"
+    assert parsed_item.get("wf_name") == "custom_name"
+    assert parsed_item.get("arguments") == "test_args"
+    assert parsed_item.get("progress") == "1/5"
+    assert parsed_item.get("outputs") == {"out1": "one"}
+
 
 def test_parse_list_item():
     workflow_item = {
@@ -203,7 +208,7 @@ def test_parse_list_item():
             "annotations": {"workflow_name": "custom_name"},
             "uid": "test_uid",
             "namespace": "argo",
-            "creationTimestamp": "test_starttime",
+            "creationTimestamp": "test_creationtime",
             "labels": {
                 GEN3_USER_METADATA_LABEL: "dummyuser",
                 GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam",
@@ -218,11 +223,21 @@ def test_parse_list_item():
     }
 
     parsed_item = argo_engine_helper.parse_list_item(workflow_item, "active_workflow")
+    assert parsed_item.get("name") == "test_wf"
     assert parsed_item.get("phase") == "Canceling"
-    assert parsed_item.get(GEN3_USER_METADATA_LABEL) == "dummyuser"
-    assert parsed_item.get(GEN3_TEAM_PROJECT_METADATA_LABEL) == "dummyteam"
+    assert parsed_item.get("submittedAt") == "test_creationtime"
+    assert parsed_item.get("startedAt") == "test_starttime"
+    assert parsed_item.get("finishedAt") == "test_finishtime"
     assert parsed_item.get("wf_name") == "custom_name"
     assert parsed_item.get("uid") == "test_uid"
+
+    def dummy_get_archived_workflow_given_name(workflow_uid):
+        return "dummy_wf_name"
+
+    parsed_item = argo_engine_helper.parse_list_item(
+        workflow_item, "archived_workflow", dummy_get_archived_workflow_given_name
+    )
+    assert parsed_item.get("wf_name") == "dummy_wf_name"
 
 
 def test_remove_list_duplicates():

@@ -57,12 +57,6 @@ def parse_common_details(
         "submittedAt": workflow_details["metadata"].get("creationTimestamp"),
         "startedAt": workflow_details["status"].get("startedAt"),
         "finishedAt": workflow_details["status"].get("finishedAt"),
-        GEN3_USER_METADATA_LABEL: workflow_details["metadata"]
-        .get("labels")
-        .get(GEN3_USER_METADATA_LABEL),
-        GEN3_TEAM_PROJECT_METADATA_LABEL: workflow_details["metadata"]
-        .get("labels")
-        .get(GEN3_TEAM_PROJECT_METADATA_LABEL),
     }
 
 
@@ -78,6 +72,12 @@ def parse_details(
     result["arguments"] = workflow_details["spec"].get("arguments")
     result["progress"] = workflow_details["status"].get("progress")
     result["outputs"] = workflow_details["status"].get("outputs", {})
+    result[GEN3_USER_METADATA_LABEL] = (
+        workflow_details["metadata"].get("labels").get(GEN3_USER_METADATA_LABEL)
+    )
+    result[GEN3_TEAM_PROJECT_METADATA_LABEL] = (
+        workflow_details["metadata"].get("labels").get(GEN3_TEAM_PROJECT_METADATA_LABEL)
+    )
     return result
 
 
@@ -95,7 +95,7 @@ def parse_list_item(
             workflow_details["metadata"].get("annotations", {}).get("workflow_name")
         )
     else:
-        # this is needed because archived list items to not have metadata.annotations
+        # this is needed because archived list items do not have metadata.annotations
         # returned by the list service...so we need to call another service to get it:
         result["wf_name"] = get_archived_workflow_given_name(
             workflow_details["metadata"].get("uid")
