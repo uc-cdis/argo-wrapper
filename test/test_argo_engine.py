@@ -6,6 +6,8 @@ from argowrapper import logger
 from argo_workflows.exceptions import NotFoundException
 from argowrapper.constants import *
 from argowrapper.engine.argo_engine import *
+import argowrapper.engine.helpers.argo_engine_helper as argo_engine_helper
+
 from test.constants import EXAMPLE_AUTH_HEADER
 from argowrapper.workflows.argo_workflows.gwas import *
 
@@ -176,7 +178,9 @@ def test_argo_engine_get_workflow_details_succeeded():
             "annotations": {"workflow_name": "custome_wf_name"},
             "labels": {
                 GEN3_USER_METADATA_LABEL: "dummyuser",
-                GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam",
+                GEN3_TEAM_PROJECT_METADATA_LABEL: argo_engine_helper.convert_gen3teamproject_to_pod_label(
+                    "dummyteam"
+                ),
             },
         },
         "spec": {"arguments": {}},
@@ -255,7 +259,9 @@ def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
                 "creationTimestamp": "2023-03-22T16:48:51Z",
                 "labels": {
                     GEN3_USER_METADATA_LABEL: "dummyuser",
-                    GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam",
+                    GEN3_TEAM_PROJECT_METADATA_LABEL: argo_engine_helper.convert_gen3teamproject_to_pod_label(
+                        "dummyteam"
+                    ),
                 },
             },
             "spec": {"arguments": {}, "shutdown": "Terminate"},
@@ -274,7 +280,9 @@ def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
                 "creationTimestamp": "2023-03-22T17:47:51Z",
                 "labels": {
                     GEN3_USER_METADATA_LABEL: "dummyuser",
-                    GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam",
+                    GEN3_TEAM_PROJECT_METADATA_LABEL: argo_engine_helper.convert_gen3teamproject_to_pod_label(
+                        "dummyteam"
+                    ),
                 },
             },
             "spec": {"arguments": {}},
@@ -296,7 +304,9 @@ def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
                 "creationTimestamp": "2023-03-22T18:57:51Z",
                 "labels": {
                     GEN3_USER_METADATA_LABEL: "dummyuser",
-                    GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam",
+                    GEN3_TEAM_PROJECT_METADATA_LABEL: argo_engine_helper.convert_gen3teamproject_to_pod_label(
+                        "dummyteam"
+                    ),
                 },
             },
             "spec": {"arguments": {}},
@@ -314,7 +324,9 @@ def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
                 "creationTimestamp": "2023-03-22T19:59:59Z",
                 "labels": {
                     GEN3_USER_METADATA_LABEL: "dummyuser",
-                    GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam",
+                    GEN3_TEAM_PROJECT_METADATA_LABEL: argo_engine_helper.convert_gen3teamproject_to_pod_label(
+                        "dummyteam"
+                    ),
                 },
             },
             "spec": {"arguments": {}},
@@ -332,7 +344,9 @@ def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
             "annotations": {"workflow_name": "custom_name_archived"},
             "labels": {
                 GEN3_USER_METADATA_LABEL: "dummyuser",
-                GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam",
+                GEN3_TEAM_PROJECT_METADATA_LABEL: argo_engine_helper.convert_gen3teamproject_to_pod_label(
+                    "dummyteam"
+                ),
             },
         },
         "spec": {},
@@ -352,7 +366,7 @@ def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
     with mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.get_username_from_token"
     ), mock.patch(
-        "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_label"
+        "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_pod_label"
     ):
         uniq_workflow_list = engine.get_workflows_for_user("test_jwt_token")
         assert len(uniq_workflow_list) == 3
@@ -387,13 +401,13 @@ def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
             engine.api_instance.list_workflows.call_args[1][
                 "list_options_label_selector"
             ]
-            == f"{GEN3_TEAM_PROJECT_METADATA_LABEL}=dummyteam"
+            == f"{GEN3_TEAM_PROJECT_METADATA_LABEL}={argo_engine_helper.convert_gen3teamproject_to_pod_label('dummyteam')}"
         )
         assert (
             engine.archive_api_instance.list_archived_workflows.call_args[1][
                 "list_options_label_selector"
             ]
-            == f"{GEN3_TEAM_PROJECT_METADATA_LABEL}=dummyteam"
+            == f"{GEN3_TEAM_PROJECT_METADATA_LABEL}={argo_engine_helper.convert_gen3teamproject_to_pod_label('dummyteam')}"
         )
 
 
@@ -468,7 +482,7 @@ def test_argo_engine_get_workflows_for_user_empty():
     with mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.get_username_from_token"
     ), mock.patch(
-        "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_label"
+        "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_pod_label"
     ):
         uniq_workflow_list = engine.get_workflows_for_user("test_jwt_token")
         assert len(uniq_workflow_list) == 2
@@ -493,7 +507,7 @@ def test_argo_engine_get_workflows_for_user_empty_both():
     with mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper.get_username_from_token"
     ), mock.patch(
-        "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_label"
+        "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_pod_label"
     ):
         uniq_workflow_list = engine.get_workflows_for_user("test_jwt_token")
         assert len(uniq_workflow_list) == 0

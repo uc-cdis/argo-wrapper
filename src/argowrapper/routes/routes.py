@@ -67,7 +67,9 @@ def check_auth(fn):
             # the workflow is one of the user's own workflows:
             workflow_user = workflow_details[GEN3_USER_METADATA_LABEL]
             username = argo_engine_helper.get_username_from_token(token)
-            current_user = argo_engine_helper.convert_gen3username_to_label(username)
+            current_user = argo_engine_helper.convert_gen3username_to_pod_label(
+                username
+            )
             if current_user != workflow_user:
                 return HTMLResponse(
                     content="user is not the author of this workflow, and hence cannot access it",
