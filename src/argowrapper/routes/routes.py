@@ -21,6 +21,8 @@ from argowrapper.auth import Auth
 from argowrapper.engine.argo_engine import ArgoEngine
 import argowrapper.engine.helpers.argo_engine_helper as argo_engine_helper
 
+import requests
+
 router = APIRouter()
 argo_engine = ArgoEngine()
 auth = Auth()
@@ -140,6 +142,33 @@ def check_auth_and_optional_team_projects(fn):
     return wrapper
 
 
+def check_payment_details(fn):
+    """
+    Check whether user is non-VA user
+    if user is VA-user, do nothing and proceed
+    if user is non-VA user () billing id tag exists in fence user info)
+    add billing Id to argo metadata and pod metadata
+    remove gen3 username from pod metadata
+    """
+
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        request = kwargs["request"]
+        request_body = kwargs["request_body"]
+        token = request.headers.get("Authorization")
+        username = argo_engine_helper.get_username_from_token(token)
+        url = request.base_url._url.rstrip("/") + "/user/user"
+        params = {"username": username}
+        user_info = requests.get(url, params, auth=token)
+
+        if "billing_id" in user_info["tags"]:
+            billing_id = user_info["tags"]["billing_id"]
+            request_body.update({"billing_id": billing_id})
+        return fn(request_body, request)
+
+    return wrapper
+
+
 @router.get("/test")
 def test():
     """route to test that the argo-workflow is correctly running"""
@@ -149,6 +178,7 @@ def test():
 # submit argo workflow
 @router.post("/submit", status_code=HTTP_200_OK)
 @check_auth_and_team_project
+@check_payment_details
 def submit_workflow(
     request_body: Dict[Any, Any],
     request: Request,  # pylint: disable=unused-argument

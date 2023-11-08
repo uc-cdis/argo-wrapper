@@ -10,6 +10,7 @@ import argowrapper.engine.helpers.argo_engine_helper as argo_engine_helper
 
 from test.constants import EXAMPLE_AUTH_HEADER
 from argowrapper.workflows.argo_workflows.gwas import *
+from unittest.mock import patch
 
 
 class WorkFlow:
@@ -47,6 +48,40 @@ def test_argo_engine_submit_succeeded():
         }
         result = engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
         assert "gwas" in result
+
+
+def test_argo_engine_submit_with_billing_id():
+    """returns workflow name if workflow submission suceeds"""
+    engine = ArgoEngine()
+    engine.api_instance.create_workflow = mock.MagicMock(return_value=None)
+    config = {"environment": "default", "scaling_groups": {"default": "group_1"}}
+
+    with mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
+    ) as mock_config_dict:
+        mock_config_dict.return_value = config
+        parameters = {
+            "pheno_csv_key": "test_replace_value",
+            "n_pcs": 100,
+            "template_version": "test",
+            "gen3_user_name": "test_user",
+            "variables": variables,
+            "team_project": "dummy-team-project",
+            "billing_id": "1234",
+        }
+        result = engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
+        workflow_yaml = engine.api_instance.create_workflow.call_args[1][
+            "body"
+        ]._data_store
+        assert (
+            workflow_yaml["workflow"]["metadata"]["labels"]["billing_id"]
+            == workflow_yaml["workflow"]["spec"]["podMetadata"]["labels"]["billing_id"]
+            == "1234"
+        )
+        assert (
+            workflow_yaml["workflow"]["spec"]["podMetadata"]["labels"]["gen3username"]
+            == ""
+        )
 
 
 def test_argo_engine_submit_failed():
