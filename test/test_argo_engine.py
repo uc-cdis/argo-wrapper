@@ -518,6 +518,41 @@ def test_argo_engine_get_workflows_for_user_empty_both():
         assert len(uniq_workflow_list) == 0
 
 
+def test_argo_engine_get_workflows_for_team_projects_and_user():
+    """Test is user and 'team project' workflows are combined as a single output"""
+    engine = ArgoEngine()
+    user_workflows_mock_response = [
+        {
+            "uid": "uid_2",
+        },
+        {
+            "uid": "uid_3",
+        },
+    ]
+
+    team_project_workflows_mock_response = [
+        {
+            "uid": "uid_2",
+        },
+        {
+            "uid": "uid_4",
+        },
+    ]
+    engine.get_workflows_for_team_projects = mock.MagicMock(
+        return_value=team_project_workflows_mock_response
+    )
+    engine.get_workflows_for_user = mock.MagicMock(
+        return_value=user_workflows_mock_response
+    )
+    uniq_workflow_list = engine.get_workflows_for_team_projects_and_user(
+        ["team1"], "test_user_jwt_token"
+    )
+    # Note that arguments above are not used. The only thing this test is testing is
+    # whether the get_workflows_for_team_projects_and_user is taking both lists
+    # and merging them based on uid value of the items
+    assert len(uniq_workflow_list) == 3
+
+
 def test_argo_engine_submit_yaml_succeeded():
     engine = ArgoEngine()
     engine.api_instance.create_workflow = mock.MagicMock()
