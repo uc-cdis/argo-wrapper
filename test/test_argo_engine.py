@@ -356,6 +356,8 @@ def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
         return_value=mock_return_archived_wf
     )
 
+    # replace call to Argo with hard-coded return value mock. Note that this means that
+    # the filtering is not tested here. TODO - a system test is needed or a more ellaborate mock to test this part.
     engine.api_instance.list_workflows = mock.MagicMock(
         return_value=WorkFlow(argo_workflows_mock_raw_response)
     )
@@ -409,6 +411,9 @@ def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
             ]
             == f"{GEN3_TEAM_PROJECT_METADATA_LABEL}={argo_engine_helper.convert_gen3teamproject_to_pod_label('dummyteam')}"
         )
+        # get_workflows_for_team_projects should return the same items as get_workflows_for_team_project if queried with just the same team:
+        uniq_workflow_list = engine.get_workflows_for_team_projects(["dummyteam"])
+        assert len(uniq_workflow_list) == 3
 
 
 def test_argo_engine_get_workflows_for_user_failed():
