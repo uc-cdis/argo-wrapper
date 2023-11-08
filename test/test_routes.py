@@ -6,7 +6,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from argowrapper.constants import *
-
+from test.constants import EXAMPLE_AUTH_HEADER
 from argowrapper.routes.routes import router
 
 
@@ -62,20 +62,38 @@ def test_submit_workflow(client):
     ) as mock_log:
         mock_auth.return_value = True
         mock_engine.return_value = "workflow_123"
-        response = client.post(
-            "/submit",
-            data=json.dumps(data),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": "bearer 1234",
-            },
-        )
-        assert response.status_code == 200
-        assert response.content.decode("utf-8") == '"workflow_123"'
-        mock_auth.assert_called_with(
-            token="bearer 1234", team_project="dummy-team-project"
-        )
-        mock_log.assert_called_with("check_auth_and_team_project")
+        with patch("requests.get") as mock_request:
+            url = "http://testserver/user/user"
+            mock_request.return_value.status_code = 200
+            mock_request.return_value = {"tags": {}}
+
+            response = client.post(
+                "/submit",
+                data=json.dumps(data),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": EXAMPLE_AUTH_HEADER,
+                },
+            )
+            assert response.status_code == 200
+            assert response.content.decode("utf-8") == '"workflow_123"'
+            mock_auth.assert_called_with(
+                token=EXAMPLE_AUTH_HEADER, team_project="dummy-team-project"
+            )
+            mock_log.assert_called_with("check_auth_and_team_project")
+            # No billing Id for this test call
+            assert "billing_id" not in mock_engine.call_args[0]
+
+            mock_request.return_value = {"tags": {"billing_id": "1234"}}
+            response = client.post(
+                "/submit",
+                data=json.dumps(data),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": EXAMPLE_AUTH_HEADER,
+                },
+            )
+            assert "billing_id" in mock_engine.call_args[0][0]
 
 
 def test_submit_workflow_missing_team_project(client):
