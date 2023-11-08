@@ -307,7 +307,7 @@ class ArgoEngine:
     def get_workflows_for_team_projects(self, team_projects: List[str]) -> List[Dict]:
         result = []
         for team_project in team_projects:
-            result.append(self.get_workflows_for_team_project(team_project))
+            result.extend(self.get_workflows_for_team_project(team_project))
         return result
 
     def get_workflows_for_team_project(self, team_project: str) -> List[Dict]:
