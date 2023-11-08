@@ -269,8 +269,9 @@ def get_workflows(
 
     try:
         if team_projects and len(team_projects) > 0:
-            return argo_engine.get_workflows_for_team_projects(
-                team_projects=team_projects
+            return argo_engine.get_workflows_for_team_projects_and_user(
+                team_projects=team_projects,
+                auth_header=request.headers.get("Authorization"),
             )
         else:
             # no team_projects, so fall back to default behavior of returning just the user workflows.

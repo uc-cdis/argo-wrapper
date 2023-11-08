@@ -285,6 +285,32 @@ def test_remove_list_duplicates():
     assert len(uniq_wf_list) == 2
 
 
+def test_remove_list_duplicates_no_duplicates():
+    """tests that remove_list_duplicates also works in the scenario where there is nothing to do (lists are already unique)"""
+    active_wf_list = [
+        {
+            "name": "test_wf_1",
+            "uid": "test_wf_1_uid",
+            "phase": "Succeeded",
+            "startedAt": "test_start",
+            "finishedAt": "test_end",
+        }
+    ]
+    archived_wf_list = [
+        {
+            "name": "test_wf_2",
+            "uid": "test_wf_2_uid",
+            "phase": "Succeeded",
+            "startedAt": "test_start",
+            "finishedAt": "test_end",
+        },
+    ]
+    uniq_wf_list = argo_engine_helper.remove_list_duplicate(
+        active_wf_list, archived_wf_list
+    )
+    assert len(uniq_wf_list) == 2
+
+
 def test_remove_list_duplicates_both_empty():
     """Test that remove_list_duplicates is able to handle empty list input"""
     active_wf_list = []
