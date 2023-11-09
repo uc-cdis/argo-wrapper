@@ -481,7 +481,9 @@ class ArgoEngine:
                 f"could not get status of {workflow_name}, workflow does not exist"
             )
 
-    def workflow_submission(self, request_body: Dict, auth_header: str):
+    def workflow_submission(
+        self, request_body: Dict, auth_header: str, billing_id: str
+    ):
         workflow = WorkflowFactory._get_workflow(
             ARGO_NAMESPACE, request_body, auth_header, WORKFLOW.GWAS
         )
@@ -489,8 +491,7 @@ class ArgoEngine:
 
         # If billing_id exists for user, add it to workflow label and pod metadata
         # remove gen3-username from pod metadata
-        if request_body.get("billing_id"):
-            billing_id = request_body.get("billing_id")
+        if billing_id and len(billing_id) > 0:
             workflow_yaml["metadata"]["labels"]["billing_id"] = billing_id
             pod_labels = workflow_yaml["spec"]["podMetadata"]["labels"]
             pod_labels["billing_id"] = billing_id

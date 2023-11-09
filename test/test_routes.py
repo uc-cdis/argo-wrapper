@@ -82,7 +82,7 @@ def test_submit_workflow(client):
             )
             mock_log.assert_called_with("check_auth_and_team_project")
             # No billing Id for this test call
-            assert "billing_id" not in mock_engine.call_args[0]
+            assert mock_engine.call_args.args[2] == None
 
             mock_request.return_value = {"tags": {"billing_id": "1234"}}
             response = client.post(
@@ -93,7 +93,7 @@ def test_submit_workflow(client):
                     "Authorization": EXAMPLE_AUTH_HEADER,
                 },
             )
-            assert "billing_id" in mock_engine.call_args[0][0]
+            assert mock_engine.call_args.args[2] == "1234"
 
 
 def test_submit_workflow_missing_team_project(client):
