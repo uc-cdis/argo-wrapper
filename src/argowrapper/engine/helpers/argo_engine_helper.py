@@ -105,27 +105,27 @@ def parse_list_item(
 
 
 def remove_list_duplicate(
-    workflow_list: List[Dict], archived_workflow_list: List[Dict]
+    workflow_list1: List[Dict], workflow_list2: List[Dict]
 ) -> List[Dict]:
-    """Remove any overlap between active workflow list and archived workflow list"""
-    if len(workflow_list) == 0 and len(archived_workflow_list) == 0:
+    """Remove any overlap between workflow_list1 and workflow_list2 using 'uid' field"""
+    if len(workflow_list1) == 0 and len(workflow_list2) == 0:
         uniq_list = []
         return uniq_list
-    elif len(workflow_list) == 0 and len(archived_workflow_list) >= 1:
-        uniq_list = archived_workflow_list[:]
+    elif len(workflow_list1) == 0 and len(workflow_list2) >= 1:
+        uniq_list = workflow_list2[:]
         return uniq_list
-    elif len(archived_workflow_list) == 0 and len(workflow_list) >= 1:
-        uniq_list = workflow_list[:]
+    elif len(workflow_list2) == 0 and len(workflow_list1) >= 1:
+        uniq_list = workflow_list1[:]
         return uniq_list
     else:
-        uniq_list = workflow_list[:]
+        uniq_list = workflow_list1[:]
         uid_list = tuple(
-            [single_workflow.get("uid") for single_workflow in workflow_list]
+            [single_workflow.get("uid") for single_workflow in workflow_list1]
         )
-        for archive_workflow in archived_workflow_list:
-            archive_workflow_uid = archive_workflow.get("uid")
-            if archive_workflow_uid not in uid_list:
-                uniq_list.append(archive_workflow)
+        for workflow in workflow_list2:
+            workflow_uid = workflow.get("uid")
+            if workflow_uid not in uid_list:
+                uniq_list.append(workflow)
             else:
                 pass
         return uniq_list
