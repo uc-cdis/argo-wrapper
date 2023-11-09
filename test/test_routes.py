@@ -397,7 +397,10 @@ def test_get_user_workflows_with_team_projects(client):
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
         "argowrapper.routes.routes.argo_engine.get_workflows_for_team_projects",
         mock_get_workflows_for_team_projects,
-    ):
+    ), patch(
+        "argowrapper.routes.routes.argo_engine.get_workflows_for_user"
+    ) as mock_get_workflows_for_user:
+        mock_get_workflows_for_user.return_value = []
         mock_auth.return_value = True
         response = client.get(
             "/workflows?team_projects=team1&team_projects=team2",
