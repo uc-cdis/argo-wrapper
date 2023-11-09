@@ -304,6 +304,17 @@ class ArgoEngine:
         self.workflow_given_names_cache[archived_workflow_uid] = given_name
         return given_name
 
+    def get_workflows_for_team_projects_and_user(
+        self, team_projects: List[str], auth_header: str
+    ) -> List[Dict]:
+        team_project_workflows = self.get_workflows_for_team_projects(team_projects)
+        user_workflows = self.get_workflows_for_user(auth_header)
+
+        uniq_workflows = argo_engine_helper.remove_list_duplicate(
+            team_project_workflows, user_workflows
+        )
+        return uniq_workflows
+
     def get_workflows_for_team_projects(self, team_projects: List[str]) -> List[Dict]:
         result = []
         for team_project in team_projects:
