@@ -46,7 +46,7 @@ def test_argo_engine_submit_succeeded():
             "variables": variables,
             "team_project": "dummy-team-project",
         }
-        result = engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
+        result = engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER, None)
         assert "gwas" in result
 
 
@@ -67,9 +67,8 @@ def test_argo_engine_submit_with_billing_id():
             "gen3_user_name": "test_user",
             "variables": variables,
             "team_project": "dummy-team-project",
-            "billing_id": "1234",
         }
-        result = engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
+        result = engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER, "1234")
         workflow_yaml = engine.api_instance.create_workflow.call_args[1][
             "body"
         ]._data_store
@@ -102,7 +101,7 @@ def test_argo_engine_submit_failed():
             "n_pcs": 100,
             "template_version": "test",
         }
-        engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
+        engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER, None)
 
 
 def test_argo_engine_cancel_succeeded():
@@ -605,7 +604,7 @@ def test_argo_engine_submit_yaml_succeeded():
         "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
     ) as mock_config_dict:
         mock_config_dict.return_value = config
-        engine.workflow_submission(input_parameters, EXAMPLE_AUTH_HEADER)
+        engine.workflow_submission(input_parameters, EXAMPLE_AUTH_HEADER, None)
         args = engine.api_instance.create_workflow.call_args_list
         for parameter in args[0][1]["body"]["workflow"]["spec"]["arguments"][
             "parameters"
@@ -643,7 +642,7 @@ def test_argo_engine_new_submit_succeeded():
         "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
     ) as mock_config_dict:
         mock_config_dict.return_value = config
-        res = engine.workflow_submission(request_body, EXAMPLE_AUTH_HEADER)
+        res = engine.workflow_submission(request_body, EXAMPLE_AUTH_HEADER, None)
         assert len(res) > 0
 
 

@@ -142,7 +142,7 @@ def check_auth_and_optional_team_projects(fn):
     return wrapper
 
 
-def check_payment_details(fn):
+def check_user_billing_id(request):
     """
     Check whether user is non-VA user
     if user is VA-user, do nothing and proceed
@@ -151,22 +151,17 @@ def check_payment_details(fn):
     remove gen3 username from pod metadata
     """
 
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        request = kwargs["request"]
-        request_body = kwargs["request_body"]
-        token = request.headers.get("Authorization")
-        username = argo_engine_helper.get_username_from_token(token)
-        url = request.base_url._url.rstrip("/") + "/user/user"
-        params = {"username": username}
-        user_info = requests.get(url, params, auth=token)
+    token = request.headers.get("Authorization")
+    username = argo_engine_helper.get_username_from_token(token)
+    url = request.base_url._url.rstrip("/") + "/user/user"
+    params = {"username": username}
+    user_info = requests.get(url, params, auth=token)
 
-        if "billing_id" in user_info["tags"]:
-            billing_id = user_info["tags"]["billing_id"]
-            request_body.update({"billing_id": billing_id})
-        return fn(request_body, request)
-
-    return wrapper
+    if "billing_id" in user_info["tags"]:
+        billing_id = user_info["tags"]["billing_id"]
+        return billing_id
+    else:
+        return None
 
 
 @router.get("/test")
@@ -178,16 +173,15 @@ def test():
 # submit argo workflow
 @router.post("/submit", status_code=HTTP_200_OK)
 @check_auth_and_team_project
-@check_payment_details
 def submit_workflow(
     request_body: Dict[Any, Any],
     request: Request,  # pylint: disable=unused-argument
 ) -> str:
     """route to submit workflow"""
-
+    billing_id = check_user_billing_id(request)
     try:
         return argo_engine.workflow_submission(
-            request_body, request.headers.get("Authorization")
+            request_body, request.headers.get("Authorization"), billing_id
         )
 
     except Exception as exception:
