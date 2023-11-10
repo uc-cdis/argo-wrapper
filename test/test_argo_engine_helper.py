@@ -243,13 +243,16 @@ def test_parse_list_item():
     assert parsed_item.get("wf_name") == "custom_name"
     assert parsed_item.get("uid") == "test_uid"
 
-    def dummy_get_archived_workflow_given_name(workflow_uid):
-        return "dummy_wf_name"
+    def dummy_get_archived_workflow_wf_name_and_team_project(workflow_uid):
+        return "dummy_wf_name", "dummy_team_project"
 
     parsed_item = argo_engine_helper.parse_list_item(
-        workflow_item, "archived_workflow", dummy_get_archived_workflow_given_name
+        workflow_item,
+        "archived_workflow",
+        dummy_get_archived_workflow_wf_name_and_team_project,
     )
     assert parsed_item.get("wf_name") == "dummy_wf_name"
+    assert parsed_item.get(GEN3_TEAM_PROJECT_METADATA_LABEL) == "dummy_team_project"
 
 
 def test_remove_list_duplicates():
