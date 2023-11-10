@@ -46,7 +46,7 @@ def test_argo_engine_submit_succeeded():
             "variables": variables,
             "team_project": "dummy-team-project",
         }
-        result = engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER, None)
+        result = engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
         assert "gwas" in result
 
 
@@ -103,7 +103,7 @@ def test_argo_engine_submit_failed():
             "n_pcs": 100,
             "template_version": "test",
         }
-        engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER, None)
+        engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
 
 
 def test_argo_engine_cancel_succeeded():
@@ -606,7 +606,7 @@ def test_argo_engine_submit_yaml_succeeded():
         "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
     ) as mock_config_dict:
         mock_config_dict.return_value = config
-        engine.workflow_submission(input_parameters, EXAMPLE_AUTH_HEADER, None)
+        engine.workflow_submission(input_parameters, EXAMPLE_AUTH_HEADER)
         args = engine.api_instance.create_workflow.call_args_list
         for parameter in args[0][1]["body"]["workflow"]["spec"]["arguments"][
             "parameters"
@@ -644,7 +644,7 @@ def test_argo_engine_new_submit_succeeded():
         "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
     ) as mock_config_dict:
         mock_config_dict.return_value = config
-        res = engine.workflow_submission(request_body, EXAMPLE_AUTH_HEADER, None)
+        res = engine.workflow_submission(request_body, EXAMPLE_AUTH_HEADER)
         assert len(res) > 0
 
 

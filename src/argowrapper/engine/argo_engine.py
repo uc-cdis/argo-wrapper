@@ -482,7 +482,7 @@ class ArgoEngine:
             )
 
     def workflow_submission(
-        self, request_body: Dict, auth_header: str, billing_id: str
+        self, request_body: Dict, auth_header: str, billing_id: str = None
     ):
         workflow = WorkflowFactory._get_workflow(
             ARGO_NAMESPACE, request_body, auth_header, WORKFLOW.GWAS
@@ -491,7 +491,7 @@ class ArgoEngine:
 
         # If billing_id exists for user, add it to workflow label and pod metadata
         # remove gen3-username from pod metadata
-        if billing_id and len(billing_id) > 0:
+        if billing_id:
             workflow_yaml["metadata"]["labels"]["gen3billing_id"] = billing_id
             pod_labels = workflow_yaml["spec"]["podMetadata"]["labels"]
             pod_labels["gen3billing_id"] = billing_id
