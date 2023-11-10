@@ -151,13 +151,18 @@ def check_user_billing_id(request):
     remove gen3 username from pod metadata
     """
 
-    token = request.headers.get("Authorization")
-    username = argo_engine_helper.get_username_from_token(token)
+    header = {"Authorization", request.headers.get("Authorization")}
     url = request.base_url._url.rstrip("/") + "/user/user"
-    params = {"username": username}
-    user_info = requests.get(url, params, auth=token)
+    try:
+        r = requests.get(url=url, headers=header)
+        r.raise_for_status()
+        user_info = r.json()
+    except Exception as e:
+        logger.error("Could not determine user info from fence")
+        logger.error(e)
+        raise
 
-    if "billing_id" in user_info["tags"]:
+    if "tags" in user_info and "billing_id" in user_info["tags"]:
         billing_id = user_info["tags"]["billing_id"]
         return billing_id
     else:
@@ -177,8 +182,10 @@ def submit_workflow(
     request_body: Dict[Any, Any],
     request: Request,  # pylint: disable=unused-argument
 ) -> str:
-    """route to submit workflow"""
+    """check if user has a billing id tag"""
     billing_id = check_user_billing_id(request)
+
+    """route to submit workflow"""
     try:
         return argo_engine.workflow_submission(
             request_body, request.headers.get("Authorization"), billing_id
