@@ -152,7 +152,8 @@ def check_user_billing_id(request):
     """
 
     header = {"Authorization": request.headers.get("Authorization")}
-    url = request.base_url._url.rstrip("/") + "/user/user"
+    # url = request.base_url._url.rstrip("/") + "/user/user"
+    url = "http://fence-service/user"
     try:
         r = requests.get(url=url, headers=header)
         r.raise_for_status()
