@@ -275,9 +275,7 @@ def get_workflows(
                 auth_header=request.headers.get("Authorization"),
             )
         else:
-            # no team_projects, so fall back to default behavior of returning just the user workflows.
-            # (this does mean that users will still have access to the workflows _they_ executed, even
-            # if after get kicked out of a "team project"):
+            # no team_projects, so fall back to querying the workflows that belong just to the user (no team project):
             return argo_engine.get_workflows_for_user(
                 request.headers.get("Authorization")
             )
