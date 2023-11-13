@@ -515,12 +515,13 @@ def test_check_user_billing_id(client):
 
             mock_resp.status_code == 500
             mock_resp.raise_for_status.side_effect = Exception("fence is down")
-            with pytest.raises(Exception):
-                response = client.post(
-                    "/submit",
-                    data=json.dumps(data),
-                    headers={
-                        "Content-Type": "application/json",
-                        "Authorization": EXAMPLE_AUTH_HEADER,
-                    },
-                )
+            response = client.post(
+                "/submit",
+                data=json.dumps(data),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": EXAMPLE_AUTH_HEADER,
+                },
+            )
+            assert response.status_code == 500
+            assert "fence is down" in str(response.content)
