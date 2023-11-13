@@ -158,9 +158,9 @@ def check_user_billing_id(request):
         r.raise_for_status()
         user_info = r.json()
     except Exception as e:
-        logger.error("Could not determine user info from fence")
-        logger.error(e)
-        raise
+        exception = Exception("Could not determine user billing info from fence", e)
+        logger.error(exception)
+        raise exception
 
     if "tags" in user_info and "billing_id" in user_info["tags"]:
         billing_id = user_info["tags"]["billing_id"]
@@ -182,11 +182,10 @@ def submit_workflow(
     request_body: Dict[Any, Any],
     request: Request,  # pylint: disable=unused-argument
 ) -> str:
-    """check if user has a billing id tag"""
-    billing_id = check_user_billing_id(request)
-
     """route to submit workflow"""
     try:
+        # check if user has a billing id tag"""
+        billing_id = check_user_billing_id(request)
         return argo_engine.workflow_submission(
             request_body, request.headers.get("Authorization"), billing_id
         )
