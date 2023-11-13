@@ -294,8 +294,8 @@ class ArgoEngine:
         workflows.
 
         Returns:
-            str: the custom, user given, workflow name found in the annotations
-                 section of the workflow
+            str, str: the custom, user given, workflow name found in the annotations
+                 section of the workflow AND the "team project" label
         """
         if archived_workflow_uid in self.workflow_given_names_cache:
             return self.workflow_given_names_cache[archived_workflow_uid]
