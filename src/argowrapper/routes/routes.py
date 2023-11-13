@@ -151,7 +151,7 @@ def check_user_billing_id(request):
     remove gen3 username from pod metadata
     """
 
-    header = {"Authorization", request.headers.get("Authorization")}
+    header = {"Authorization": request.headers.get("Authorization")}
     url = request.base_url._url.rstrip("/") + "/user/user"
     try:
         r = requests.get(url=url, headers=header)
