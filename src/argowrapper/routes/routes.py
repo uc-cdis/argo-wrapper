@@ -21,6 +21,8 @@ from argowrapper.auth import Auth
 from argowrapper.engine.argo_engine import ArgoEngine
 import argowrapper.engine.helpers.argo_engine_helper as argo_engine_helper
 
+import requests
+
 router = APIRouter()
 argo_engine = ArgoEngine()
 auth = Auth()
@@ -140,6 +142,33 @@ def check_auth_and_optional_team_projects(fn):
     return wrapper
 
 
+def check_user_billing_id(request):
+    """
+    Check whether user is non-VA user
+    if user is VA-user, do nothing and proceed
+    if user is non-VA user () billing id tag exists in fence user info)
+    add billing Id to argo metadata and pod metadata
+    remove gen3 username from pod metadata
+    """
+
+    header = {"Authorization", request.headers.get("Authorization")}
+    url = request.base_url._url.rstrip("/") + "/user/user"
+    try:
+        r = requests.get(url=url, headers=header)
+        r.raise_for_status()
+        user_info = r.json()
+    except Exception as e:
+        exception = Exception("Could not determine user billing info from fence", e)
+        logger.error(exception)
+        raise exception
+
+    if "tags" in user_info and "billing_id" in user_info["tags"]:
+        billing_id = user_info["tags"]["billing_id"]
+        return billing_id
+    else:
+        return None
+
+
 @router.get("/test")
 def test():
     """route to test that the argo-workflow is correctly running"""
@@ -154,10 +183,12 @@ def submit_workflow(
     request: Request,  # pylint: disable=unused-argument
 ) -> str:
     """route to submit workflow"""
-
     try:
+        # check if user has a billing id tag:
+        billing_id = check_user_billing_id(request)
+        # submit workflow:
         return argo_engine.workflow_submission(
-            request_body, request.headers.get("Authorization")
+            request_body, request.headers.get("Authorization"), billing_id
         )
 
     except Exception as exception:
