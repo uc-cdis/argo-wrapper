@@ -166,6 +166,8 @@ def check_user_billing_id(request):
         raise exception
     logger.info("Got user info successfully. Checking for billing id..")
 
+    logger.info("Got user info successfully. Checking for billing id..")
+
     if "tags" in user_info and "billing_id" in user_info["tags"]:
         billing_id = user_info["tags"]["billing_id"]
         logger.info("billing id found in user tags: " + billing_id)
