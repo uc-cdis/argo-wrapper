@@ -160,6 +160,7 @@ def check_user_billing_id(request):
     except Exception as e:
         exception = Exception("Could not determine user billing info from fence", e)
         logger.error(exception)
+        traceback.print_exc()
         raise exception
 
     if "tags" in user_info and "billing_id" in user_info["tags"]:
