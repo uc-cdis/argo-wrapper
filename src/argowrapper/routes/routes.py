@@ -163,10 +163,14 @@ def check_user_billing_id(request):
         traceback.print_exc()
         raise exception
 
+    logger.info("Got user info successfully. Checking for billing id..")
+
     if "tags" in user_info and "billing_id" in user_info["tags"]:
         billing_id = user_info["tags"]["billing_id"]
+        logger.info("billing id found in user tags.")
         return billing_id
     else:
+        logger.info("billing id not found.")
         return None
 
 
