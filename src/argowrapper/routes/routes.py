@@ -182,11 +182,10 @@ def submit_workflow(
     request_body: Dict[Any, Any],
     request: Request,  # pylint: disable=unused-argument
 ) -> str:
-    """route to submit workflow"""
+    # check if user has a billing id tag:
+    billing_id = check_user_billing_id(request)
+    # submit workflow:
     try:
-        # check if user has a billing id tag:
-        billing_id = check_user_billing_id(request)
-        # submit workflow:
         return argo_engine.workflow_submission(
             request_body, request.headers.get("Authorization"), billing_id
         )
