@@ -151,8 +151,8 @@ def check_user_billing_id(request):
     remove gen3 username from pod metadata
     """
 
-    header = {"Authorization", request.headers.get("Authorization")}
-    url = request.base_url._url.rstrip("/") + "/user/user"
+    header = {"Authorization": request.headers.get("Authorization")}
+    url = "http://fence-service/user"
     try:
         r = requests.get(url=url, headers=header)
         r.raise_for_status()
@@ -160,12 +160,16 @@ def check_user_billing_id(request):
     except Exception as e:
         exception = Exception("Could not determine user billing info from fence", e)
         logger.error(exception)
+        traceback.print_exc()
         raise exception
+    logger.info("Got user info successfully. Checking for billing id..")
 
     if "tags" in user_info and "billing_id" in user_info["tags"]:
         billing_id = user_info["tags"]["billing_id"]
+        logger.info("billing id found in user tags: " + billing_id)
         return billing_id
     else:
+        logger.info("billing id not found.")
         return None
 
 
