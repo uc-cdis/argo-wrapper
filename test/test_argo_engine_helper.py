@@ -223,7 +223,9 @@ def test_parse_list_item():
             "creationTimestamp": "test_creationtime",
             "labels": {
                 GEN3_USER_METADATA_LABEL: "dummyuser",
-                GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam",
+                GEN3_TEAM_PROJECT_METADATA_LABEL: argo_engine_helper.convert_gen3teamproject_to_pod_label(
+                    "dummyteam"
+                ),
             },
         },
         "spec": {"shutdown": "Terminate"},
