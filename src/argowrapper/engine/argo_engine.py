@@ -424,7 +424,7 @@ class ArgoEngine:
                 namespace=ARGO_NAMESPACE,
                 list_options_label_selector=label_selector,
                 _check_return_type=False,
-                fields="items.metadata.name,items.metadata.namespace,items.metadata.annotations,items.metadata.uid,items.metadata.creationTimestamp,items.spec.arguments,items.spec.shutdown,items.status.phase,items.status.startedAt,items.status.finishedAt",
+                fields="items.metadata.name,items.metadata.namespace,items.metadata.annotations,items.metadata.uid,items.metadata.creationTimestamp,items.metadata.labels,items.spec.arguments,items.spec.shutdown,items.status.phase,items.status.startedAt,items.status.finishedAt",
             )
             archived_workflow_list_return = (
                 self.archive_api_instance.list_archived_workflows(
