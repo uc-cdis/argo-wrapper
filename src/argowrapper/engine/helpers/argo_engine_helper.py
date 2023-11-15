@@ -94,7 +94,7 @@ def parse_list_item(
         result["wf_name"] = (
             workflow_details["metadata"].get("annotations", {}).get("workflow_name")
         )
-        result[GEN3_TEAM_PROJECT_METADATA_LABEL] = (
+        result[GEN3_TEAM_PROJECT_METADATA_LABEL] = convert_pod_label_to_gen3teamproject(
             workflow_details["metadata"]
             .get("labels")
             .get(GEN3_TEAM_PROJECT_METADATA_LABEL)
