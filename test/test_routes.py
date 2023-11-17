@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from argowrapper.constants import *
 from test.constants import EXAMPLE_AUTH_HEADER
-from argowrapper.routes.routes import router
+from argowrapper.routes.routes import router, check_user_monthly_workflow_cap
 
 variables = [
     {"variable_type": "concept", "concept_id": "2000000324"},
@@ -460,7 +460,7 @@ def test_if_endpoints_are_set_to_the_right_check_auth(client):
         mock_log.assert_called_with("check_auth")
 
 
-def test_check_user_billing_id(client):
+def test_submit_workflow_with_user_billing_id(client):
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
         "argowrapper.routes.routes.argo_engine.workflow_submission"
     ) as mock_engine, patch(
@@ -502,16 +502,19 @@ def test_check_user_billing_id(client):
             mock_resp.json = mock.Mock(
                 return_value={"tags": {"othertag1": "tag1", "billing_id": "1234"}}
             )
-
-            response = client.post(
-                "/submit",
-                data=json.dumps(data),
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": EXAMPLE_AUTH_HEADER,
-                },
-            )
-            assert mock_engine.call_args.args[2] == "1234"
+            with patch(
+                "argowrapper.routes.routes.check_user_monthly_workflow_cap"
+            ) as mock_check_monthly_cap:
+                mock_check_monthly_cap.return_value = True
+                response = client.post(
+                    "/submit",
+                    data=json.dumps(data),
+                    headers={
+                        "Content-Type": "application/json",
+                        "Authorization": EXAMPLE_AUTH_HEADER,
+                    },
+                )
+                assert mock_engine.call_args.args[2] == "1234"
 
             mock_resp.status_code == 500
             mock_resp.raise_for_status.side_effect = Exception("fence is down")
@@ -525,3 +528,71 @@ def test_check_user_billing_id(client):
             )
             assert response.status_code == 500
             assert "fence is down" in str(response.content)
+
+
+def test_check_user_monthly_workflow_cap():
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": EXAMPLE_AUTH_HEADER,
+    }
+
+    with patch(
+        "argowrapper.engine.argo_engine.ArgoEngine.get_user_workflows_for_current_month"
+    ) as mock_get_workflow:
+        mock_get_workflow.return_value = [
+            {"wf_name": "workflow1"},
+            {"wf_name": "workflow2"},
+        ]
+        assert check_user_monthly_workflow_cap(headers["Authorization"]) == True
+
+        mock_get_workflow.return_value = [
+            {"wf_name": "workflow1"},
+            {"wf_name": "workflow2"},
+            {"wf_name": "workflow3"},
+            {"wf_name": "workflow4"},
+            {"wf_name": "workflow5"},
+            {"wf_name": "workflow6"},
+            {"wf_name": "workflow7"},
+            {"wf_name": "workflow8"},
+            {"wf_name": "workflow9"},
+            {"wf_name": "workflow10"},
+            {"wf_name": "workflow11"},
+            {"wf_name": "workflow12"},
+            {"wf_name": "workflow13"},
+            {"wf_name": "workflow14"},
+            {"wf_name": "workflow15"},
+            {"wf_name": "workflow16"},
+            {"wf_name": "workflow17"},
+            {"wf_name": "workflow18"},
+            {"wf_name": "workflow19"},
+            {"wf_name": "workflow20"},
+            {"wf_name": "workflow21"},
+        ]
+
+        assert check_user_monthly_workflow_cap(headers["Authorization"]) == False
+
+
+def test_submit_workflow_with_billing_id_and_over_monthly_cap(client):
+    with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
+        "argowrapper.routes.routes.argo_engine.workflow_submission"
+    ) as mock_engine, patch(
+        "argowrapper.routes.routes.log_auth_check_type"
+    ) as mock_log, patch(
+        "argowrapper.routes.routes.check_user_billing_id"
+    ) as mock_check_billing_id, patch(
+        "argowrapper.routes.routes.check_user_monthly_workflow_cap"
+    ) as mock_check_monthly_cap:
+        mock_auth.return_value = True
+        mock_engine.return_value = "workflow_123"
+        mock_check_billing_id.return_value = "1234"
+        mock_check_monthly_cap.return_value = False
+
+        response = client.post(
+            "/submit",
+            data=json.dumps(data),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": EXAMPLE_AUTH_HEADER,
+            },
+        )
+        assert response.status_code == 403
