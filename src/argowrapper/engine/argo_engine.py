@@ -384,10 +384,8 @@ class ArgoEngine:
 
     def get_user_workflows_for_current_month(self, auth_header: str) -> List[Dict]:
         """
-        Get the list of all workflows for the current user. Each item in the list
-        contains the workflow name, its status, start and end time.
-        Considers solely the workflows that are labelled with ONLY the user name (so no
-        team project label)
+        Get the list of all succeeded and running workflows the current user owns in the current month.
+        Each item in the list contains the workflow name, its status, start and end time.
 
         Args:
             auth_header: authorization header that contains the user's jwt token
