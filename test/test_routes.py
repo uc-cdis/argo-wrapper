@@ -1,13 +1,36 @@
 import json
 from typing import Any, Generator
 from unittest.mock import patch
+from unittest import mock
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from argowrapper.constants import *
-
+from test.constants import EXAMPLE_AUTH_HEADER
 from argowrapper.routes.routes import router
+
+variables = [
+    {"variable_type": "concept", "concept_id": "2000000324"},
+    {"variable_type": "concept", "concept_id": "2000000123"},
+    {"variable_type": "custom_dichotomous", "cohort_ids": [1, 3]},
+]
+
+data = {
+    "n_pcs": 3,
+    "variables": variables,
+    "hare_population": "hare",
+    "out_prefix": "vadc_genesis",
+    "outcome": 1,
+    "maf_threshold": 0.01,
+    "imputation_score_cutoff": 0.3,
+    "template_version": "gwas-template-latest",
+    "source_id": 4,
+    "case_cohort_definition_id": 70,
+    "control_cohort_definition_id": -1,
+    "workflow_name": "wf_name",
+    TEAM_PROJECT_FIELD_NAME: "dummy-team-project",
+}
 
 
 def start_application():
@@ -32,48 +55,29 @@ def client(app: FastAPI) -> Generator[TestClient, Any, None]:
 
 
 def test_submit_workflow(client):
-
-    variables = [
-        {"variable_type": "concept", "concept_id": "2000000324"},
-        {"variable_type": "concept", "concept_id": "2000000123"},
-        {"variable_type": "custom_dichotomous", "cohort_ids": [1, 3]},
-    ]
-
-    data = {
-        "n_pcs": 3,
-        "variables": variables,
-        "hare_population": "hare",
-        "out_prefix": "vadc_genesis",
-        "outcome": 1,
-        "maf_threshold": 0.01,
-        "imputation_score_cutoff": 0.3,
-        "template_version": "gwas-template-latest",
-        "source_id": 4,
-        "case_cohort_definition_id": 70,
-        "control_cohort_definition_id": -1,
-        "workflow_name": "wf_name",
-        TEAM_PROJECT_FIELD_NAME: "dummy-team-project",
-    }
-
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
         "argowrapper.routes.routes.argo_engine.workflow_submission"
     ) as mock_engine, patch(
         "argowrapper.routes.routes.log_auth_check_type"
-    ) as mock_log:
+    ) as mock_log, patch(
+        "argowrapper.routes.routes.check_user_billing_id"
+    ) as mock_check_billing_id:
         mock_auth.return_value = True
         mock_engine.return_value = "workflow_123"
+        mock_check_billing_id.return_value = None
+
         response = client.post(
             "/submit",
             data=json.dumps(data),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": "bearer 1234",
+                "Authorization": EXAMPLE_AUTH_HEADER,
             },
         )
         assert response.status_code == 200
         assert response.content.decode("utf-8") == '"workflow_123"'
         mock_auth.assert_called_with(
-            token="bearer 1234", team_project="dummy-team-project"
+            token=EXAMPLE_AUTH_HEADER, team_project="dummy-team-project"
         )
         mock_log.assert_called_with("check_auth_and_team_project")
 
@@ -379,7 +383,10 @@ def test_get_user_workflows_with_team_projects(client):
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
         "argowrapper.routes.routes.argo_engine.get_workflows_for_team_projects",
         mock_get_workflows_for_team_projects,
-    ):
+    ), patch(
+        "argowrapper.routes.routes.argo_engine.get_workflows_for_user"
+    ) as mock_get_workflows_for_user:
+        mock_get_workflows_for_user.return_value = []
         mock_auth.return_value = True
         response = client.get(
             "/workflows?team_projects=team1&team_projects=team2",
@@ -451,3 +458,70 @@ def test_if_endpoints_are_set_to_the_right_check_auth(client):
 
         client.get("/logs/workflow_123?uid=workflow_uid")
         mock_log.assert_called_with("check_auth")
+
+
+def test_check_user_billing_id(client):
+    with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
+        "argowrapper.routes.routes.argo_engine.workflow_submission"
+    ) as mock_engine, patch(
+        "argowrapper.routes.routes.log_auth_check_type"
+    ) as mock_log:
+        mock_auth.return_value = True
+        mock_engine.return_value = "workflow_123"
+        with patch("requests.get") as mock_request:
+            mock_resp = mock.Mock()
+            mock_resp.status_code = 200
+            mock_resp.raise_for_status = mock.Mock()
+            mock_resp.json = mock.Mock(return_value={"tags": {}})
+            mock_request.return_value = mock_resp
+
+            response = client.post(
+                "/submit",
+                data=json.dumps(data),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": EXAMPLE_AUTH_HEADER,
+                },
+            )
+            assert response.status_code == 200
+            assert mock_engine.call_args.args[2] == None
+
+            mock_resp.json = mock.Mock(return_value={"tags": {"othertag1": "tag1"}})
+
+            response = client.post(
+                "/submit",
+                data=json.dumps(data),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": EXAMPLE_AUTH_HEADER,
+                },
+            )
+            assert response.status_code == 200
+            assert mock_engine.call_args.args[2] == None
+
+            mock_resp.json = mock.Mock(
+                return_value={"tags": {"othertag1": "tag1", "billing_id": "1234"}}
+            )
+
+            response = client.post(
+                "/submit",
+                data=json.dumps(data),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": EXAMPLE_AUTH_HEADER,
+                },
+            )
+            assert mock_engine.call_args.args[2] == "1234"
+
+            mock_resp.status_code == 500
+            mock_resp.raise_for_status.side_effect = Exception("fence is down")
+            response = client.post(
+                "/submit",
+                data=json.dumps(data),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": EXAMPLE_AUTH_HEADER,
+                },
+            )
+            assert response.status_code == 500
+            assert "fence is down" in str(response.content)

@@ -10,6 +10,7 @@ import argowrapper.engine.helpers.argo_engine_helper as argo_engine_helper
 
 from test.constants import EXAMPLE_AUTH_HEADER
 from argowrapper.workflows.argo_workflows.gwas import *
+from unittest.mock import patch
 
 
 class WorkFlow:
@@ -47,6 +48,41 @@ def test_argo_engine_submit_succeeded():
         }
         result = engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
         assert "gwas" in result
+
+
+def test_argo_engine_submit_with_billing_id():
+    """returns workflow name if workflow submission suceeds"""
+    engine = ArgoEngine()
+    engine.api_instance.create_workflow = mock.MagicMock(return_value=None)
+    config = {"environment": "default", "scaling_groups": {"default": "group_1"}}
+
+    with mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
+    ) as mock_config_dict:
+        mock_config_dict.return_value = config
+        parameters = {
+            "pheno_csv_key": "test_replace_value",
+            "n_pcs": 100,
+            "template_version": "test",
+            "gen3_user_name": "test_user",
+            "variables": variables,
+            "team_project": "dummy-team-project",
+        }
+        result = engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER, "1234")
+        workflow_yaml = engine.api_instance.create_workflow.call_args[1][
+            "body"
+        ]._data_store
+        assert (
+            workflow_yaml["workflow"]["metadata"]["labels"]["gen3billing_id"]
+            == workflow_yaml["workflow"]["spec"]["podMetadata"]["labels"][
+                "gen3billing_id"
+            ]
+            == "1234"
+        )
+        assert (
+            workflow_yaml["workflow"]["spec"]["podMetadata"]["labels"]["gen3username"]
+            == ""
+        )
 
 
 def test_argo_engine_submit_failed():
@@ -259,9 +295,7 @@ def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
                 "creationTimestamp": "2023-03-22T16:48:51Z",
                 "labels": {
                     GEN3_USER_METADATA_LABEL: "dummyuser",
-                    GEN3_TEAM_PROJECT_METADATA_LABEL: argo_engine_helper.convert_gen3teamproject_to_pod_label(
-                        "dummyteam"
-                    ),
+                    GEN3_TEAM_PROJECT_METADATA_LABEL: "",
                 },
             },
             "spec": {"arguments": {}, "shutdown": "Terminate"},
@@ -371,18 +405,11 @@ def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
         "argowrapper.engine.argo_engine.argo_engine_helper.convert_gen3username_to_pod_label"
     ):
         uniq_workflow_list = engine.get_workflows_for_user("test_jwt_token")
-        assert len(uniq_workflow_list) == 3
+        assert len(uniq_workflow_list) == 1
         # assert on values as mapped in argo_engine_helper.parse_details():
         assert "Canceled" == uniq_workflow_list[0]["phase"]
-        assert "workflow_three" == uniq_workflow_list[2]["name"]
         assert "custom_name_active1" == uniq_workflow_list[0]["wf_name"]
         assert "2023-03-22T16:48:51Z" == uniq_workflow_list[0]["submittedAt"]
-        # preference is given to active workflows, so we expect [1] to have this name instead of custom_name_archived:
-        assert "custom_name_active2" == uniq_workflow_list[1]["wf_name"]
-        assert "2023-03-22T17:47:51Z" == uniq_workflow_list[1]["submittedAt"]
-        # workflow [2] is archived:
-        assert "custom_name_archived" == uniq_workflow_list[2]["wf_name"]
-        assert "2023-03-22T19:59:59Z" == uniq_workflow_list[2]["submittedAt"]
         assert (
             GEN3_USER_METADATA_LABEL
             in engine.api_instance.list_workflows.call_args[1][
@@ -396,9 +423,13 @@ def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
             ]
         )
 
+        # leave out the one that has no team project, to simulate the argo query:
+        engine.api_instance.list_workflows = mock.MagicMock(
+            return_value=WorkFlow(argo_workflows_mock_raw_response[1:])
+        )
         # test also the get_workflows_for_team_project:
         uniq_workflow_list = engine.get_workflows_for_team_project("dummyteam")
-        assert len(uniq_workflow_list) == 3
+        assert len(uniq_workflow_list) == 2
         assert (
             engine.api_instance.list_workflows.call_args[1][
                 "list_options_label_selector"
@@ -411,9 +442,14 @@ def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
             ]
             == f"{GEN3_TEAM_PROJECT_METADATA_LABEL}={argo_engine_helper.convert_gen3teamproject_to_pod_label('dummyteam')}"
         )
-        # get_workflows_for_team_projects should return the same items as get_workflows_for_team_project if queried with just the same team:
+        # get_workflows_for_team_projects should return the same items as get_workflows_for_team_project if queried with just the one team:
+        # (actually we need a smarter mock method to make the team project name count in this test...TODO - write better mock methods that simulate the
+        # underlying filtering by Argo and returning different results for different team project queries)
         uniq_workflow_list = engine.get_workflows_for_team_projects(["dummyteam"])
-        assert len(uniq_workflow_list) == 3
+        assert len(uniq_workflow_list) == 2
+        assert "custom_name_active2" == uniq_workflow_list[0]["wf_name"]
+        assert "custom_name_archived" == uniq_workflow_list[1]["wf_name"]
+        assert "2023-03-22T19:59:59Z" == uniq_workflow_list[1]["submittedAt"]
 
 
 def test_argo_engine_get_workflows_for_user_failed():
@@ -713,3 +749,31 @@ def test_argo_engine_get_workflow_log_succeeded():
         == "Timeout occurred while fetching attrition table information. Please retry."
     )
     assert workflow_errors[0]["error_message"] == "Error (exit code 126)"
+
+
+def test_get_archived_workflow_wf_name_and_team_project():
+    """check if this helper method returns the expected values and returns results from cache if called a second time for the same workflow"""
+    engine = ArgoEngine()
+    mock_return_wf = {
+        "wf_name": "dummy_wf_name",
+        GEN3_TEAM_PROJECT_METADATA_LABEL: "dummy_team_project_label",
+    }
+
+    engine.get_workflow_details = mock.MagicMock(return_value=mock_return_wf)
+    (
+        given_name,
+        team_project,
+    ) = engine._get_archived_workflow_wf_name_and_team_project("dummy_uid")
+    assert given_name == "dummy_wf_name"
+    assert team_project == "dummy_team_project_label"
+
+    # test the internal caching that happens at _get_archived_workflow_wf_name_and_team_project,
+    # by setting the get_workflow_details to return None and show that it was not called,
+    # as the result is still the previous one:
+    engine.get_workflow_details = mock.MagicMock(return_value=None)
+    (
+        given_name,
+        team_project,
+    ) = engine._get_archived_workflow_wf_name_and_team_project("dummy_uid")
+    assert given_name == "dummy_wf_name"
+    assert team_project == "dummy_team_project_label"

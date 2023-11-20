@@ -277,9 +277,11 @@ class ArgoEngine:
             )
             return f"archived {workflow_name} retried sucessfully"
 
-    def _get_archived_workflow_given_name(self, archived_workflow_uid) -> str:
+    def _get_archived_workflow_wf_name_and_team_project(
+        self, archived_workflow_uid
+    ) -> (str, str):
         """
-        Gets the name details for the given archived workflow
+        Gets the name and team project details for the given archived workflow
 
         It tries to get it from cache first. If not in cache, it will query the
         argo endpoint for archived workflows and parse out the 'workflow_name'
@@ -292,8 +294,8 @@ class ArgoEngine:
         workflows.
 
         Returns:
-            str: the custom, user given, workflow name found in the annotations
-                 section of the workflow
+            str, str: the custom, user given, workflow name found in the annotations
+                 section of the workflow AND the "team project" label
         """
         if archived_workflow_uid in self.workflow_given_names_cache:
             return self.workflow_given_names_cache[archived_workflow_uid]
@@ -301,8 +303,12 @@ class ArgoEngine:
         workflow_details = self.get_workflow_details(None, archived_workflow_uid)
         #  get the workflow given name from the parsed details:
         given_name = workflow_details["wf_name"]
-        self.workflow_given_names_cache[archived_workflow_uid] = given_name
-        return given_name
+        team_project = workflow_details[GEN3_TEAM_PROJECT_METADATA_LABEL]
+        self.workflow_given_names_cache[archived_workflow_uid] = (
+            given_name,
+            team_project,
+        )
+        return given_name, team_project
 
     def get_workflows_for_team_projects_and_user(
         self, team_projects: List[str], auth_header: str
@@ -340,14 +346,14 @@ class ArgoEngine:
         )
         label_selector = f"{GEN3_TEAM_PROJECT_METADATA_LABEL}={team_project_label}"
         workflows = self.get_workflows_for_label_selector(label_selector=label_selector)
-        for workflow in workflows:
-            workflow["team_project"] = team_project
         return workflows
 
     def get_workflows_for_user(self, auth_header: str) -> List[Dict]:
         """
         Get the list of all workflows for the current user. Each item in the list
         contains the workflow name, its status, start and end time.
+        Considers solely the workflows that are labelled with ONLY the user name (so no
+        team project label)
 
         Args:
             auth_header: authorization header that contains the user's jwt token
@@ -362,9 +368,15 @@ class ArgoEngine:
         username = argo_engine_helper.get_username_from_token(auth_header)
         user_label = argo_engine_helper.convert_gen3username_to_pod_label(username)
         label_selector = f"{GEN3_USER_METADATA_LABEL}={user_label}"
-        return self.get_workflows_for_label_selector(
+        all_user_workflows = self.get_workflows_for_label_selector(
             label_selector=label_selector
         )  # TODO - this part would benefit from a system test
+        user_only_workflows = []
+        for workflow in all_user_workflows:
+            # keep only workflows that have an empty team project:
+            if not workflow[GEN3_TEAM_PROJECT_METADATA_LABEL]:
+                user_only_workflows.append(workflow)
+        return user_only_workflows
 
     def get_workflows_for_label_selector(self, label_selector: str) -> List[Dict]:
         try:
@@ -372,7 +384,7 @@ class ArgoEngine:
                 namespace=ARGO_NAMESPACE,
                 list_options_label_selector=label_selector,
                 _check_return_type=False,
-                fields="items.metadata.name,items.metadata.namespace,items.metadata.annotations,items.metadata.uid,items.metadata.creationTimestamp,items.spec.arguments,items.spec.shutdown,items.status.phase,items.status.startedAt,items.status.finishedAt",
+                fields="items.metadata.name,items.metadata.namespace,items.metadata.annotations,items.metadata.uid,items.metadata.creationTimestamp,items.metadata.labels,items.spec.arguments,items.spec.shutdown,items.status.phase,items.status.startedAt,items.status.finishedAt",
             )
             archived_workflow_list_return = (
                 self.archive_api_instance.list_archived_workflows(
@@ -402,7 +414,7 @@ class ArgoEngine:
                     argo_engine_helper.parse_list_item(
                         workflow,
                         workflow_type="archived_workflow",
-                        get_archived_workflow_given_name=self._get_archived_workflow_given_name,
+                        get_archived_workflow_wf_name_and_team_project=self._get_archived_workflow_wf_name_and_team_project,
                     )
                     for workflow in archived_workflow_list_return.items
                 ]
@@ -481,12 +493,24 @@ class ArgoEngine:
                 f"could not get status of {workflow_name}, workflow does not exist"
             )
 
-    def workflow_submission(self, request_body: Dict, auth_header: str):
+    def workflow_submission(
+        self, request_body: Dict, auth_header: str, billing_id: str = None
+    ):
         workflow = WorkflowFactory._get_workflow(
             ARGO_NAMESPACE, request_body, auth_header, WORKFLOW.GWAS
         )
         workflow_yaml = workflow._to_dict()
+
+        # If billing_id exists for user, add it to workflow label and pod metadata
+        # remove gen3-username from pod metadata
+        if billing_id:
+            workflow_yaml["metadata"]["labels"]["gen3billing_id"] = billing_id
+            pod_labels = workflow_yaml["spec"]["podMetadata"]["labels"]
+            pod_labels["gen3billing_id"] = billing_id
+            pod_labels["gen3username"] = ""
+
         logger.debug(workflow_yaml)
+
         try:
             response = self.api_instance.create_workflow(
                 namespace=ARGO_NAMESPACE,

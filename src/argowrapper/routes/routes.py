@@ -21,6 +21,8 @@ from argowrapper.auth import Auth
 from argowrapper.engine.argo_engine import ArgoEngine
 import argowrapper.engine.helpers.argo_engine_helper as argo_engine_helper
 
+import requests
+
 router = APIRouter()
 argo_engine = ArgoEngine()
 auth = Auth()
@@ -140,6 +142,37 @@ def check_auth_and_optional_team_projects(fn):
     return wrapper
 
 
+def check_user_billing_id(request):
+    """
+    Check whether user is non-VA user
+    if user is VA-user, do nothing and proceed
+    if user is non-VA user () billing id tag exists in fence user info)
+    add billing Id to argo metadata and pod metadata
+    remove gen3 username from pod metadata
+    """
+
+    header = {"Authorization": request.headers.get("Authorization")}
+    url = "http://fence-service/user"
+    try:
+        r = requests.get(url=url, headers=header)
+        r.raise_for_status()
+        user_info = r.json()
+    except Exception as e:
+        exception = Exception("Could not determine user billing info from fence", e)
+        logger.error(exception)
+        traceback.print_exc()
+        raise exception
+    logger.info("Got user info successfully. Checking for billing id..")
+
+    if "tags" in user_info and "billing_id" in user_info["tags"]:
+        billing_id = user_info["tags"]["billing_id"]
+        logger.info("billing id found in user tags: " + billing_id)
+        return billing_id
+    else:
+        logger.info("billing id not found.")
+        return None
+
+
 @router.get("/test")
 def test():
     """route to test that the argo-workflow is correctly running"""
@@ -154,10 +187,12 @@ def submit_workflow(
     request: Request,  # pylint: disable=unused-argument
 ) -> str:
     """route to submit workflow"""
-
     try:
+        # check if user has a billing id tag:
+        billing_id = check_user_billing_id(request)
+        # submit workflow:
         return argo_engine.workflow_submission(
-            request_body, request.headers.get("Authorization")
+            request_body, request.headers.get("Authorization"), billing_id
         )
 
     except Exception as exception:
@@ -244,9 +279,7 @@ def get_workflows(
                 auth_header=request.headers.get("Authorization"),
             )
         else:
-            # no team_projects, so fall back to default behavior of returning just the user workflows.
-            # (this does mean that users will still have access to the workflows _they_ executed, even
-            # if after get kicked out of a "team project"):
+            # no team_projects, so fall back to querying the workflows that belong just to the user (no team project):
             return argo_engine.get_workflows_for_user(
                 request.headers.get("Authorization")
             )

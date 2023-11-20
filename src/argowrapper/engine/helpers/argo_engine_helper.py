@@ -84,22 +84,30 @@ def parse_details(
 def parse_list_item(
     workflow_details: Dict[str, any],
     workflow_type: str,
-    get_archived_workflow_given_name: Callable = None,
+    get_archived_workflow_wf_name_and_team_project: Callable = None,
 ) -> Dict[str, any]:
     """Parse the return of workflow list view"""
     result = parse_common_details(
         workflow_details=workflow_details, workflow_type=workflow_type
     )
-    if get_archived_workflow_given_name is None:
+    if get_archived_workflow_wf_name_and_team_project is None:
         result["wf_name"] = (
             workflow_details["metadata"].get("annotations", {}).get("workflow_name")
         )
+        result[GEN3_TEAM_PROJECT_METADATA_LABEL] = convert_pod_label_to_gen3teamproject(
+            workflow_details["metadata"]
+            .get("labels")
+            .get(GEN3_TEAM_PROJECT_METADATA_LABEL)
+        )
     else:
-        # this is needed because archived list items do not have metadata.annotations
+        # this is needed because archived list items do not have metadata.annotations or meta.labels
         # returned by the list service...so we need to call another service to get it:
-        result["wf_name"] = get_archived_workflow_given_name(
+        wf_name, team_project = get_archived_workflow_wf_name_and_team_project(
             workflow_details["metadata"].get("uid")
         )
+        result["wf_name"] = wf_name
+        result[GEN3_TEAM_PROJECT_METADATA_LABEL] = team_project
+
     result["uid"] = workflow_details["metadata"].get("uid")
     return result
 
