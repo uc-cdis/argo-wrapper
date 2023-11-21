@@ -15,6 +15,7 @@ from argowrapper.constants import (
     TEAM_PROJECT_LIST_FIELD_NAME,
     GEN3_TEAM_PROJECT_METADATA_LABEL,
     GEN3_USER_METADATA_LABEL,
+    GEN3_NON_VA_WORKFLOW_MONTHLY_CAP,
 )
 
 from argowrapper import logger
@@ -175,29 +176,32 @@ def check_user_billing_id(request):
         return None
 
 
-def check_user_monthly_workflow_cap(request_token):
+def check_user_reached_monthly_workflow_cap(request_token):
     """
     Query Argo service to see how many successful run user already
     have in the current calendar month. If the number is greater than
     the threshold, return error.
     """
-    monthly_cap = 20
 
     try:
         current_month_workflows = argo_engine.get_user_workflows_for_current_month(
             request_token
         )
 
-        if len(current_month_workflows) >= monthly_cap:
+        if len(current_month_workflows) >= GEN3_NON_VA_WORKFLOW_MONTHLY_CAP:
             logger.info(
                 "User already executed {} workflows this month and cannot create new ones anymore.".format(
                     len(current_month_workflows)
                 )
             )
-            logger.info("The currently monthly cap is {}.".format(monthly_cap))
-            return False
+            logger.info(
+                "The currently monthly cap is {}.".format(
+                    GEN3_NON_VA_WORKFLOW_MONTHLY_CAP
+                )
+            )
+            return True
 
-        return True
+        return False
     except Exception as e:
         logger.error(e)
         traceback.print_exc()
@@ -219,19 +223,19 @@ def submit_workflow(
 ) -> str:
     """route to submit workflow"""
     try:
-        user_allowed_to_run_workflow = True
+        reached_monthly_cap = False
 
         # check if user has a billing id tag:
         billing_id = check_user_billing_id(request)
 
         # if user has billing_id (non-VA user), check if they already reached the monthly cap
         if billing_id:
-            user_allowed_to_run_workflow = check_user_monthly_workflow_cap(
+            reached_monthly_cap = check_user_reached_monthly_workflow_cap(
                 request.headers.get("Authorization")
             )
 
         # submit workflow:
-        if user_allowed_to_run_workflow:
+        if not reached_monthly_cap:
             return argo_engine.workflow_submission(
                 request_body, request.headers.get("Authorization"), billing_id
             )
