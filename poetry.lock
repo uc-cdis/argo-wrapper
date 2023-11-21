@@ -375,7 +375,7 @@ test = ["anyio[trio] (>=3.2.1,<4.0.0)", "black (==21.9b0)", "databases[sqlite] (
 name = "freezegun"
 version = "1.2.2"
 description = "Let your Python tests travel through time"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.6"
 files = [
@@ -968,4 +968,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "6026624e7478b31689b00f8b148cd20b069bbba402bb32eabf7d951925fed97c"
+content-hash = "c7d58e155f14e5d67b2aeffe25509b52c176a02e2c1666869d923bdd7a3b6fe7"
