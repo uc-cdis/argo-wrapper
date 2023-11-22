@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse
 from starlette.status import (
     HTTP_200_OK,
     HTTP_401_UNAUTHORIZED,
+    HTTP_403_FORBIDDEN,
     HTTP_500_INTERNAL_SERVER_ERROR,
 )
 from argowrapper.constants import (
@@ -14,6 +15,7 @@ from argowrapper.constants import (
     TEAM_PROJECT_LIST_FIELD_NAME,
     GEN3_TEAM_PROJECT_METADATA_LABEL,
     GEN3_USER_METADATA_LABEL,
+    GEN3_NON_VA_WORKFLOW_MONTHLY_CAP,
 )
 
 from argowrapper import logger
@@ -152,6 +154,7 @@ def check_user_billing_id(request):
     """
 
     header = {"Authorization": request.headers.get("Authorization")}
+    # TODO: Make this configurable
     url = "http://fence-service/user"
     try:
         r = requests.get(url=url, headers=header)
@@ -173,6 +176,38 @@ def check_user_billing_id(request):
         return None
 
 
+def check_user_reached_monthly_workflow_cap(request_token):
+    """
+    Query Argo service to see how many successful run user already
+    have in the current calendar month. If the number is greater than
+    the threshold, return error.
+    """
+
+    try:
+        current_month_workflows = argo_engine.get_user_workflows_for_current_month(
+            request_token
+        )
+
+        if len(current_month_workflows) >= GEN3_NON_VA_WORKFLOW_MONTHLY_CAP:
+            logger.info(
+                "User already executed {} workflows this month and cannot create new ones anymore.".format(
+                    len(current_month_workflows)
+                )
+            )
+            logger.info(
+                "The currently monthly cap is {}.".format(
+                    GEN3_NON_VA_WORKFLOW_MONTHLY_CAP
+                )
+            )
+            return True
+
+        return False
+    except Exception as e:
+        logger.error(e)
+        traceback.print_exc()
+        raise e
+
+
 @router.get("/test")
 def test():
     """route to test that the argo-workflow is correctly running"""
@@ -188,13 +223,27 @@ def submit_workflow(
 ) -> str:
     """route to submit workflow"""
     try:
+        reached_monthly_cap = False
+
         # check if user has a billing id tag:
         billing_id = check_user_billing_id(request)
-        # submit workflow:
-        return argo_engine.workflow_submission(
-            request_body, request.headers.get("Authorization"), billing_id
-        )
 
+        # if user has billing_id (non-VA user), check if they already reached the monthly cap
+        if billing_id:
+            reached_monthly_cap = check_user_reached_monthly_workflow_cap(
+                request.headers.get("Authorization")
+            )
+
+        # submit workflow:
+        if not reached_monthly_cap:
+            return argo_engine.workflow_submission(
+                request_body, request.headers.get("Authorization"), billing_id
+            )
+        else:
+            return HTMLResponse(
+                content="You have reached the workflow monthly cap.",
+                status_code=HTTP_403_FORBIDDEN,
+            )
     except Exception as exception:
         return HTMLResponse(
             content=str(exception),

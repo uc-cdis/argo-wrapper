@@ -29,10 +29,14 @@ from argowrapper.constants import (
     WORKFLOW,
     GEN3_USER_METADATA_LABEL,
     GEN3_TEAM_PROJECT_METADATA_LABEL,
+    GEN3_WORKFLOW_PHASE_LABEL,
+    GEN3_SUBMIT_TIMESTAMP_LABEL,
 )
 from argowrapper.engine.helpers import argo_engine_helper
 from argowrapper.engine.helpers.workflow_factory import WorkflowFactory
 from argowrapper.workflows.argo_workflows.gwas import GWAS
+
+from datetime import datetime
 
 
 class ArgoEngine:
@@ -377,6 +381,40 @@ class ArgoEngine:
             if not workflow[GEN3_TEAM_PROJECT_METADATA_LABEL]:
                 user_only_workflows.append(workflow)
         return user_only_workflows
+
+    def get_user_workflows_for_current_month(self, auth_header: str) -> List[Dict]:
+        """
+        Get the list of all succeeded and running workflows the current user owns in the current month.
+        Each item in the list contains the workflow name, its status, start and end time.
+
+        Args:
+            auth_header: authorization header that contains the user's jwt token
+
+        Returns:
+            List[Dict]: List of workflow dictionaries with details of workflows
+            that the user has ran.
+
+        Raises:
+            raises Exception in case of any error.
+        """
+        username = argo_engine_helper.get_username_from_token(auth_header)
+        user_label = argo_engine_helper.convert_gen3username_to_pod_label(username)
+        label_selector = f"{GEN3_USER_METADATA_LABEL}={user_label}"
+        all_user_workflows = self.get_workflows_for_label_selector(
+            label_selector=label_selector
+        )
+        user_monthly_workflows = []
+        for workflow in all_user_workflows:
+            if workflow[GEN3_WORKFLOW_PHASE_LABEL] in {"Running", "Succeeded"}:
+                submitted_time_str = workflow[GEN3_SUBMIT_TIMESTAMP_LABEL]
+                submitted_time = datetime.strptime(
+                    submitted_time_str, "%Y-%m-%dT%H:%M:%SZ"
+                )
+                first_day_of_month = datetime.today().replace(day=1)
+                if submitted_time.date() >= first_day_of_month.date():
+                    user_monthly_workflows.append(workflow)
+
+        return user_monthly_workflows
 
     def get_workflows_for_label_selector(self, label_selector: str) -> List[Dict]:
         try:

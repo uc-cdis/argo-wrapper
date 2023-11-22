@@ -37,6 +37,9 @@ BACKUP_PVC_NAME: Final = "va-input-nfs-pvc"
 WORKFLOW_KIND: Final = "workflow"
 GEN3_USER_METADATA_LABEL: Final = "gen3username"
 GEN3_TEAM_PROJECT_METADATA_LABEL: Final = "gen3teamproject"
+GEN3_WORKFLOW_PHASE_LABEL: Final = "phase"
+GEN3_SUBMIT_TIMESTAMP_LABEL: Final = "submittedAt"
+GEN3_NON_VA_WORKFLOW_MONTHLY_CAP: Final = 20
 
 
 class POD_COMPLETION_STRATEGY(Enum):

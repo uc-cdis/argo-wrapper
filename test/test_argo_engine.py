@@ -11,6 +11,7 @@ import argowrapper.engine.helpers.argo_engine_helper as argo_engine_helper
 from test.constants import EXAMPLE_AUTH_HEADER
 from argowrapper.workflows.argo_workflows.gwas import *
 from unittest.mock import patch
+from freezegun import freeze_time
 
 
 class WorkFlow:
@@ -777,3 +778,53 @@ def test_get_archived_workflow_wf_name_and_team_project():
     ) = engine._get_archived_workflow_wf_name_and_team_project("dummy_uid")
     assert given_name == "dummy_wf_name"
     assert team_project == "dummy_team_project_label"
+
+
+@freeze_time("Nov 16th, 2023")
+def test_get_user_workflows_for_current_month(monkeypatch):
+
+    engine = ArgoEngine()
+    workflows_mock_response = [
+        {
+            "uid": "uid_1",
+            "phase": "Running",
+            "submittedAt": "2023-11-14T16:44:02Z",
+        },
+        {
+            "uid": "uid_2",
+            "phase": "Succeeded",
+            "submittedAt": "2023-11-15T17:52:52Z",
+        },
+        {
+            "uid": "uid_3",
+            "phase": "Failed",
+            "submittedAt": "2023-11-02T00:00:00Z",
+        },
+        {
+            "uid": "uid_4",
+            "phase": "Succeeded",
+            "submittedAt": "2023-10-31T00:00:00Z",
+        },
+    ]
+
+    expected_workflow_reponse = [
+        {
+            "uid": "uid_1",
+            "phase": "Running",
+            "submittedAt": "2023-11-14T16:44:02Z",
+        },
+        {
+            "uid": "uid_2",
+            "phase": "Succeeded",
+            "submittedAt": "2023-11-15T17:52:52Z",
+        },
+    ]
+    engine.get_workflows_for_label_selector = mock.MagicMock(
+        return_value=workflows_mock_response
+    )
+
+    user_monthly_workflow = engine.get_user_workflows_for_current_month(
+        EXAMPLE_AUTH_HEADER
+    )
+
+    assert user_monthly_workflow == expected_workflow_reponse

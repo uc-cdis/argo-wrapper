@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "argowrapper"
-version = "1.8.0"
+version = "1.8.1"
 description = "argo wrapper for va workflow"
 authors = ["UchicagoZchen138 <zchen138@uchicago.edu>"]
 repository = "https://github.com/uc-cdis/argo-wrapper"
@@ -21,9 +21,11 @@ importlib-resources = "^5.4.0"
 requests = "^2.27.1"
 PyJWT = "^2.4.0"
 pytest-cov = "^3.0.0"
+freezegun = "^1.2.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
+
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
