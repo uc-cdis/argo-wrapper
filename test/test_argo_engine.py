@@ -74,10 +74,8 @@ def test_argo_engine_submit_with_billing_id():
             "body"
         ]._data_store
         assert (
-            workflow_yaml["workflow"]["metadata"]["labels"]["gen3billing_id"]
-            == workflow_yaml["workflow"]["spec"]["podMetadata"]["labels"][
-                "gen3billing_id"
-            ]
+            workflow_yaml["workflow"]["metadata"]["labels"]["billing_id"]
+            == workflow_yaml["workflow"]["spec"]["podMetadata"]["labels"]["billing_id"]
             == "1234"
         )
         assert (

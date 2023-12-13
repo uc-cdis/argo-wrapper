@@ -542,9 +542,9 @@ class ArgoEngine:
         # If billing_id exists for user, add it to workflow label and pod metadata
         # remove gen3-username from pod metadata
         if billing_id:
-            workflow_yaml["metadata"]["labels"]["gen3billing_id"] = billing_id
+            workflow_yaml["metadata"]["labels"]["billing_id"] = billing_id
             pod_labels = workflow_yaml["spec"]["podMetadata"]["labels"]
-            pod_labels["gen3billing_id"] = billing_id
+            pod_labels["billing_id"] = billing_id
             pod_labels["gen3username"] = ""
 
         logger.debug(workflow_yaml)
