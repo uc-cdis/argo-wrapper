@@ -1,8 +1,9 @@
-from enum import Enum
-from typing import Final
-import re
 import configparser
 import os
+import re
+from enum import Enum
+from typing import Final
+
 from argowrapper import logger
 
 config = configparser.ConfigParser()
@@ -22,7 +23,7 @@ logger.info(f"Access method: {config['DEFAULT']['ARGO_ACCESS_METHOD']}")
 ARGO_HOST: Final = config["DEFAULT"]["ARGO_HOST"]
 TEST_WF: Final = "test.yaml"
 WF_HEADER: Final = "header.yaml"
-ARGO_NAMESPACE: Final = "argo"
+ARGO_NAMESPACE: Final = config["DEFAULT"]["ARGO_NAMESPACE"]
 TOKEN_REGEX: Final = re.compile("bearer", re.IGNORECASE)
 ARGO_ACCESS_SERVICE: Final = "argo_workflow"
 ARGO_ACCESS_METHOD: Final = config["DEFAULT"]["ARGO_ACCESS_METHOD"]
