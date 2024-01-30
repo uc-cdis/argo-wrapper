@@ -9,6 +9,7 @@ from starlette.status import (
     HTTP_401_UNAUTHORIZED,
     HTTP_403_FORBIDDEN,
     HTTP_500_INTERNAL_SERVER_ERROR,
+    HTTP_400_BAD_REQUEST,
 )
 from argowrapper.constants import (
     TEAM_PROJECT_FIELD_NAME,
@@ -144,6 +145,80 @@ def check_auth_and_optional_team_projects(fn):
     return wrapper
 
 
+def check_team_projects_and_cohorts(fn):
+    """custom annotation to make sure cohort in request belong to user's team project"""
+
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        request = kwargs["request"]
+        token = request.headers.get("Authorization")
+        team_projects = kwargs[TEAM_PROJECT_LIST_FIELD_NAME]
+        cohort_ids = []
+        source_id = kwargs["source_id"]
+        if "outcome" in kwargs and "cohort_ids" in kwargs["outcome"]:
+            cohort_ids = cohort_ids.append(kwargs["outcome"]["cohort_ids"])
+
+        if "variables" in kwargs:
+            variables = kwargs["variables"]
+            for v in variables:
+                if "cohort_ids" in v:
+                    cohort_ids.append(v["cohort_ids"])
+
+        if (
+            team_projects
+            and source_id
+            and len(team_projects) > 0
+            and len(cohort_ids) > 0
+        ):
+            header = {"cookie": "fence={}".format(token)}
+            url = "https://cohort-middleware-service/cohortdefinition-stats/by-source-id/{}/by-team-project?team-project={}".format(
+                source_id, team_projects
+            )
+
+            logger.info("team project is " + team_projects)
+            logger.info("source_id is " + source_id)
+            logger.info("cohort ids are " + " ".join(cohort_ids))
+            logger.info("request url is " + url)
+
+            try:
+                r = requests.get(url=url, headers=header)
+                r.raise_for_status()
+                team_cohort_info = r.json()
+                team_cohort_id_set = set()
+                if "cohort_definitions_and_stats" in team_cohort_info:
+                    for t in team_cohort_info:
+                        if "cohort_definition_id" in t:
+                            team_cohort_id_set.add(t["cohort_definition_id"])
+                cohort_id_set = set(cohort_ids)
+
+                if cohort_id_set.issubset(team_cohort_id_set):
+                    logger.info(
+                        "cohort ids submitted belong to user's team project. Continue.."
+                    )
+                    return fn(*args, **kwargs)
+                else:
+                    logger.error(
+                        "cohort ids submitted do NOT belong to user's team project."
+                    )
+                    return HTMLResponse(
+                        content="Cohort ids submitted do NOT belong to user's team project.",
+                        status_code=HTTP_401_UNAUTHORIZED,
+                    )
+            except Exception as e:
+                exception = Exception("Something went wrong", e)
+                logger.error(exception)
+                traceback.print_exc()
+                raise exception
+        else:
+            # some required parameters is missing, return bad request:
+            return HTMLResponse(
+                content="Missing required parameters",
+                status_code=HTTP_400_BAD_REQUEST,
+            )
+
+    return wrapper
+
+
 def check_user_billing_id(request):
     """
     Check whether user is non-VA user
@@ -217,6 +292,7 @@ def test():
 # submit argo workflow
 @router.post("/submit", status_code=HTTP_200_OK)
 @check_auth_and_team_project
+@check_team_projects_and_cohorts
 def submit_workflow(
     request_body: Dict[Any, Any],
     request: Request,  # pylint: disable=unused-argument
