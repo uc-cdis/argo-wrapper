@@ -156,7 +156,7 @@ def check_team_projects_and_cohorts(fn):
         logger.info(json.dumps(kwargs))
         request = kwargs["request"]
         token = request.headers.get("Authorization")
-        team_projects = kwargs[TEAM_PROJECT_LIST_FIELD_NAME]
+        team_project = kwargs[TEAM_PROJECT_FIELD_NAME]
         cohort_ids = []
         source_id = kwargs["source_id"]
         if "outcome" in kwargs and "cohort_ids" in kwargs["outcome"]:
@@ -168,18 +168,13 @@ def check_team_projects_and_cohorts(fn):
                 if "cohort_ids" in v:
                     cohort_ids.append(v["cohort_ids"])
 
-        if (
-            team_projects
-            and source_id
-            and len(team_projects) > 0
-            and len(cohort_ids) > 0
-        ):
+        if team_project and source_id and len(team_project) > 0 and len(cohort_ids) > 0:
             header = {"cookie": "fence={}".format(token)}
             url = "https://cohort-middleware-service/cohortdefinition-stats/by-source-id/{}/by-team-project?team-project={}".format(
-                source_id, team_projects
+                source_id, team_project
             )
 
-            logger.info("team project is " + team_projects)
+            logger.info("team project is " + team_project)
             logger.info("source_id is " + source_id)
             logger.info("cohort ids are " + " ".join(cohort_ids))
             logger.info("request url is " + url)
