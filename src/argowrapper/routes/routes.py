@@ -150,6 +150,10 @@ def check_team_projects_and_cohorts(fn):
 
     @wraps(fn)
     def wrapper(*args, **kwargs):
+        import json
+
+        logger.info("arguments:")
+        logger.info(json.dumps(kwargs))
         request = kwargs["request"]
         token = request.headers.get("Authorization")
         team_projects = kwargs[TEAM_PROJECT_LIST_FIELD_NAME]
