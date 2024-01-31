@@ -153,20 +153,21 @@ def check_team_projects_and_cohorts(fn):
         import json
 
         logger.info("arguments:")
-        logger.info(json.dumps(kwargs))
+        logger.info(json.dumps(kwargs["request_body"]))
         request = kwargs["request"]
+        request_body = kwargs["request_body"]
         token = request.headers.get("Authorization")
-        team_project = kwargs[TEAM_PROJECT_FIELD_NAME]
+        team_project = request_body[TEAM_PROJECT_FIELD_NAME]
         cohort_ids = []
-        source_id = kwargs["source_id"]
-        if "outcome" in kwargs and "cohort_ids" in kwargs["outcome"]:
-            cohort_ids = cohort_ids.append(kwargs["outcome"]["cohort_ids"])
+        source_id = request_body["source_id"]
+        if "outcome" in request_body and "cohort_ids" in request_body["outcome"]:
+            cohort_ids.extend(request_body["outcome"]["cohort_ids"])
 
-        if "variables" in kwargs:
-            variables = kwargs["variables"]
+        if "variables" in request_body:
+            variables = request_body["variables"]
             for v in variables:
                 if "cohort_ids" in v:
-                    cohort_ids.append(v["cohort_ids"])
+                    cohort_ids.extend(v["cohort_ids"])
 
         if team_project and source_id and len(team_project) > 0 and len(cohort_ids) > 0:
             header = {"cookie": "fence={}".format(token)}
@@ -175,8 +176,8 @@ def check_team_projects_and_cohorts(fn):
             )
 
             logger.info("team project is " + team_project)
-            logger.info("source_id is " + source_id)
-            logger.info("cohort ids are " + " ".join(cohort_ids))
+            logger.info("source_id is " + str(source_id))
+            logger.info("cohort ids are " + " ".join(str(c) for c in cohort_ids))
             logger.info("request url is " + url)
 
             try:
@@ -185,7 +186,7 @@ def check_team_projects_and_cohorts(fn):
                 team_cohort_info = r.json()
                 team_cohort_id_set = set()
                 if "cohort_definitions_and_stats" in team_cohort_info:
-                    for t in team_cohort_info:
+                    for t in team_cohort_info["cohort_definitions_and_stats"]:
                         if "cohort_definition_id" in t:
                             team_cohort_id_set.add(t["cohort_definition_id"])
                 cohort_id_set = set(cohort_ids)

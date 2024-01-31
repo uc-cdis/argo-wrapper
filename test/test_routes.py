@@ -22,7 +22,11 @@ data = {
     "variables": variables,
     "hare_population": "hare",
     "out_prefix": "vadc_genesis",
-    "outcome": 1,
+    "outcome": {
+        "variable_type": "custom_dichotomous",
+        "cohort_ids": [2],
+        "provided_name": "test Pheno",
+    },
     "maf_threshold": 0.01,
     "imputation_score_cutoff": 0.3,
     "template_version": "gwas-template-latest",
@@ -31,6 +35,14 @@ data = {
     "control_cohort_definition_id": -1,
     "workflow_name": "wf_name",
     TEAM_PROJECT_FIELD_NAME: "dummy-team-project",
+}
+
+cohort_definition_data = {
+    "cohort_definitions_and_stats": [
+        {"cohort_definition_id": 1, "cohort_name": "Cohort 1", "size": 1},
+        {"cohort_definition_id": 2, "cohort_name": "Cohort 2", "size": 2},
+        {"cohort_definition_id": 3, "cohort_name": "Cohort 3", "size": 3},
+    ]
 }
 
 
@@ -56,16 +68,38 @@ def client(app: FastAPI) -> Generator[TestClient, Any, None]:
 
 
 def test_submit_workflow(client):
+    def mocked_requests_get(*args, **kwargs):
+        class MockResponse:
+            def __init__(self, json_data, status_code):
+                self.json_data = json_data
+                self.status_code = status_code
+
+            def json(self):
+                return self.json_data
+
+            def raise_for_status(self):
+                if self.status_code != 200:
+                    raise Exception()
+
+        if (
+            kwargs["url"]
+            == "https://cohort-middleware-service/cohortdefinition-stats/by-source-id/4/by-team-project?team-project=dummy-team-project"
+        ):
+            return MockResponse(cohort_definition_data, 200)
+
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
         "argowrapper.routes.routes.argo_engine.workflow_submission"
     ) as mock_engine, patch(
         "argowrapper.routes.routes.log_auth_check_type"
     ) as mock_log, patch(
         "argowrapper.routes.routes.check_user_billing_id"
-    ) as mock_check_billing_id:
+    ) as mock_check_billing_id, patch(
+        "requests.get"
+    ) as mock_requests:
         mock_auth.return_value = True
         mock_engine.return_value = "workflow_123"
         mock_check_billing_id.return_value = None
+        mock_requests.side_effect = mocked_requests_get
 
         response = client.post(
             "/submit",
