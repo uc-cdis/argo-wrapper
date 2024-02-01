@@ -173,7 +173,7 @@ def check_team_projects_and_cohorts(fn):
 
         if team_project and source_id and len(team_project) > 0 and len(cohort_ids) > 0:
             header = {"Authorization": token, "cookie": "fence={}".format(token)}
-            url = "http://cohort-middleware-service/cohort-middleware/cohortdefinition-stats/by-source-id/{}/by-team-project?team-project={}".format(
+            url = "http://cohort-middleware-service/cohortdefinition-stats/by-source-id/{}/by-team-project?team-project={}".format(
                 source_id, team_project
             )
 
