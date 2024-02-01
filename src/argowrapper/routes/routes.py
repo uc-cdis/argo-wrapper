@@ -156,7 +156,6 @@ def check_team_projects_and_cohorts(fn):
         logger.info(json.dumps(kwargs["request_body"]))
         request = kwargs["request"]
         token = request.headers.get("Authorization")
-        host = request
         request_body = kwargs["request_body"]
 
         team_project = request_body[TEAM_PROJECT_FIELD_NAME]
@@ -179,7 +178,6 @@ def check_team_projects_and_cohorts(fn):
 
             logger.info("team project is " + team_project)
             logger.info("source_id is " + str(source_id))
-            logger.info("cohort ids are " + " ".join(str(c) for c in cohort_ids))
             logger.info("request url is " + url)
 
             try:
@@ -192,6 +190,12 @@ def check_team_projects_and_cohorts(fn):
                         if "cohort_definition_id" in t:
                             team_cohort_id_set.add(t["cohort_definition_id"])
                 cohort_id_set = set(cohort_ids)
+
+                logger.info("cohort ids are " + " ".join(str(c) for c in cohort_ids))
+                logger.info(
+                    "team cohort ids are "
+                    + " ".join(str(c) for c in team_cohort_id_set)
+                )
 
                 if cohort_id_set.issubset(team_cohort_id_set):
                     logger.info(

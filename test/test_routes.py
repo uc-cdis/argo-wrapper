@@ -83,7 +83,7 @@ def test_submit_workflow(client):
 
         if (
             kwargs["url"]
-            == "https://cohort-middleware-service/cohortdefinition-stats/by-source-id/4/by-team-project?team-project=dummy-team-project"
+            == "http://cohort-middleware-service/cohortdefinition-stats/by-source-id/4/by-team-project?team-project=dummy-team-project"
         ):
             return MockResponse(cohort_definition_data, 200)
 
