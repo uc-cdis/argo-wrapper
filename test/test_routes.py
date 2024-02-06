@@ -33,6 +33,7 @@ data = {
     "source_id": 4,
     "case_cohort_definition_id": 70,
     "control_cohort_definition_id": -1,
+    "source_population_cohort": 4,
     "workflow_name": "wf_name",
     TEAM_PROJECT_FIELD_NAME: "dummy-team-project",
     "user_tags": None,  # For testing purpose
@@ -43,6 +44,7 @@ cohort_definition_data = {
         {"cohort_definition_id": 1, "cohort_name": "Cohort 1", "size": 1},
         {"cohort_definition_id": 2, "cohort_name": "Cohort 2", "size": 2},
         {"cohort_definition_id": 3, "cohort_name": "Cohort 3", "size": 3},
+        {"cohort_definition_id": 4, "cohort_name": "Cohort 4", "size": 4},
     ]
 }
 
@@ -643,7 +645,7 @@ def test_submit_workflow_with_non_team_project_cohort(client):
         mock_check_billing_id.return_value = None
         mock_requests.side_effect = mocked_requests_get
 
-        data["outcome"]["cohort_ids"] = [4]
+        data["outcome"]["cohort_ids"] = [400]
 
         response = client.post(
             "/submit",

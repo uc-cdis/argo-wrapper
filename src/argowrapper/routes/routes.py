@@ -171,7 +171,7 @@ def check_team_projects_and_cohorts(fn):
                     cohort_ids.extend(v["cohort_ids"])
 
         if "source_population_cohort" in request_body:
-            cohort_ids.extend(request_body["source_population_cohort"])
+            cohort_ids.append(request_body["source_population_cohort"])
 
         if team_project and source_id and len(team_project) > 0 and len(cohort_ids) > 0:
             header = {"Authorization": token, "cookie": "fence={}".format(token)}
