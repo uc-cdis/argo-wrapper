@@ -22,7 +22,7 @@ from argowrapper.constants import (
 from argowrapper import logger
 from argowrapper.auth import Auth
 from argowrapper.engine.argo_engine import ArgoEngine
-from argowrapper.utils import get_team_cohort_id
+from argowrapper.auth.utils import get_cohort_ids_for_team_project
 
 import argowrapper.engine.helpers.argo_engine_helper as argo_engine_helper
 
@@ -175,7 +175,9 @@ def check_team_projects_and_cohorts(fn):
 
         if team_project and source_id and len(team_project) > 0 and len(cohort_ids) > 0:
             # Get team project cohort ids
-            team_cohort_id_set = get_team_cohort_id(token, source_id, team_project)
+            team_cohort_id_set = get_cohort_ids_for_team_project(
+                token, source_id, team_project
+            )
 
             logger.debug("cohort ids are " + " ".join(str(c) for c in cohort_ids))
             logger.debug(
@@ -194,7 +196,7 @@ def check_team_projects_and_cohorts(fn):
                 )
                 return HTMLResponse(
                     content="Cohort ids submitted do NOT all belong to the same team project.",
-                    status_code=HTTP_401_UNAUTHORIZED,
+                    status_code=HTTP_400_BAD_REQUEST,
                 )
 
         else:

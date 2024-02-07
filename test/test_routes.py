@@ -655,4 +655,4 @@ def test_submit_workflow_with_non_team_project_cohort(client):
                 "Authorization": EXAMPLE_AUTH_HEADER,
             },
         )
-        assert response.status_code == 401
+        assert response.status_code == 400
