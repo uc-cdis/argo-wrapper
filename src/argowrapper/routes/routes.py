@@ -22,6 +22,8 @@ from argowrapper.constants import (
 from argowrapper import logger
 from argowrapper.auth import Auth
 from argowrapper.engine.argo_engine import ArgoEngine
+from argowrapper.utils import get_team_cohort_id
+
 import argowrapper.engine.helpers.argo_engine_helper as argo_engine_helper
 
 import requests
@@ -150,74 +152,51 @@ def check_team_projects_and_cohorts(fn):
 
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        import json
 
-        logger.info("arguments:")
-        logger.info(json.dumps(kwargs["request_body"]))
-        request = kwargs["request"]
-        token = request.headers.get("Authorization")
+        token = kwargs["request"].headers.get("Authorization")
         request_body = kwargs["request_body"]
-
         team_project = request_body[TEAM_PROJECT_FIELD_NAME]
-        cohort_ids = []
         source_id = request_body["source_id"]
-        if "outcome" in request_body and "cohort_ids" in request_body["outcome"]:
+
+        # Construct set with all cohort ids requested
+        cohort_ids = []
+        if "cohort_ids" in request_body["outcome"]:
             cohort_ids.extend(request_body["outcome"]["cohort_ids"])
 
-        if "variables" in request_body:
-            variables = request_body["variables"]
-            for v in variables:
-                if "cohort_ids" in v:
-                    cohort_ids.extend(v["cohort_ids"])
+        variables = request_body["variables"]
+        for v in variables:
+            if "cohort_ids" in v:
+                cohort_ids.extend(v["cohort_ids"])
 
         if "source_population_cohort" in request_body:
             cohort_ids.append(request_body["source_population_cohort"])
 
+        cohort_id_set = set(cohort_ids)
+
         if team_project and source_id and len(team_project) > 0 and len(cohort_ids) > 0:
-            header = {"Authorization": token, "cookie": "fence={}".format(token)}
-            url = "http://cohort-middleware-service/cohortdefinition-stats/by-source-id/{}/by-team-project?team-project={}".format(
-                source_id, team_project
+            # Get team project cohort ids
+            team_cohort_id_set = get_team_cohort_id(token, source_id, team_project)
+
+            logger.debug("cohort ids are " + " ".join(str(c) for c in cohort_ids))
+            logger.debug(
+                "team cohort ids are " + " ".join(str(c) for c in team_cohort_id_set)
             )
 
-            logger.info("team project is " + team_project)
-            logger.info("source_id is " + str(source_id))
-            logger.info("request url is " + url)
-
-            try:
-                r = requests.get(url=url, headers=header)
-                r.raise_for_status()
-                team_cohort_info = r.json()
-                team_cohort_id_set = set()
-                if "cohort_definitions_and_stats" in team_cohort_info:
-                    for t in team_cohort_info["cohort_definitions_and_stats"]:
-                        if "cohort_definition_id" in t:
-                            team_cohort_id_set.add(t["cohort_definition_id"])
-                cohort_id_set = set(cohort_ids)
-
-                logger.info("cohort ids are " + " ".join(str(c) for c in cohort_ids))
-                logger.info(
-                    "team cohort ids are "
-                    + " ".join(str(c) for c in team_cohort_id_set)
+            # Compare the two sets
+            if cohort_id_set.issubset(team_cohort_id_set):
+                logger.debug(
+                    "cohort ids submitted all belong to the same team project. Continue.."
+                )
+                return fn(*args, **kwargs)
+            else:
+                logger.error(
+                    "Cohort ids submitted do NOT all belong to the same team project."
+                )
+                return HTMLResponse(
+                    content="Cohort ids submitted do NOT all belong to the same team project.",
+                    status_code=HTTP_401_UNAUTHORIZED,
                 )
 
-                if cohort_id_set.issubset(team_cohort_id_set):
-                    logger.info(
-                        "cohort ids submitted belong to user's team project. Continue.."
-                    )
-                    return fn(*args, **kwargs)
-                else:
-                    logger.error(
-                        "cohort ids submitted do NOT belong to user's team project."
-                    )
-                    return HTMLResponse(
-                        content="Cohort ids submitted do NOT belong to user's team project.",
-                        status_code=HTTP_401_UNAUTHORIZED,
-                    )
-            except Exception as e:
-                exception = Exception("Something went wrong", e)
-                logger.error(exception)
-                traceback.print_exc()
-                raise exception
         else:
             # some required parameters is missing, return bad request:
             return HTMLResponse(
