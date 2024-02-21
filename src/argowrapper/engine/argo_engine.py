@@ -1,42 +1,41 @@
 import string
 import traceback
+from datetime import datetime
 from typing import Dict, List, Literal
 
 import argo_workflows
 from argo_workflows.api import (
     archived_workflow_service_api,
-    workflow_service_api,
     artifact_service_api,
+    workflow_service_api,
+)
+from argo_workflows.exceptions import NotFoundException
+from argo_workflows.model.io_argoproj_workflow_v1alpha1_retry_archived_workflow_request import (
+    IoArgoprojWorkflowV1alpha1RetryArchivedWorkflowRequest,
 )
 from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_create_request import (
     IoArgoprojWorkflowV1alpha1WorkflowCreateRequest,
 )
-from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_terminate_request import (
-    IoArgoprojWorkflowV1alpha1WorkflowTerminateRequest,
-)
 from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_retry_request import (
     IoArgoprojWorkflowV1alpha1WorkflowRetryRequest,
 )
-from argo_workflows.model.io_argoproj_workflow_v1alpha1_retry_archived_workflow_request import (
-    IoArgoprojWorkflowV1alpha1RetryArchivedWorkflowRequest,
+from argo_workflows.model.io_argoproj_workflow_v1alpha1_workflow_terminate_request import (
+    IoArgoprojWorkflowV1alpha1WorkflowTerminateRequest,
 )
-from argo_workflows.exceptions import NotFoundException
 
 from argowrapper import logger
 from argowrapper.constants import (
     ARGO_HOST,
     ARGO_NAMESPACE,
-    WORKFLOW,
-    GEN3_USER_METADATA_LABEL,
-    GEN3_TEAM_PROJECT_METADATA_LABEL,
-    GEN3_WORKFLOW_PHASE_LABEL,
     GEN3_SUBMIT_TIMESTAMP_LABEL,
+    GEN3_TEAM_PROJECT_METADATA_LABEL,
+    GEN3_USER_METADATA_LABEL,
+    GEN3_WORKFLOW_PHASE_LABEL,
+    WORKFLOW,
 )
 from argowrapper.engine.helpers import argo_engine_helper
 from argowrapper.engine.helpers.workflow_factory import WorkflowFactory
 from argowrapper.workflows.argo_workflows.gwas import GWAS
-
-from datetime import datetime
 
 
 class ArgoEngine:
@@ -71,7 +70,6 @@ class ArgoEngine:
         self.artifact_api_instance = artifact_service_api.ArtifactServiceApi(api_client)
 
     def _get_workflow_details_dict(self, workflow_name: str) -> Dict:
-
         return self.api_instance.get_workflow(
             namespace=ARGO_NAMESPACE,
             name=workflow_name,
@@ -426,6 +424,7 @@ class ArgoEngine:
             )
             archived_workflow_list_return = (
                 self.archive_api_instance.list_archived_workflows(
+                    namespace=ARGO_NAMESPACE,
                     list_options_label_selector=label_selector,
                     _check_return_type=False,
                 )
