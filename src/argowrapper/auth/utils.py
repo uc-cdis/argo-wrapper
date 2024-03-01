@@ -1,17 +1,15 @@
 import requests
 from argowrapper import logger
 from argowrapper.constants import (
-    COHORT_MIDDLEWARE_SERVICE,
+    COHORT_DEFINITION_BY_SOURCE_AND_TEAM_PROJECT_URL,
 )
 
 
 def get_cohort_ids_for_team_project(token, source_id, team_project):
     header = {"Authorization": token, "cookie": "fence={}".format(token)}
-    api_url = (
-        COHORT_MIDDLEWARE_SERVICE
-        + "/cohortdefinition-stats/by-source-id/{}/by-team-project?team-project={}"
+    url = COHORT_DEFINITION_BY_SOURCE_AND_TEAM_PROJECT_URL.format(
+        source_id, team_project
     )
-    url = api_url.format(source_id, team_project)
     try:
         r = requests.get(url=url, headers=header)
         r.raise_for_status()
