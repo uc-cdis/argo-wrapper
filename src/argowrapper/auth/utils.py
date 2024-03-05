@@ -7,6 +7,7 @@ from argowrapper.constants import (
 
 def get_cohort_ids_for_team_project(token, source_id, team_project):
     # Get cohort ids
+    token_flag = True
     header = {"Authorization": token, "cookie": "fence={}".format(token)}
     url = COHORT_DEFINITION_BY_SOURCE_AND_TEAM_PROJECT_URL.format(
         source_id, team_project
