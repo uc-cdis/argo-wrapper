@@ -9,7 +9,7 @@ def get_cohort_ids_for_team_project(token, source_id, team_project):
     header = {"Authorization": token, "cookie": "fence={}".format(token)}
     api_url = (
         COHORT_MIDDLEWARE_SERVICE_URL
-        + "cohortdefinition-stats/by-source-id/{}/by-team-project?team-project={}"
+        + "/cohortdefinition-stats/by-source-id/{}/by-team-project?team-project={}"
     )
     api_url = api_url.format(source_id, team_project)
 
