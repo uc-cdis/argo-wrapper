@@ -21,9 +21,7 @@ logger.info(f"Argo host: {config['DEFAULT']['ARGO_HOST']}")
 logger.info(f"Access method: {config['DEFAULT']['ARGO_ACCESS_METHOD']}")
 
 ARGO_HOST: Final = config["DEFAULT"]["ARGO_HOST"]
-COHORT_DEFINITION_BY_SOURCE_AND_TEAM_PROJECT_URL: Final = config["DEFAULT"][
-    "COHORT_DEFINITION_BY_SOURCE_AND_TEAM_PROJECT_URL"
-]
+COHORT_MIDDLEWARE_URL: Final = config["DEFAULT"]["COHORT_MIDDLEWARE_URL"]
 TEST_WF: Final = "test.yaml"
 WF_HEADER: Final = "header.yaml"
 ARGO_NAMESPACE: Final = config["DEFAULT"]["ARGO_NAMESPACE"]
