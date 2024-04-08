@@ -356,7 +356,7 @@ def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
                 "uid": "uid_3",
                 "creationTimestamp": "2023-03-22T19:59:59Z",
                 "labels": {
-                    GEN3_USER_METADATA_LABEL: "dummyuser",
+                    GEN3_USER_METADATA_LABEL: "",
                     GEN3_TEAM_PROJECT_METADATA_LABEL: argo_engine_helper.convert_gen3teamproject_to_pod_label(
                         "dummyteam"
                     ),
@@ -409,6 +409,7 @@ def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
         assert "Canceled" == uniq_workflow_list[0]["phase"]
         assert "custom_name_active1" == uniq_workflow_list[0]["wf_name"]
         assert "2023-03-22T16:48:51Z" == uniq_workflow_list[0]["submittedAt"]
+        assert "dummyuser" == uniq_workflow_list[0]["userName"]
         assert (
             GEN3_USER_METADATA_LABEL
             in engine.api_instance.list_workflows.call_args[1][
@@ -449,6 +450,7 @@ def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
         assert "custom_name_active2" == uniq_workflow_list[0]["wf_name"]
         assert "custom_name_archived" == uniq_workflow_list[1]["wf_name"]
         assert "2023-03-22T19:59:59Z" == uniq_workflow_list[1]["submittedAt"]
+        assert "" == uniq_workflow_list[1]["userName"]
 
 
 def test_argo_engine_get_workflows_for_user_failed():
