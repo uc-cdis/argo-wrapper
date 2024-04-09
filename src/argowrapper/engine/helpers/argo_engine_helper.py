@@ -5,6 +5,7 @@ import string
 from typing import Callable, Dict, List
 
 import jwt
+import urllib
 
 from argowrapper import logger
 from argowrapper.auth import Auth
@@ -51,12 +52,18 @@ def parse_common_details(
     elif workflow_type == "archived_workflow":
         pass
 
+    user_name_str = (
+        workflow_details["metadata"].get("labels").get(GEN3_USER_METADATA_LABEL)
+    )
+    if user_name_str:
+        if user_name_str.startswith("user-"):
+            user_name_str = user_name_str[5:]
+        user_name_str = urllib.parse.unquote(user_name_str.replace("-", "%"))
+
     return {
         "name": workflow_details["metadata"].get("name"),
         "phase": phase,
-        "userName": workflow_details["metadata"]
-        .get("labels")
-        .get(GEN3_USER_METADATA_LABEL),
+        "userName": user_name_str,
         "submittedAt": workflow_details["metadata"].get("creationTimestamp"),
         "startedAt": workflow_details["status"].get("startedAt"),
         "finishedAt": workflow_details["status"].get("finishedAt"),

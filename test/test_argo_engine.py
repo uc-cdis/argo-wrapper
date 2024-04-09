@@ -293,7 +293,7 @@ def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
                 "uid": "uid_one",
                 "creationTimestamp": "2023-03-22T16:48:51Z",
                 "labels": {
-                    GEN3_USER_METADATA_LABEL: "dummyuser",
+                    GEN3_USER_METADATA_LABEL: "user-cdis-2edummytest-40gmail-2ecom",
                     GEN3_TEAM_PROJECT_METADATA_LABEL: "",
                 },
             },
@@ -409,7 +409,7 @@ def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
         assert "Canceled" == uniq_workflow_list[0]["phase"]
         assert "custom_name_active1" == uniq_workflow_list[0]["wf_name"]
         assert "2023-03-22T16:48:51Z" == uniq_workflow_list[0]["submittedAt"]
-        assert "dummyuser" == uniq_workflow_list[0]["userName"]
+        assert "cdis.dummytest@gmail.com" == uniq_workflow_list[0]["userName"]
         assert (
             GEN3_USER_METADATA_LABEL
             in engine.api_instance.list_workflows.call_args[1][
