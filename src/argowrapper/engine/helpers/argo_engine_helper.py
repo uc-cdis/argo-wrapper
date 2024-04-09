@@ -79,12 +79,18 @@ def parse_details(
     result["arguments"] = workflow_details["spec"].get("arguments")
     result["progress"] = workflow_details["status"].get("progress")
     result["outputs"] = workflow_details["status"].get("outputs", {})
-    result[GEN3_USER_METADATA_LABEL] = convert_username_label_to_gen3username(
-        workflow_details["metadata"].get("labels").get(GEN3_USER_METADATA_LABEL)
-    )
-    result[GEN3_TEAM_PROJECT_METADATA_LABEL] = convert_pod_label_to_gen3teamproject(
-        workflow_details["metadata"].get("labels").get(GEN3_TEAM_PROJECT_METADATA_LABEL)
-    )
+    if workflow_details["metadata"].get("labels"):
+        result[GEN3_USER_METADATA_LABEL] = convert_username_label_to_gen3username(
+            workflow_details["metadata"].get("labels").get(GEN3_USER_METADATA_LABEL)
+        )
+        result[GEN3_TEAM_PROJECT_METADATA_LABEL] = convert_pod_label_to_gen3teamproject(
+            workflow_details["metadata"]
+            .get("labels")
+            .get(GEN3_TEAM_PROJECT_METADATA_LABEL)
+        )
+    else:
+        result[GEN3_USER_METADATA_LABEL] = None
+        result[GEN3_TEAM_PROJECT_METADATA_LABEL] = None
     return result
 
 
