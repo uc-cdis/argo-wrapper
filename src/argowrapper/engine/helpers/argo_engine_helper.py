@@ -53,12 +53,9 @@ def parse_common_details(
 
     user_name_str = ""
     if workflow_details["metadata"].get("labels"):
-        user_name_str = (
+        user_name_str = convert_username_label_to_gen3username(
             workflow_details["metadata"].get("labels").get(GEN3_USER_METADATA_LABEL)
         )
-
-    if user_name_str:
-        user_name_str = convert_username_label_to_gen3username(user_name_str)
 
     return {
         "name": workflow_details["metadata"].get("name"),
@@ -82,7 +79,7 @@ def parse_details(
     result["arguments"] = workflow_details["spec"].get("arguments")
     result["progress"] = workflow_details["status"].get("progress")
     result["outputs"] = workflow_details["status"].get("outputs", {})
-    result[GEN3_USER_METADATA_LABEL] = (
+    result[GEN3_USER_METADATA_LABEL] = convert_username_label_to_gen3username(
         workflow_details["metadata"].get("labels").get(GEN3_USER_METADATA_LABEL)
     )
     result[GEN3_TEAM_PROJECT_METADATA_LABEL] = convert_pod_label_to_gen3teamproject(
@@ -234,9 +231,12 @@ def convert_username_label_to_gen3username(label: str) -> str:
     Returns:
         : _description_
     """
-    label = label.replace("user-", "", 1)
-    regex = r"-[0-9A-Za-z]{2}"
-    return re.sub(regex, _convert_to_label, label)
+    if label:
+        label = label.replace("user-", "", 1)
+        regex = r"-[0-9A-Za-z]{2}"
+        return re.sub(regex, _convert_to_label, label)
+    else:
+        return ""
 
 
 def _convert_to_label(special_character_match: str) -> str:
