@@ -52,9 +52,12 @@ def parse_common_details(
     elif workflow_type == "archived_workflow":
         pass
 
-    user_name_str = (
-        workflow_details["metadata"].get("labels").get(GEN3_USER_METADATA_LABEL)
-    )
+    user_name_str = ""
+    if workflow_details["metadata"].get("labels"):
+        user_name_str = (
+            workflow_details["metadata"].get("labels").get(GEN3_USER_METADATA_LABEL)
+        )
+
     if user_name_str:
         if user_name_str.startswith("user-"):
             user_name_str = user_name_str[5:]

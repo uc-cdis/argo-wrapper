@@ -312,7 +312,6 @@ def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
                 "uid": "uid_2",
                 "creationTimestamp": "2023-03-22T17:47:51Z",
                 "labels": {
-                    GEN3_USER_METADATA_LABEL: "dummyuser",
                     GEN3_TEAM_PROJECT_METADATA_LABEL: argo_engine_helper.convert_gen3teamproject_to_pod_label(
                         "dummyteam"
                     ),
