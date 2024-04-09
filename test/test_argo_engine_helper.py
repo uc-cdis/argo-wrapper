@@ -26,7 +26,7 @@ workflow_yaml = yaml.safe_load(stream)
 
 UsernameLabelPair = namedtuple("UsernameLabelPair", "username label")
 user_label_data = [
-    UsernameLabelPair("abc123-test", "user-abc123-test"),
+    UsernameLabelPair("abc123-test", "user-abc123-2dtest"),
     UsernameLabelPair("48@!(CEab***", "user-48-40-21-28CEab-2a-2a-2a"),
     UsernameLabelPair("-scott.VA@gmail.com", "user--2dscott-2eVA-40gmail-2ecom"),
 ]
