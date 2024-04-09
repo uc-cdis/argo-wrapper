@@ -63,7 +63,7 @@ def parse_common_details(
     return {
         "name": workflow_details["metadata"].get("name"),
         "phase": phase,
-        "userName": user_name_str,
+        GEN3_USER_METADATA_LABEL: user_name_str,
         "submittedAt": workflow_details["metadata"].get("creationTimestamp"),
         "startedAt": workflow_details["status"].get("startedAt"),
         "finishedAt": workflow_details["status"].get("finishedAt"),
