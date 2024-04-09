@@ -58,7 +58,10 @@ def parse_common_details(
     if user_name_str:
         if user_name_str.startswith("user-"):
             user_name_str = user_name_str[5:]
+        # argo engine encode % as -
         user_name_str = urllib.parse.unquote(user_name_str.replace("-", "%"))
+        # put actual - back after decoding
+        user_name_str = user_name_str.replace("%", "-")
 
     return {
         "name": workflow_details["metadata"].get("name"),
