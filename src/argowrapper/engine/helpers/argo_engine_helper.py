@@ -5,7 +5,6 @@ import string
 from typing import Callable, Dict, List
 
 import jwt
-import urllib
 
 from argowrapper import logger
 from argowrapper.auth import Auth
@@ -59,12 +58,7 @@ def parse_common_details(
         )
 
     if user_name_str:
-        if user_name_str.startswith("user-"):
-            user_name_str = user_name_str[5:]
-        # argo engine encode % as -
-        user_name_str = urllib.parse.unquote(user_name_str.replace("-", "%"))
-        # put actual - back after decoding
-        user_name_str = user_name_str.replace("%", "-")
+        user_name_str = convert_username_label_to_gen3username(user_name_str)
 
     return {
         "name": workflow_details["metadata"].get("name"),
@@ -228,3 +222,29 @@ def get_username_from_token(header_and_or_token: str) -> str:
     username = decoded.get("context", {}).get("user", {}).get("name")
     logger.info(f"{username} is submitting a workflow")
     return username
+
+
+def convert_username_label_to_gen3username(label: str) -> str:
+    """this function will reverse the conversion of a username to label as
+    defined by the convert_gen3username_to_pod_label function. eg "user--21" -> "!"
+
+    Args:
+        label (str): _description_
+
+    Returns:
+        : _description_
+    """
+    label = label.replace("user-", "", 1)
+    regex = r"-[0-9A-Za-z]{2}"
+    return re.sub(regex, _convert_to_label, label)
+
+
+def _convert_to_label(special_character_match: str) -> str:
+    if match := special_character_match.group():
+        match = match.strip("-")
+        try:
+            byte_array = bytearray.fromhex(match)
+            return byte_array.decode()
+        except:
+            logger.info("match is not hex value, return original")
+            return "-" + match

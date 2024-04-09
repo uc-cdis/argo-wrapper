@@ -12,28 +12,6 @@ from argowrapper.constants import *
 from test.constants import EXAMPLE_AUTH_HEADER, EXAMPLE_JUST_TOKEN
 
 
-def _convert_to_label(special_character_match: str) -> str:
-    if match := special_character_match.group():
-        match = match.strip("-")
-        byte_array = bytearray.fromhex(match)
-        return byte_array.decode()
-
-
-def convert_username_label_to_gen3username(label: str) -> str:
-    """this function will reverse the conversion of a username to label as
-    defined by the convert_gen3username_to_pod_label function. eg "user--21" -> "!"
-
-    Args:
-        label (str): _description_
-
-    Returns:
-        : _description_
-    """
-    label = label.replace("user-", "", 1)
-    regex = r"-[0-9A-Za-z]{2}"
-    return re.sub(regex, _convert_to_label, label)
-
-
 @pytest.fixture(scope="module")
 def setup():
     print("*****SETUP*****")
@@ -48,7 +26,7 @@ workflow_yaml = yaml.safe_load(stream)
 
 UsernameLabelPair = namedtuple("UsernameLabelPair", "username label")
 user_label_data = [
-    UsernameLabelPair("abc123", "user-abc123"),
+    UsernameLabelPair("abc123-test", "user-abc123-test"),
     UsernameLabelPair("48@!(CEab***", "user-48-40-21-28CEab-2a-2a-2a"),
     UsernameLabelPair("-scott.VA@gmail.com", "user--2dscott-2eVA-40gmail-2ecom"),
 ]
@@ -61,7 +39,7 @@ def test_convert_username_label_to_gen3username(username, label):
 
 @pytest.mark.parametrize("username,label", user_label_data)
 def test_convert_gen3username_to_pod_label(username, label):
-    assert convert_username_label_to_gen3username(label) == username
+    assert argo_engine_helper.convert_username_label_to_gen3username(label) == username
 
 
 def test_convert_gen3teamproject_to_pod_label_and_back():
