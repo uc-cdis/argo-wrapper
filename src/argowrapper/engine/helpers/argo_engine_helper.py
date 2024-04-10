@@ -51,9 +51,16 @@ def parse_common_details(
     elif workflow_type == "archived_workflow":
         pass
 
+    user_name_str = ""
+    if workflow_details["metadata"].get("labels"):
+        user_name_str = convert_username_label_to_gen3username(
+            workflow_details["metadata"].get("labels").get(GEN3_USER_METADATA_LABEL)
+        )
+
     return {
         "name": workflow_details["metadata"].get("name"),
         "phase": phase,
+        GEN3_USER_METADATA_LABEL: user_name_str,
         "submittedAt": workflow_details["metadata"].get("creationTimestamp"),
         "startedAt": workflow_details["status"].get("startedAt"),
         "finishedAt": workflow_details["status"].get("finishedAt"),
@@ -72,12 +79,18 @@ def parse_details(
     result["arguments"] = workflow_details["spec"].get("arguments")
     result["progress"] = workflow_details["status"].get("progress")
     result["outputs"] = workflow_details["status"].get("outputs", {})
-    result[GEN3_USER_METADATA_LABEL] = (
-        workflow_details["metadata"].get("labels").get(GEN3_USER_METADATA_LABEL)
-    )
-    result[GEN3_TEAM_PROJECT_METADATA_LABEL] = convert_pod_label_to_gen3teamproject(
-        workflow_details["metadata"].get("labels").get(GEN3_TEAM_PROJECT_METADATA_LABEL)
-    )
+    if workflow_details["metadata"].get("labels"):
+        result[GEN3_USER_METADATA_LABEL] = convert_username_label_to_gen3username(
+            workflow_details["metadata"].get("labels").get(GEN3_USER_METADATA_LABEL)
+        )
+        result[GEN3_TEAM_PROJECT_METADATA_LABEL] = convert_pod_label_to_gen3teamproject(
+            workflow_details["metadata"]
+            .get("labels")
+            .get(GEN3_TEAM_PROJECT_METADATA_LABEL)
+        )
+    else:
+        result[GEN3_USER_METADATA_LABEL] = None
+        result[GEN3_TEAM_PROJECT_METADATA_LABEL] = None
     return result
 
 
@@ -212,3 +225,32 @@ def get_username_from_token(header_and_or_token: str) -> str:
     username = decoded.get("context", {}).get("user", {}).get("name")
     logger.info(f"{username} is submitting a workflow")
     return username
+
+
+def convert_username_label_to_gen3username(label: str) -> str:
+    """this function will reverse the conversion of a username to label as
+    defined by the convert_gen3username_to_pod_label function. eg "user--21" -> "!"
+
+    Args:
+        label (str): _description_
+
+    Returns:
+        : _description_
+    """
+    if label:
+        label = label.replace("user-", "", 1)
+        regex = r"-[0-9A-Za-z]{2}"
+        return re.sub(regex, _convert_to_label, label)
+    else:
+        return ""
+
+
+def _convert_to_label(special_character_match: str) -> str:
+    if match := special_character_match.group():
+        match = match.strip("-")
+        try:
+            byte_array = bytearray.fromhex(match)
+            return byte_array.decode()
+        except:
+            logger.info("match is not hex value, return original")
+            return "-" + match
