@@ -452,7 +452,7 @@ def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
         assert "custom_name_active2" == uniq_workflow_list[0]["wf_name"]
         assert "custom_name_archived" == uniq_workflow_list[1]["wf_name"]
         assert "2023-03-22T19:59:59Z" == uniq_workflow_list[1]["submittedAt"]
-        assert "" == uniq_workflow_list[1][GEN3_USER_METADATA_LABEL]
+        assert "dummyuser" == uniq_workflow_list[1][GEN3_USER_METADATA_LABEL]
 
 
 def test_argo_engine_get_workflows_for_user_failed():
