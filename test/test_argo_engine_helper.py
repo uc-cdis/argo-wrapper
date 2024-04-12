@@ -224,7 +224,7 @@ def test_parse_list_item():
     assert parsed_item.get("uid") == "test_uid"
 
     def dummy_get_archived_workflow_wf_name_and_team_project(workflow_uid):
-        return "dummy_wf_name", "dummy_team_project"
+        return "dummy_wf_name", "dummy_team_project", "dummy_user"
 
     parsed_item = argo_engine_helper.parse_list_item(
         workflow_item,
@@ -233,6 +233,7 @@ def test_parse_list_item():
     )
     assert parsed_item.get("wf_name") == "dummy_wf_name"
     assert parsed_item.get(GEN3_TEAM_PROJECT_METADATA_LABEL) == "dummy_team_project"
+    assert parsed_item.get(GEN3_USER_METADATA_LABEL) == "dummy_user"
 
 
 def test_remove_list_duplicates():

@@ -281,7 +281,7 @@ class ArgoEngine:
 
     def _get_archived_workflow_wf_name_and_team_project(
         self, archived_workflow_uid
-    ) -> (str, str):
+    ) -> (str, str, str):
         """
         Gets the name and team project details for the given archived workflow
 
@@ -306,11 +306,13 @@ class ArgoEngine:
         #  get the workflow given name from the parsed details:
         given_name = workflow_details["wf_name"]
         team_project = workflow_details[GEN3_TEAM_PROJECT_METADATA_LABEL]
+        gen3username = workflow_details[GEN3_USER_METADATA_LABEL]
         self.workflow_given_names_cache[archived_workflow_uid] = (
             given_name,
             team_project,
+            gen3username,
         )
-        return given_name, team_project
+        return given_name, team_project, gen3username
 
     def get_workflows_for_team_projects_and_user(
         self, team_projects: List[str], auth_header: str
