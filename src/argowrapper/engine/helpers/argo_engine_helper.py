@@ -115,11 +115,16 @@ def parse_list_item(
     else:
         # this is needed because archived list items do not have metadata.annotations or meta.labels
         # returned by the list service...so we need to call another service to get it:
-        wf_name, team_project = get_archived_workflow_wf_name_and_team_project(
+        (
+            wf_name,
+            team_project,
+            gen3username,
+        ) = get_archived_workflow_wf_name_and_team_project(
             workflow_details["metadata"].get("uid")
         )
         result["wf_name"] = wf_name
         result[GEN3_TEAM_PROJECT_METADATA_LABEL] = team_project
+        result[GEN3_USER_METADATA_LABEL] = gen3username
 
     result["uid"] = workflow_details["metadata"].get("uid")
     return result
