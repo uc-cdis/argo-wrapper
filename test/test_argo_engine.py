@@ -452,7 +452,7 @@ def test_argo_engine_get_workflows_for_user_and_team_projects_suceeded():
         assert "custom_name_active2" == uniq_workflow_list[0]["wf_name"]
         assert "custom_name_archived" == uniq_workflow_list[1]["wf_name"]
         assert "2023-03-22T19:59:59Z" == uniq_workflow_list[1]["submittedAt"]
-        assert "" == uniq_workflow_list[1][GEN3_USER_METADATA_LABEL]
+        assert "dummyuser" == uniq_workflow_list[1][GEN3_USER_METADATA_LABEL]
 
 
 def test_argo_engine_get_workflows_for_user_failed():
@@ -760,15 +760,18 @@ def test_get_archived_workflow_wf_name_and_team_project():
     mock_return_wf = {
         "wf_name": "dummy_wf_name",
         GEN3_TEAM_PROJECT_METADATA_LABEL: "dummy_team_project_label",
+        GEN3_USER_METADATA_LABEL: "dummy_user",
     }
 
     engine.get_workflow_details = mock.MagicMock(return_value=mock_return_wf)
     (
         given_name,
         team_project,
+        gen3username,
     ) = engine._get_archived_workflow_wf_name_and_team_project("dummy_uid")
     assert given_name == "dummy_wf_name"
     assert team_project == "dummy_team_project_label"
+    assert gen3username == "dummy_user"
 
     # test the internal caching that happens at _get_archived_workflow_wf_name_and_team_project,
     # by setting the get_workflow_details to return None and show that it was not called,
@@ -777,9 +780,11 @@ def test_get_archived_workflow_wf_name_and_team_project():
     (
         given_name,
         team_project,
+        gen3username,
     ) = engine._get_archived_workflow_wf_name_and_team_project("dummy_uid")
     assert given_name == "dummy_wf_name"
     assert team_project == "dummy_team_project_label"
+    assert gen3username == "dummy_user"
 
 
 @freeze_time("Nov 16th, 2023")
