@@ -1,7 +1,7 @@
 ARG AZLINUX_BASE_VERSION=master
 
-FROM 707767160287.dkr.ecr.us-east-1.amazonaws.com/gen3/python-build-base:${AZLINUX_BASE_VERSION} as base
-# FROM quay.io/cdis/python-build-base:${AZLINUX_BASE_VERSION} as base
+# FROM 707767160287.dkr.ecr.us-east-1.amazonaws.com/gen3/python-build-base:${AZLINUX_BASE_VERSION} as base
+FROM quay.io/cdis/python-build-base:${AZLINUX_BASE_VERSION} as base
 
 ENV appname=argowrapper
 
