@@ -405,7 +405,11 @@ class ArgoEngine:
         )
         user_monthly_workflows = []
         for workflow in all_user_workflows:
-            if workflow[GEN3_WORKFLOW_PHASE_LABEL] in {"Running", "Succeeded"}:
+            if workflow[GEN3_WORKFLOW_PHASE_LABEL] in {
+                "Running",
+                "Succeeded",
+                "Failed",
+            }:
                 submitted_time_str = workflow[GEN3_SUBMIT_TIMESTAMP_LABEL]
                 submitted_time = datetime.strptime(
                     submitted_time_str, "%Y-%m-%dT%H:%M:%SZ"
