@@ -331,8 +331,9 @@ def submit_workflow(
                 status_code=HTTP_403_FORBIDDEN,
             )
     except Exception as exception:
+        logger.error(str(exception))
         return HTMLResponse(
-            content=str(exception),
+            content="Unexpected Error Occurred",
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -351,8 +352,9 @@ def get_workflow_details(
         return argo_engine.get_workflow_details(workflow_name, uid)
 
     except Exception as exception:
+        logger.error(str(exception))
         return HTMLResponse(
-            content=str(exception),
+            content="Unexpected Error Occurred",
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -374,7 +376,7 @@ def retry_workflow(
         logger.error(traceback.format_exc())
         logger.error(f"could not retry {workflow_name}, failed with error {exception}")
         return HTMLResponse(
-            content=str(exception),
+            content="Could not retry workflow, error occurred",
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -392,8 +394,9 @@ def cancel_workflow(
         return argo_engine.cancel_workflow(workflow_name)
 
     except Exception as exception:
+        logger.error(str(exception))
         return HTMLResponse(
-            content=str(exception),
+            content="Unexpected Error Occurred",
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -420,8 +423,9 @@ def get_workflows(
             )
 
     except Exception as exception:
+        logger.error(str(exception))
         return HTMLResponse(
-            content=exception,
+            content="Unexpected Error Occurred",
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -439,7 +443,8 @@ def get_workflow_logs(
         return argo_engine.get_workflow_logs(workflow_name, uid)
 
     except Exception as exception:
+        logger.error(str(exception))
         return HTMLResponse(
-            content=exception,
+            content="Unexpected Error Occurred",
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )
