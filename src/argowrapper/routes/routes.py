@@ -17,6 +17,7 @@ from argowrapper.constants import (
     GEN3_TEAM_PROJECT_METADATA_LABEL,
     GEN3_USER_METADATA_LABEL,
     GEN3_NON_VA_WORKFLOW_MONTHLY_CAP,
+    GEN3_DEFAULT_WORKFLOW_MONTHLY_CAP,
 )
 
 from argowrapper import logger
@@ -209,7 +210,7 @@ def check_team_projects_and_cohorts(fn):
     return wrapper
 
 
-def check_user_billing_id(request):
+def check_user_info_for_billing_id_and_workflow_limit(request):
     """
     Check whether user is non-VA user
     if user is VA-user, do nothing and proceed
@@ -232,16 +233,26 @@ def check_user_billing_id(request):
         raise exception
     logger.info("Got user info successfully. Checking for billing id..")
 
-    if "tags" in user_info and "billing_id" in user_info["tags"]:
-        billing_id = user_info["tags"]["billing_id"]
-        logger.info("billing id found in user tags: " + billing_id)
-        return billing_id
+    if "tags" in user_info:
+        if "billing_id" in user_info["tags"]:
+            billing_id = user_info["tags"]["billing_id"]
+            logger.info("billing id found in user tags: " + billing_id)
+        else:
+            billing_id = None
+
+        if "workflow_limit" in user_info["tags"]:
+            workflow_limit = user_info["tags"]["workflow_limit"]
+            logger.info("Workflow limit found in user tags: " + workflow_limit)
+        else:
+            workflow_limit = None
+
+        return billing_id, workflow_limit
     else:
-        logger.info("billing id not found.")
-        return None
+        logger.info("User info does not have tags")
+        return None, None
 
 
-def check_user_reached_monthly_workflow_cap(request_token):
+def check_user_reached_monthly_workflow_cap(request_token, billing_id, custom_limit):
     """
     Query Argo service to see how many successful run user already
     have in the current calendar month. If the number is greater than
@@ -252,20 +263,28 @@ def check_user_reached_monthly_workflow_cap(request_token):
         current_month_workflows = argo_engine.get_user_workflows_for_current_month(
             request_token
         )
+        username = argo_engine_helper.get_username_from_token(request_token)
+        if custom_limit:
+            limit = custom_limit
+        else:
+            if billing_id:
+                limit = GEN3_NON_VA_WORKFLOW_MONTHLY_CAP
+            else:
+                limit = GEN3_DEFAULT_WORKFLOW_MONTHLY_CAP
 
-        if len(current_month_workflows) >= GEN3_NON_VA_WORKFLOW_MONTHLY_CAP:
-            logger.info(
-                "User already executed {} workflows this month and cannot create new ones anymore.".format(
-                    len(current_month_workflows)
-                )
-            )
-            logger.info(
-                "The currently monthly cap is {}.".format(
-                    GEN3_NON_VA_WORKFLOW_MONTHLY_CAP
+        if len(current_month_workflows) >= limit:
+            logger.warn(
+                "This user {} already executed {} workflows this month and cannot create new ones anymore. The currently monthly cap for this user is {}.".format(
+                    username, len(current_month_workflows), limit
                 )
             )
             return True
-
+        else:
+            logger.info(
+                "This user {} executed {} workflows this month. The currently monthly cap for this user is {}.".format(
+                    username, len(current_month_workflows), limit
+                )
+            )
         return False
     except Exception as e:
         logger.error(e)
@@ -292,13 +311,14 @@ def submit_workflow(
         reached_monthly_cap = False
 
         # check if user has a billing id tag:
-        billing_id = check_user_billing_id(request)
+        billing_id, workflow_limit = check_user_info_for_billing_id_and_workflow_limit(
+            request
+        )
 
         # if user has billing_id (non-VA user), check if they already reached the monthly cap
-        if billing_id:
-            reached_monthly_cap = check_user_reached_monthly_workflow_cap(
-                request.headers.get("Authorization")
-            )
+        reached_monthly_cap = check_user_reached_monthly_workflow_cap(
+            request.headers.get("Authorization"), billing_id, workflow_limit
+        )
 
         # submit workflow:
         if not reached_monthly_cap:
@@ -311,8 +331,9 @@ def submit_workflow(
                 status_code=HTTP_403_FORBIDDEN,
             )
     except Exception as exception:
+        logger.error(str(exception))
         return HTMLResponse(
-            content=str(exception),
+            content="Unexpected Error Occurred",
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -331,8 +352,9 @@ def get_workflow_details(
         return argo_engine.get_workflow_details(workflow_name, uid)
 
     except Exception as exception:
+        logger.error(str(exception))
         return HTMLResponse(
-            content=str(exception),
+            content="Unexpected Error Occurred",
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -354,7 +376,7 @@ def retry_workflow(
         logger.error(traceback.format_exc())
         logger.error(f"could not retry {workflow_name}, failed with error {exception}")
         return HTMLResponse(
-            content=str(exception),
+            content="Could not retry workflow, error occurred",
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -372,8 +394,9 @@ def cancel_workflow(
         return argo_engine.cancel_workflow(workflow_name)
 
     except Exception as exception:
+        logger.error(str(exception))
         return HTMLResponse(
-            content=str(exception),
+            content="Unexpected Error Occurred",
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -400,8 +423,9 @@ def get_workflows(
             )
 
     except Exception as exception:
+        logger.error(str(exception))
         return HTMLResponse(
-            content=exception,
+            content="Unexpected Error Occurred",
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -419,7 +443,8 @@ def get_workflow_logs(
         return argo_engine.get_workflow_logs(workflow_name, uid)
 
     except Exception as exception:
+        logger.error(str(exception))
         return HTMLResponse(
-            content=exception,
+            content="Unexpected Error Occurred",
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )

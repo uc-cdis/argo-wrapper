@@ -825,6 +825,11 @@ def test_get_user_workflows_for_current_month(monkeypatch):
             "phase": "Succeeded",
             "submittedAt": "2023-11-15T17:52:52Z",
         },
+        {
+            "uid": "uid_3",
+            "phase": "Failed",
+            "submittedAt": "2023-11-02T00:00:00Z",
+        },
     ]
     engine.get_workflows_for_label_selector = mock.MagicMock(
         return_value=workflows_mock_response
