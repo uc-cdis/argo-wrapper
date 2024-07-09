@@ -8,7 +8,11 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from argowrapper.constants import *
 from test.constants import EXAMPLE_AUTH_HEADER
-from argowrapper.routes.routes import router, check_user_reached_monthly_workflow_cap
+from argowrapper.routes.routes import (
+    router,
+    check_user_reached_monthly_workflow_cap,
+    get_user_monthly_workflow,
+)
 from argowrapper.constants import GEN3_NON_VA_WORKFLOW_MONTHLY_CAP
 
 variables = [
@@ -722,3 +726,23 @@ def test_submit_workflow_with_non_team_project_cohort(client):
             },
         )
         assert response.status_code == 400
+
+
+def test_get_user_monthly_workflow():
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": EXAMPLE_AUTH_HEADER,
+    }
+
+    with patch(
+        "argowrapper.engine.argo_engine.ArgoEngine.get_user_workflows_for_current_month"
+    ) as mock_get_workflow:
+        mock_get_workflow.return_value = [
+            {"wf_name": "workflow1"},
+            {"wf_name": "workflow2"},
+        ]
+
+        assert get_user_monthly_workflow(headers["Authorization"]) == [
+            {"wf_name": "workflow1"},
+            {"wf_name": "workflow2"},
+        ]

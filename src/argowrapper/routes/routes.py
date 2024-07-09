@@ -298,6 +298,21 @@ def test():
     return {"message": "test"}
 
 
+@router.get("/workflows/user-monthly", status_code=HTTP_200_OK)
+def get_user_monthly_workflow(request_token):
+    """
+    Query Argo service to see how many successful run user already
+    have in the current calendar month.
+    """
+
+    try:
+        return argo_engine.get_user_workflows_for_current_month(request_token)
+    except Exception as e:
+        logger.error(e)
+        traceback.print_exc()
+        raise e
+
+
 # submit argo workflow
 @router.post("/submit", status_code=HTTP_200_OK)
 @check_auth_and_team_project
