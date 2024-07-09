@@ -252,11 +252,10 @@ def check_user_info_for_billing_id_and_workflow_limit(request):
         return None, None
 
 
-def check_user_reached_monthly_workflow_cap(request_token, billing_id, custom_limit):
+def check_user_monthly_workflow_cap(request_token, billing_id, custom_limit):
     """
-    Query Argo service to see how many successful run user already
-    have in the current calendar month. If the number is greater than
-    the threshold, return error.
+    Query Argo service to see how many workflow runs user already
+    have in the current calendar month. Return number of workflow runs and limit
     """
 
     try:
@@ -271,21 +270,7 @@ def check_user_reached_monthly_workflow_cap(request_token, billing_id, custom_li
                 limit = GEN3_NON_VA_WORKFLOW_MONTHLY_CAP
             else:
                 limit = GEN3_DEFAULT_WORKFLOW_MONTHLY_CAP
-
-        if len(current_month_workflows) >= limit:
-            logger.warn(
-                "This user {} already executed {} workflows this month and cannot create new ones anymore. The currently monthly cap for this user is {}.".format(
-                    username, len(current_month_workflows), limit
-                )
-            )
-            return True
-        else:
-            logger.info(
-                "This user {} executed {} workflows this month. The currently monthly cap for this user is {}.".format(
-                    username, len(current_month_workflows), limit
-                )
-            )
-        return False
+        return len(current_month_workflows), limit
     except Exception as e:
         logger.error(e)
         traceback.print_exc()
@@ -296,21 +281,6 @@ def check_user_reached_monthly_workflow_cap(request_token, billing_id, custom_li
 def test():
     """route to test that the argo-workflow is correctly running"""
     return {"message": "test"}
-
-
-@router.get("/workflows/user-monthly", status_code=HTTP_200_OK)
-def get_user_monthly_workflow(request_token):
-    """
-    Query Argo service to see how many successful run user already
-    have in the current calendar month.
-    """
-
-    try:
-        return argo_engine.get_user_workflows_for_current_month(request_token)
-    except Exception as e:
-        logger.error(e)
-        traceback.print_exc()
-        raise e
 
 
 # submit argo workflow
@@ -331,9 +301,11 @@ def submit_workflow(
         )
 
         # if user has billing_id (non-VA user), check if they already reached the monthly cap
-        reached_monthly_cap = check_user_reached_monthly_workflow_cap(
+        workflow_run, workflow_limit = check_user_monthly_workflow_cap(
             request.headers.get("Authorization"), billing_id, workflow_limit
         )
+
+        reached_monthly_cap = workflow_run >= workflow_limit
 
         # submit workflow:
         if not reached_monthly_cap:
@@ -463,3 +435,30 @@ def get_workflow_logs(
             content="Unexpected Error Occurred",
             status_code=HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
+
+@router.get("/workflows/user-monthly", status_code=HTTP_200_OK)
+def get_user_monthly_workflow(
+    request: Request,
+) -> Dict[str, any]:
+    """
+    Query Argo service to see how many successful run user already
+    have in the current calendar month. Return workflow numbers and workflow cap
+    """
+
+    try:
+        billing_id, workflow_limit = check_user_info_for_billing_id_and_workflow_limit(
+            request
+        )
+
+        # if user has billing_id (non-VA user), check if they already reached the monthly cap
+        workflow_run, workflow_limit = check_user_monthly_workflow_cap(
+            request.headers.get("Authorization"), billing_id, workflow_limit
+        )
+
+        result = {"workflow_run": workflow_run, "workflow_limit": workflow_limit}
+        return result
+    except Exception as e:
+        logger.error(e)
+        traceback.print_exc()
+        raise e
