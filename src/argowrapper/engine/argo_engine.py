@@ -118,13 +118,53 @@ class ArgoEngine:
             .decode()
         )
 
+    def _find_first_failed_node(self, uid: str):
+        failed_nodes = []
+        archived_workflow_dict = self._get_archived_workflow_details_dict(uid)
+        archived_workflow_details_nodes = archived_workflow_dict["status"].get("nodes")
+        for node_id, node_info in archived_workflow_details_nodes.items():
+            if node_info.get("phase") == "Failed" and node_info.get("type") == "Retry":
+                start_time = datetime.strptime(
+                    node_info["startedAt"], "%Y-%m-%dT%H:%M:%SZ"
+                )
+                failed_nodes.append((node_id, node_info, start_time))
+        failed_nodes.sort(key=lambda x: x[2])
+        if failed_nodes:
+            first_failed_node = failed_nodes[0][1]
+            return first_failed_node.get("name")
+        else:
+            return None
+
     def _get_log_errors(self, uid: str, status_nodes_dict: Dict) -> List[Dict]:
         errors = []
+        first_failed_node = self._find_first_failed_node(uid)
         for node_id, step in status_nodes_dict.items():
-            if step.get("phase") in ("Failed", "Error") and step.get("type") == "Retry":
-                message = (
-                    step["message"] if step.get("message") else "No message provided"
-                )
+            if (
+                step.get("phase") in ("Failed", "Error")
+                and step.get("type") == "Pod"
+                and step.get("name") == first_failed_node + "(0)"
+            ):
+                # message = (
+                #     step["message"] if step.get("message") else "No message provided"
+                # )
+                message = []
+                if step.get("message"):
+                    message.append(step["message"])
+                else:
+                    node_outputs_mainlog = self._get_workflow_node_artifact(
+                        uid=uid, node_id=node_id
+                    )
+                    log_text = node_outputs_mainlog.text
+                    log_lines = log_text.split("\n")
+                    error_line_index = next(
+                        (i for i, line in enumerate(log_lines) if "Error" in line), None
+                    )
+                    if error_line_index is not None:
+                        error_message = "\n".join(log_lines[error_line_index:])
+                        message.append(error_message)
+                    else:
+                        message.append(log_text)
+
                 node_type = step.get("type")
                 node_step = step.get("displayName")
                 node_step_template = step.get("templateName")
