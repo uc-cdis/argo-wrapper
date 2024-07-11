@@ -142,7 +142,8 @@ class ArgoEngine:
             if (
                 step.get("phase") in ("Failed", "Error")
                 and step.get("type") == "Pod"
-                and step.get("name") == first_failed_node + "(0)"
+                # and step.get("name") == first_failed_node + "(0)"
+                and step.get("name") == first_failed_node
             ):
                 # message = (
                 #     step["message"] if step.get("message") else "No message provided"
