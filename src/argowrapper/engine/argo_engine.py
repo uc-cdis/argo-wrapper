@@ -517,7 +517,7 @@ class ArgoEngine:
             )
             raise exception
 
-    def get_workflow_logs(self, workflow_name: str, uid: str):
+    def get_workflow_logs(self, uid: str):
         """
         Gets the workflow errors from failed workflow
 
@@ -528,7 +528,8 @@ class ArgoEngine:
         Returns:
             Dict[str, any]: returns a list of dictionaries of errors of Retry nodes
         """
-        return workflow_name, uid
+        archived_workflow_dict = self._get_archived_workflow_details_dict(uid)
+        return archived_workflow_dict
         # try:
         #     archived_workflow_dict = self._get_archived_workflow_details_dict(uid)
         #     archived_workflow_phase = archived_workflow_dict["status"].get("phase")
