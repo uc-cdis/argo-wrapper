@@ -155,42 +155,43 @@ class ArgoEngine:
                 node_outputs_mainlog = self._get_workflow_node_artifact(
                     uid=uid, node_id=node_id
                 )
-                log_text = node_outputs_mainlog.text
-                log_lines = log_text.split("\n")
-                error_line_index = next(
-                    (i for i, line in enumerate(log_lines) if "Error" in line), None
-                )
-                if error_line_index is not None:
-                    error_message = "\n".join(log_lines[error_line_index:])
-                    message.append(error_message)
-                else:
-                    message.append(log_text)
+                return node_outputs_mainlog
+        #         log_text = node_outputs_mainlog.text
+        #         log_lines = log_text.split("\n")
+        #         error_line_index = next(
+        #             (i for i, line in enumerate(log_lines) if "Error" in line), None
+        #         )
+        #         if error_line_index is not None:
+        #             error_message = "\n".join(log_lines[error_line_index:])
+        #             message.append(error_message)
+        #         else:
+        #             message.append(log_text)
 
-                node_type = step.get("type")
-                node_step = step.get("displayName")
-                node_step_template = step.get("templateName")
-                node_phase = step.get("phase")
-                node_outputs_mainlog = self._get_workflow_node_artifact(
-                    uid=uid, node_id=node_id
-                )
-                node_log_interpreted = GWAS.interpret_gwas_workflow_error(
-                    step_name=node_step, step_log=node_outputs_mainlog
-                )
-                errors.append(
-                    {
-                        "name": step.get("name"),
-                        "node_id": node_id,
-                        "node_type": node_type,
-                        "node_phase": node_phase,
-                        "step_name": node_step,
-                        "step_template": node_step_template,
-                        "error_message": message,
-                        "error_interpreted": node_log_interpreted,
-                    }
-                )
-            else:
-                pass
-        return errors
+        #         node_type = step.get("type")
+        #         node_step = step.get("displayName")
+        #         node_step_template = step.get("templateName")
+        #         node_phase = step.get("phase")
+        #         node_outputs_mainlog = self._get_workflow_node_artifact(
+        #             uid=uid, node_id=node_id
+        #         )
+        #         node_log_interpreted = GWAS.interpret_gwas_workflow_error(
+        #             step_name=node_step, step_log=node_outputs_mainlog
+        #         )
+        #         errors.append(
+        #             {
+        #                 "name": step.get("name"),
+        #                 "node_id": node_id,
+        #                 "node_type": node_type,
+        #                 "node_phase": node_phase,
+        #                 "step_name": node_step,
+        #                 "step_template": node_step_template,
+        #                 "error_message": message,
+        #                 "error_interpreted": node_log_interpreted,
+        #             }
+        #         )
+        #     else:
+        #         pass
+        # return errors
 
     def get_workflow_details(
         self, workflow_name: str, uid: str = None
