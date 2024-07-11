@@ -118,10 +118,11 @@ class ArgoEngine:
             .decode()
         )
 
-    def _find_first_failed_node(self, workflow_name: str):
+    def _find_first_failed_node(self, uid: str):
         failed_nodes = []
-        active_workflow_log_return = self._get_workflow_log_dict(workflow_name)
-        for node_id, node_info in active_workflow_log_return.items():
+        archived_workflow_dict = self._get_archived_workflow_details_dict(uid)
+        archived_workflow_details_nodes = archived_workflow_dict["status"].get("nodes")
+        for node_id, node_info in archived_workflow_details_nodes.items():
             if node_info.get("phase") == "Failed" and node_info.get("type") == "Pod":
                 start_time = datetime.strptime(
                     node_info["startedAt"], "%Y-%m-%dT%H:%M:%SZ"
@@ -527,54 +528,55 @@ class ArgoEngine:
         Returns:
             Dict[str, any]: returns a list of dictionaries of errors of Retry nodes
         """
-        try:
-            archived_workflow_dict = self._get_archived_workflow_details_dict(uid)
-            archived_workflow_phase = archived_workflow_dict["status"].get("phase")
-            if archived_workflow_phase in ("Failed", "Error"):
-                archived_workflow_details_nodes = archived_workflow_dict["status"].get(
-                    "nodes"
-                )
-                archived_workflow_errors = self._get_log_errors(
-                    uid=uid, status_nodes_dict=archived_workflow_details_nodes
-                )
-                return archived_workflow_errors
-            else:
-                logger.info(
-                    f"Workflow {workflow_name} with uid {uid} doesn't have a Failed or Error phase"
-                )
-                return []
+        return workflow_name, uid
+        # try:
+        #     archived_workflow_dict = self._get_archived_workflow_details_dict(uid)
+        #     archived_workflow_phase = archived_workflow_dict["status"].get("phase")
+        #     if archived_workflow_phase in ("Failed", "Error"):
+        #         archived_workflow_details_nodes = archived_workflow_dict["status"].get(
+        #             "nodes"
+        #         )
+        #         archived_workflow_errors = self._get_log_errors(
+        #             uid=uid, status_nodes_dict=archived_workflow_details_nodes
+        #         )
+        #         return archived_workflow_errors
+        #     else:
+        #         logger.info(
+        #             f"Workflow {workflow_name} with uid {uid} doesn't have a Failed or Error phase"
+        #         )
+        #         return []
 
-        except (KeyError, NotFoundException):
-            logger.info(
-                f"Can't find the log of {workflow_name} workflow at archived workflow endpoint"
-            )
-            logger.info(
-                f"Look up the log of {workflow_name} workflow at workflow endpoint"
-            )
-            active_workflow_phase = self._get_workflow_phase(workflow_name)
-            if active_workflow_phase in ("Failed", "Error"):
-                active_workflow_log_return = self._get_workflow_log_dict(workflow_name)
-                active_workflow_details_nodes = active_workflow_log_return[
-                    "status"
-                ].get("nodes")
-                active_workflow_errors = self._get_log_errors(
-                    uid=uid, status_nodes_dict=active_workflow_details_nodes
-                )
-                return active_workflow_errors
-            else:
-                logger.info(
-                    f"Workflow {workflow_name} with uid {uid} doesn't have a Failed or Error phase"
-                )
-                return []
+        # except (KeyError, NotFoundException):
+        #     logger.info(
+        #         f"Can't find the log of {workflow_name} workflow at archived workflow endpoint"
+        #     )
+        #     logger.info(
+        #         f"Look up the log of {workflow_name} workflow at workflow endpoint"
+        #     )
+        #     active_workflow_phase = self._get_workflow_phase(workflow_name)
+        #     if active_workflow_phase in ("Failed", "Error"):
+        #         active_workflow_log_return = self._get_workflow_log_dict(workflow_name)
+        #         active_workflow_details_nodes = active_workflow_log_return[
+        #             "status"
+        #         ].get("nodes")
+        #         active_workflow_errors = self._get_log_errors(
+        #             uid=uid, status_nodes_dict=active_workflow_details_nodes
+        #         )
+        #         return active_workflow_errors
+        #     else:
+        #         logger.info(
+        #             f"Workflow {workflow_name} with uid {uid} doesn't have a Failed or Error phase"
+        #         )
+        #         return []
 
-        except Exception as exception:
-            logger.error(traceback.format_exc())
-            logger.error(
-                f"getting workflow status for {workflow_name} due to {exception}"
-            )
-            raise Exception(
-                f"could not get status of {workflow_name}, workflow does not exist"
-            )
+        # except Exception as exception:
+        #     logger.error(traceback.format_exc())
+        #     logger.error(
+        #         f"getting workflow status for {workflow_name} due to {exception}"
+        #     )
+        #     raise Exception(
+        #         f"could not get status of {workflow_name}, workflow does not exist"
+        #     )
 
     def workflow_submission(
         self, request_body: Dict, auth_header: str, billing_id: str = None
