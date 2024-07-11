@@ -156,11 +156,13 @@ class ArgoEngine:
                     uid=uid, node_id=node_id
                 )
                 log_lines = node_outputs_mainlog.split("\n")
+                cleaned_log_lines = [line.strip() for line in log_lines]
                 error_line_index = next(
-                    (i for i, line in enumerate(log_lines) if "Error" in line), None
+                    (i for i, line in enumerate(cleaned_log_lines) if "Error" in line),
+                    None,
                 )
                 if error_line_index is not None:
-                    error_message = "\n".join(log_lines[error_line_index:])
+                    error_message = "\n".join(cleaned_log_lines[error_line_index:])
                     message.append(error_message)
                 else:
                     message.append(node_outputs_mainlog)
