@@ -73,7 +73,7 @@ class ArgoEngine:
         return self.api_instance.get_workflow(
             namespace=ARGO_NAMESPACE,
             name=workflow_name,
-            fields="metadata.name,metadata.annotations,metadata.creationTimestamp,metadata.labels,spec.arguments,spec.shutdown,status.phase,status.progress,status.startedAt,status.finishedAt,status.outputs",
+            fields="metadata.name,metadata.annotations,metadata.creationTimestamp,metadata.labels,spec.arguments,spec.shutdown,status.phase,status.progress,status.startedAt,status.finishedAt,status.outputs,status.nodes",
             # Note that _check_return_type=False avoids an existing issue with OpenAPI generator.
             _check_return_type=False,
         ).to_dict()
@@ -118,11 +118,10 @@ class ArgoEngine:
             .decode()
         )
 
-    def _find_first_failed_node(self, uid: str):
+    def _find_first_failed_node(self, workflow_name: str):
         failed_nodes = []
-        archived_workflow_dict = self._get_archived_workflow_details_dict(uid)
-        archived_workflow_details_nodes = archived_workflow_dict["status"].get("nodes")
-        for node_id, node_info in archived_workflow_details_nodes.items():
+        active_workflow_log_return = self._get_workflow_log_dict(workflow_name)
+        for node_id, node_info in active_workflow_log_return.items():
             if node_info.get("phase") == "Failed" and node_info.get("type") == "Pod":
                 start_time = datetime.strptime(
                     node_info["startedAt"], "%Y-%m-%dT%H:%M:%SZ"
