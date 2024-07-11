@@ -517,7 +517,7 @@ class ArgoEngine:
             )
             raise exception
 
-    def get_workflow_logs(self, uid: str):
+    def get_workflow_logs(self, workflow_name: str, uid: str):
         """
         Gets the workflow errors from failed workflow
 
