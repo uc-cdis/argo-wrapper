@@ -123,7 +123,7 @@ class ArgoEngine:
         archived_workflow_dict = self._get_archived_workflow_details_dict(uid)
         archived_workflow_details_nodes = archived_workflow_dict["status"].get("nodes")
         for node_id, node_info in archived_workflow_details_nodes.items():
-            if node_info.get("phase") == "Failed" and node_info.get("type") == "Retry":
+            if node_info.get("phase") == "Failed" and node_info.get("type") == "Pod":
                 start_time = datetime.strptime(
                     node_info["startedAt"], "%Y-%m-%dT%H:%M:%SZ"
                 )
