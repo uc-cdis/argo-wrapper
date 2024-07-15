@@ -123,7 +123,7 @@ class ArgoEngine:
         archived_workflow_dict = self._get_archived_workflow_details_dict(uid)
         archived_workflow_details_nodes = archived_workflow_dict["status"].get("nodes")
         for node_id, node_info in archived_workflow_details_nodes.items():
-            if node_info.get("phase") == "Failed" and node_info.get("type") == "Pod":
+            if node_info.get("phase") == "Failed" and node_info.get("type") == "Retry":
                 start_time = datetime.strptime(
                     node_info["startedAt"], "%Y-%m-%dT%H:%M:%SZ"
                 )
@@ -142,8 +142,8 @@ class ArgoEngine:
             if (
                 step.get("phase") in ("Failed", "Error")
                 and step.get("type") == "Pod"
-                # and step.get("name") == first_failed_node + "(0)"
-                and step.get("name") == first_failed_node
+                and step.get("name") == first_failed_node + "(0)"
+                # and step.get("name") == first_failed_node
             ):
                 # message = (
                 #     step["message"] if step.get("message") else "No message provided"
