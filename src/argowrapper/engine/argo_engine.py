@@ -168,24 +168,24 @@ class ArgoEngine:
                     message.append(node_outputs_mainlog)
 
                 node_type = step.get("type")
-                node_step = step.get("displayName")
+                node_step = step.get("displayName").split("(")[0]
                 node_step_template = step.get("templateName")
                 node_phase = step.get("phase")
                 node_outputs_mainlog = self._get_workflow_node_artifact(
                     uid=uid, node_id=node_id
                 )
                 node_log_interpreted = GWAS.interpret_gwas_workflow_error(
-                    step_name=node_step, step_log=node_outputs_mainlog
+                    step_name=node_step, step_log=message
                 )
                 errors.append(
                     {
                         "name": step.get("name"),
-                        "node_id": node_id,
+                        #    "node_id": node_id,
                         "node_type": node_type,
                         "node_phase": node_phase,
                         "step_name": node_step,
                         "step_template": node_step_template,
-                        "error_message": message,
+                        #    "error_message": message,
                         "error_interpreted": node_log_interpreted,
                     }
                 )
