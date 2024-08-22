@@ -28,6 +28,7 @@ from argowrapper.auth.utils import get_cohort_ids_for_team_project
 import argowrapper.engine.helpers.argo_engine_helper as argo_engine_helper
 
 import requests
+import json
 
 router = APIRouter()
 argo_engine = ArgoEngine()
@@ -291,6 +292,7 @@ def submit_workflow(
     request_body: Dict[Any, Any],
     request: Request,  # pylint: disable=unused-argument
 ) -> str:
+    logger.info(json.dumps(request_body, indent=4))
     """route to submit workflow"""
     try:
         reached_monthly_cap = False
