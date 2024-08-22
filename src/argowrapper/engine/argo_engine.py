@@ -552,7 +552,7 @@ class ArgoEngine:
             pod_labels["billing_id"] = billing_id
             pod_labels["gen3username"] = ""
 
-        logger.debug(workflow_yaml)
+        logger.info(workflow_yaml)
 
         try:
             response = self.api_instance.create_workflow(
