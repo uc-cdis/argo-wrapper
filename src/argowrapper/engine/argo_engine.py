@@ -35,6 +35,7 @@ from argowrapper.constants import (
     GEN3_NON_VA_WORKFLOW_MONTHLY_CAP,
     GEN3_DEFAULT_WORKFLOW_MONTHLY_CAP,
     EXCEED_WORKFLOW_LIMIT_ERROR,
+    VALID_PARAMETERS,
 )
 from argowrapper.engine.helpers import argo_engine_helper
 from argowrapper.engine.helpers.workflow_factory import WorkflowFactory
@@ -541,6 +542,10 @@ class ArgoEngine:
             )
 
     def workflow_submission(self, request_body: Dict, auth_header: str):
+        for key in list(request_body.keys()):
+            if key not in VALID_PARAMETERS:
+                del request_body[key]
+
         workflow = WorkflowFactory._get_workflow(
             ARGO_NAMESPACE, request_body, auth_header, WORKFLOW.GWAS
         )
