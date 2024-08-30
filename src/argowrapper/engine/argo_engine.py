@@ -542,9 +542,6 @@ class ArgoEngine:
             )
 
     def workflow_submission(self, request_body: Dict, auth_header: str):
-        for key in list(request_body.keys()):
-            if key not in VALID_PARAMETERS:
-                del request_body[key]
 
         workflow = WorkflowFactory._get_workflow(
             ARGO_NAMESPACE, request_body, auth_header, WORKFLOW.GWAS

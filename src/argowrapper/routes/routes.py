@@ -275,8 +275,7 @@ def retry_workflow(
     try:
         new_parameters = {}
         for param in workflow_details.get("arguments").get("parameters"):
-            if param.get("name") and param.get("name") in VALID_PARAMETERS:
-                new_parameters[param.get("name")] = param.get("value")
+            new_parameters[param.get("name")] = param.get("value")
 
         result = argo_engine.workflow_submission(
             new_parameters, request.headers.get("Authorization")
