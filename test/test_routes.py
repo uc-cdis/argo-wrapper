@@ -366,7 +366,13 @@ def test_retry_workflow(client):
 
         mock_workflow_details.return_value = {
             GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam",
-            "arguments": {"parameters": [{"name": "n_pcs", "value": "3"}]},
+            "arguments": {
+                "parameters": [
+                    {"name": "n_pcs", "value": "3"},
+                    {"name": "template_version", "value": "test_template"},
+                    {"name": "workflow_name", "value": "test_workflow_123"},
+                ]
+            },
         }
         response = client.post(
             "/retry/workflow_123?uid=wf_uid",
@@ -379,6 +385,11 @@ def test_retry_workflow(client):
         assert response.content.decode("utf-8") == '"workflow_123 retried successfully"'
         mock_auth.assert_called_with(token="bearer 1234", team_project="dummyteam")
         mock_log.assert_called_with("check_auth")
+        assert mock_engine.call_args[0][0] == {
+            "n_pcs": "3",
+            "template_version": "test_template",
+            "workflow_name": "test_workflow_123",
+        }
 
 
 def test_get_user_workflows(client):

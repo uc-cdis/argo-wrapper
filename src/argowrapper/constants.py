@@ -43,21 +43,6 @@ GEN3_WORKFLOW_PHASE_LABEL: Final = "phase"
 GEN3_SUBMIT_TIMESTAMP_LABEL: Final = "submittedAt"
 GEN3_NON_VA_WORKFLOW_MONTHLY_CAP: Final = 20
 GEN3_DEFAULT_WORKFLOW_MONTHLY_CAP: Final = 50
-VALID_PARAMETERS: Final = [
-    "n_pcs",
-    "variables",
-    "out_prefix",
-    "outcome",
-    "hare_population",
-    "hare_concept_id",
-    "maf_threshold",
-    "imputation_score_cutoff",
-    "template_version",
-    "source_id",
-    "source_population_cohort",
-    "workflow_name",
-    "team_project",
-]
 EXCEED_WORKFLOW_LIMIT_ERROR: Final = "User has reached monthly workflow limit."
 
 

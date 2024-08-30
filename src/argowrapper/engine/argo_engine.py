@@ -35,7 +35,6 @@ from argowrapper.constants import (
     GEN3_NON_VA_WORKFLOW_MONTHLY_CAP,
     GEN3_DEFAULT_WORKFLOW_MONTHLY_CAP,
     EXCEED_WORKFLOW_LIMIT_ERROR,
-    VALID_PARAMETERS,
 )
 from argowrapper.engine.helpers import argo_engine_helper
 from argowrapper.engine.helpers.workflow_factory import WorkflowFactory
