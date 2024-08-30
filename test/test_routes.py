@@ -10,8 +10,6 @@ from argowrapper.constants import *
 from test.constants import EXAMPLE_AUTH_HEADER
 from argowrapper.routes.routes import (
     router,
-    check_user_monthly_workflow_cap,
-    get_user_monthly_workflow,
 )
 from argowrapper.constants import (
     GEN3_NON_VA_WORKFLOW_MONTHLY_CAP,
@@ -113,11 +111,11 @@ def test_submit_workflow(client):
     ) as mock_engine, patch(
         "argowrapper.routes.routes.log_auth_check_type"
     ) as mock_log, patch(
-        "argowrapper.routes.routes.check_user_info_for_billing_id_and_workflow_limit"
+        "argowrapper.routes.routes.argo_engine.check_user_info_for_billing_id_and_workflow_limit"
     ) as mock_check_billing_id, patch(
         "requests.get"
     ) as mock_requests, patch(
-        "argowrapper.routes.routes.check_user_monthly_workflow_cap"
+        "argowrapper.routes.routes.argo_engine.check_user_monthly_workflow_cap"
     ) as mock_check_monthly_cap:
         mock_auth.return_value = True
         mock_engine.return_value = "workflow_123"
@@ -348,16 +346,33 @@ def test_cancel_workflow(client):
 
 def test_retry_workflow(client):
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
-        "argowrapper.routes.routes.argo_engine.retry_workflow"
-    ) as mock_engine, patch(
         "argowrapper.routes.routes.argo_engine.get_workflow_details"
     ) as mock_workflow_details, patch(
         "argowrapper.routes.routes.log_auth_check_type"
-    ) as mock_log:
+    ) as mock_log, patch(
+        "argowrapper.routes.routes.argo_engine.workflow_submission"
+    ) as mock_engine, patch(
+        "argowrapper.routes.routes.argo_engine.check_user_info_for_billing_id_and_workflow_limit"
+    ) as mock_check_billing_id, patch(
+        "requests.get"
+    ) as mock_requests, patch(
+        "argowrapper.routes.routes.argo_engine.check_user_monthly_workflow_cap"
+    ) as mock_check_monthly_cap:
         mock_auth.return_value = True
-        mock_engine.return_value = "workflow_123 retried sucessfully"
+        mock_check_billing_id.return_value = None, None
+        mock_check_monthly_cap.return_value = 1, 3
+        mock_requests.side_effect = mocked_requests_get
+        mock_engine.return_value = "workflow_123"
+
         mock_workflow_details.return_value = {
-            GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam"
+            GEN3_TEAM_PROJECT_METADATA_LABEL: "dummyteam",
+            "arguments": {
+                "parameters": [
+                    {"name": "n_pcs", "value": "3"},
+                    {"name": "template_version", "value": "test_template"},
+                    {"name": "workflow_name", "value": "test_workflow_123"},
+                ]
+            },
         }
         response = client.post(
             "/retry/workflow_123?uid=wf_uid",
@@ -367,9 +382,14 @@ def test_retry_workflow(client):
             },
         )
         assert response.status_code == 200
-        assert response.content.decode("utf-8") == '"workflow_123 retried sucessfully"'
+        assert response.content.decode("utf-8") == '"workflow_123 retried successfully"'
         mock_auth.assert_called_with(token="bearer 1234", team_project="dummyteam")
         mock_log.assert_called_with("check_auth")
+        assert mock_engine.call_args[0][0] == {
+            "n_pcs": "3",
+            "template_version": "test_template",
+            "workflow_name": "test_workflow_123",
+        }
 
 
 def test_get_user_workflows(client):
@@ -519,145 +539,25 @@ def test_if_endpoints_are_set_to_the_right_check_auth(client):
         mock_log.assert_called_with("check_auth")
 
 
-def test_submit_workflow_with_user_billing_id(client):
-    with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
-        "argowrapper.routes.routes.argo_engine.workflow_submission"
-    ) as mock_engine, patch(
-        "argowrapper.routes.routes.log_auth_check_type"
-    ) as mock_log, patch(
-        "requests.get"
-    ) as mock_requests, patch(
-        "argowrapper.engine.argo_engine.ArgoEngine.get_user_workflows_for_current_month"
-    ) as mock_get_workflow:
-        mock_auth.return_value = True
-        mock_engine.return_value = "workflow_123"
-        mock_requests.side_effect = mocked_requests_get
-        mock_get_workflow.return_value = [
-            {"wf_name": "workflow1"},
-            {"wf_name": "workflow2"},
-        ]
-
-        data["user_tags"] = {"tags": {}}
-        response = client.post(
-            "/submit",
-            data=json.dumps(data),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": EXAMPLE_AUTH_HEADER,
-            },
-        )
-        assert response.status_code == 200
-        assert mock_engine.call_args.args[2] == None
-
-        data["user_tags"] = {"tags": {"othertag1": "tag1"}}
-
-        response = client.post(
-            "/submit",
-            data=json.dumps(data),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": EXAMPLE_AUTH_HEADER,
-            },
-        )
-        assert response.status_code == 200
-        assert mock_engine.call_args.args[2] == None
-
-        data["user_tags"] = {"tags": {"othertag1": "tag1", "billing_id": "1234"}}
-
-        with patch(
-            "argowrapper.routes.routes.check_user_monthly_workflow_cap"
-        ) as mock_check_monthly_cap:
-            mock_check_monthly_cap.return_value = 1, 3
-            response = client.post(
-                "/submit",
-                data=json.dumps(data),
-                headers={
-                    "Content-Type": "application/json",
-                    "Authorization": EXAMPLE_AUTH_HEADER,
-                },
-            )
-            assert mock_engine.call_args.args[2] == "1234"
-
-        data["user_tags"] = 500
-
-        response = client.post(
-            "/submit",
-            data=json.dumps(data),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": EXAMPLE_AUTH_HEADER,
-            },
-        )
-        assert response.status_code == 500
-
-
-def test_check_user_monthly_workflow_cap():
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": EXAMPLE_AUTH_HEADER,
-    }
-
-    with patch(
-        "argowrapper.engine.argo_engine.ArgoEngine.get_user_workflows_for_current_month"
-    ) as mock_get_workflow:
-        mock_get_workflow.return_value = [
-            {"wf_name": "workflow1"},
-            {"wf_name": "workflow2"},
-        ]
-
-        # Test Under Default Limit
-        assert (
-            check_user_monthly_workflow_cap(headers["Authorization"], None, None) == 2,
-            GEN3_NON_VA_WORKFLOW_MONTHLY_CAP,
-        )
-
-        # Test Custom Limit
-        assert (
-            check_user_monthly_workflow_cap(headers["Authorization"], None, 2) == 2,
-            2,
-        )
-
-        # Test Billing Id User Exceeding Limit
-        workflows = []
-        for index in range(GEN3_NON_VA_WORKFLOW_MONTHLY_CAP + 1):
-            workflows.append({"wf_name": "workflow" + str(index)})
-        mock_get_workflow.return_value = workflows
-
-        assert (
-            check_user_monthly_workflow_cap(headers["Authorization"], "1234", None)
-            == GEN3_NON_VA_WORKFLOW_MONTHLY_CAP + 1,
-            GEN3_NON_VA_WORKFLOW_MONTHLY_CAP,
-        )
-
-        # Test VA User Exceeding Limit
-        workflows = []
-        for index in range(GEN3_DEFAULT_WORKFLOW_MONTHLY_CAP + 1):
-            workflows.append({"wf_name": "workflow" + str(index)})
-        mock_get_workflow.return_value = workflows
-        assert (
-            check_user_monthly_workflow_cap(headers["Authorization"], None, None)
-            == GEN3_DEFAULT_WORKFLOW_MONTHLY_CAP + 1,
-            GEN3_DEFAULT_WORKFLOW_MONTHLY_CAP,
-        )
-
-
 def test_submit_workflow_with_billing_id_and_over_monthly_cap(client):
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
-        "argowrapper.routes.routes.argo_engine.workflow_submission"
-    ) as mock_engine, patch(
         "argowrapper.routes.routes.log_auth_check_type"
     ) as mock_log, patch(
-        "argowrapper.routes.routes.check_user_info_for_billing_id_and_workflow_limit"
+        "argowrapper.routes.routes.argo_engine.check_user_info_for_billing_id_and_workflow_limit"
     ) as mock_check_billing_id, patch(
-        "argowrapper.routes.routes.check_user_monthly_workflow_cap"
+        "argowrapper.routes.routes.argo_engine.check_user_monthly_workflow_cap"
     ) as mock_check_monthly_cap, patch(
         "requests.get"
-    ) as mock_requests:
+    ) as mock_requests, mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
+    ) as mock_config_dict:
         mock_auth.return_value = True
-        mock_engine.return_value = "workflow_123"
         mock_check_billing_id.return_value = "1234", None
         mock_check_monthly_cap.return_value = 1, 1
         mock_requests.side_effect = mocked_requests_get
+
+        config = {"environment": "default", "scaling_groups": {"default": "group_1"}}
+        mock_config_dict.return_value = config
 
         response = client.post(
             "/submit",
@@ -672,21 +572,23 @@ def test_submit_workflow_with_billing_id_and_over_monthly_cap(client):
 
 def test_submit_workflow_over_monthly_cap(client):
     with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
-        "argowrapper.routes.routes.argo_engine.workflow_submission"
-    ) as mock_engine, patch(
         "argowrapper.routes.routes.log_auth_check_type"
     ) as mock_log, patch(
-        "argowrapper.routes.routes.check_user_info_for_billing_id_and_workflow_limit"
+        "argowrapper.routes.routes.argo_engine.check_user_info_for_billing_id_and_workflow_limit"
     ) as mock_check_billing_id, patch(
-        "argowrapper.routes.routes.check_user_monthly_workflow_cap"
+        "argowrapper.routes.routes.argo_engine.check_user_monthly_workflow_cap"
     ) as mock_check_monthly_cap, patch(
         "requests.get"
-    ) as mock_requests:
+    ) as mock_requests, mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
+    ) as mock_config_dict:
         mock_auth.return_value = True
-        mock_engine.return_value = "workflow_123"
         mock_check_billing_id.return_value = None, None
         mock_check_monthly_cap.return_value = 1, 1
         mock_requests.side_effect = mocked_requests_get
+
+        config = {"environment": "default", "scaling_groups": {"default": "group_1"}}
+        mock_config_dict.return_value = config
 
         response = client.post(
             "/submit",
@@ -705,7 +607,7 @@ def test_submit_workflow_with_non_team_project_cohort(client):
     ) as mock_engine, patch(
         "argowrapper.routes.routes.log_auth_check_type"
     ) as mock_log, patch(
-        "argowrapper.routes.routes.check_user_info_for_billing_id_and_workflow_limit"
+        "argowrapper.routes.routes.argo_engine.check_user_info_for_billing_id_and_workflow_limit"
     ) as mock_check_billing_id, patch(
         "requests.get"
     ) as mock_requests:
@@ -731,7 +633,7 @@ def test_get_user_monthly_workflow(client):
     with patch(
         "argowrapper.engine.argo_engine.ArgoEngine.get_user_workflows_for_current_month"
     ) as mock_get_workflow, patch(
-        "argowrapper.routes.routes.check_user_info_for_billing_id_and_workflow_limit"
+        "argowrapper.engine.argo_engine.ArgoEngine.check_user_info_for_billing_id_and_workflow_limit"
     ) as mock_check_billing_id:
         mock_get_workflow.return_value = [
             {"wf_name": "workflow1"},
