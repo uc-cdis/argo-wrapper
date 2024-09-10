@@ -522,7 +522,7 @@ class ArgoEngine:
             )
             raise exception
 
-    def get_workflow_logs(self, workflow_name: str, uid: str):
+    def get_workflow_logs(self, workflow_name: str, uid: str) -> List[Dict]:
         """
         Gets the workflow errors from failed workflow
 

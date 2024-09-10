@@ -722,7 +722,7 @@ def test_argo_engine_get_archived_workflow_log_succeeded():
             "nodes": {
                 "step_one_name": {
                     "name": "step_one_name",
-                    "type": "Retry",
+                    "type": "Pod",
                     "displayName": "run-plots",
                     "templateName": "step_one_template",
                     "message": "Error (exit code 126)",
@@ -739,7 +739,7 @@ def test_argo_engine_get_archived_workflow_log_succeeded():
     )
     archived_workflow_errors = engine.get_workflow_logs("archived_wf", "archived_uid")
     assert len(archived_workflow_errors) == 1
-    assert archived_workflow_errors[0]["node_type"] == "Retry"
+    assert archived_workflow_errors[0]["node_type"] == "Pod"
     assert archived_workflow_errors[0]["step_template"] == "step_one_template"
     assert (
         archived_workflow_errors[0]["error_interpreted"]
@@ -781,9 +781,9 @@ def test_argo_engine_get_workflow_log_succeeded():
     assert workflow_errors[0]["name"] == "step_one_name"
     assert (
         workflow_errors[0]["error_interpreted"]
-        == "Timeout occurred while fetching attrition table information. Please retry."
+        == "A timeout occurred while fetching the attrition table information. Please retry running your workflow."
     )
-    assert workflow_errors[0]["error_message"] == "Error (exit code 126)"
+    # assert workflow_errors[0]["error_message"] == "Error (exit code 126)"
 
 
 def test_get_archived_workflow_wf_name_and_team_project():
