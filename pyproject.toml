@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "argowrapper"
-version = "1.8.1"
+version = "2.2.0"
 description = "argo wrapper for va workflow"
 authors = ["UchicagoZchen138 <zchen138@uchicago.edu>"]
 repository = "https://github.com/uc-cdis/argo-wrapper"

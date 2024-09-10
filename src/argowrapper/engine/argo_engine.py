@@ -32,10 +32,14 @@ from argowrapper.constants import (
     GEN3_USER_METADATA_LABEL,
     GEN3_WORKFLOW_PHASE_LABEL,
     WORKFLOW,
+    GEN3_NON_VA_WORKFLOW_MONTHLY_CAP,
+    GEN3_DEFAULT_WORKFLOW_MONTHLY_CAP,
+    EXCEED_WORKFLOW_LIMIT_ERROR,
 )
 from argowrapper.engine.helpers import argo_engine_helper
 from argowrapper.engine.helpers.workflow_factory import WorkflowFactory
 from argowrapper.workflows.argo_workflows.gwas import GWAS
+import requests
 
 
 class ArgoEngine:
@@ -583,13 +587,20 @@ class ArgoEngine:
                 f"could not get status of {workflow_name}, workflow does not exist"
             )
 
-    def workflow_submission(
-        self, request_body: Dict, auth_header: str, billing_id: str = None
-    ):
+    def workflow_submission(self, request_body: Dict, auth_header: str):
+
         workflow = WorkflowFactory._get_workflow(
             ARGO_NAMESPACE, request_body, auth_header, WORKFLOW.GWAS
         )
         workflow_yaml = workflow._to_dict()
+
+        reached_monthly_cap = False
+
+        # check if user has a billing id tag:
+        (
+            billing_id,
+            workflow_limit,
+        ) = self.check_user_info_for_billing_id_and_workflow_limit(auth_header)
 
         # If billing_id exists for user, add it to workflow label and pod metadata
         # remove gen3-username from pod metadata
@@ -599,22 +610,99 @@ class ArgoEngine:
             pod_labels["billing_id"] = billing_id
             pod_labels["gen3username"] = ""
 
-        logger.debug(workflow_yaml)
+        # if user has billing_id (non-VA user), check if they already reached the monthly cap
+        workflow_run, workflow_limit = self.check_user_monthly_workflow_cap(
+            auth_header, billing_id, workflow_limit
+        )
 
-        try:
-            response = self.api_instance.create_workflow(
-                namespace=ARGO_NAMESPACE,
-                body=IoArgoprojWorkflowV1alpha1WorkflowCreateRequest(
-                    workflow=workflow_yaml,
+        reached_monthly_cap = workflow_run >= workflow_limit
+
+        # submit workflow:
+        if not reached_monthly_cap:
+            try:
+                response = self.api_instance.create_workflow(
+                    namespace=ARGO_NAMESPACE,
+                    body=IoArgoprojWorkflowV1alpha1WorkflowCreateRequest(
+                        workflow=workflow_yaml,
+                        _check_return_type=False,
+                        _check_type=False,
+                    ),
                     _check_return_type=False,
-                    _check_type=False,
-                ),
-                _check_return_type=False,
-            )
-            logger.debug(response)
-        except Exception as exception:
-            logger.error(traceback.format_exc())
-            logger.error(f"could not submit workflow, failed with error {exception}")
-            raise exception
+                )
+                logger.debug(response)
+            except Exception as exception:
+                logger.error(traceback.format_exc())
+                logger.error(
+                    f"could not submit workflow, failed with error {exception}"
+                )
+                raise exception
+        else:
+            logger.warning(EXCEED_WORKFLOW_LIMIT_ERROR)
+            raise Exception(EXCEED_WORKFLOW_LIMIT_ERROR)
 
         return workflow.wf_name
+
+    def check_user_info_for_billing_id_and_workflow_limit(self, request_token):
+        """
+        Check whether user is non-VA user
+        if user is VA-user, do nothing and proceed
+        if user is non-VA user () billing id tag exists in fence user info)
+        add billing Id to argo metadata and pod metadata
+        remove gen3 username from pod metadata
+        """
+
+        header = {"Authorization": request_token}
+        # TODO: Make this configurable
+        url = "http://fence-service/user"
+        try:
+            r = requests.get(url=url, headers=header)
+            r.raise_for_status()
+            user_info = r.json()
+        except Exception as e:
+            exception = Exception("Could not determine user billing info from fence", e)
+            logger.error(exception)
+            traceback.print_exc()
+            raise exception
+        logger.info("Got user info successfully. Checking for billing id..")
+
+        if "tags" in user_info:
+            if "billing_id" in user_info["tags"]:
+                billing_id = user_info["tags"]["billing_id"]
+                logger.info("billing id found in user tags: " + billing_id)
+            else:
+                billing_id = None
+
+            if "workflow_limit" in user_info["tags"]:
+                workflow_limit = user_info["tags"]["workflow_limit"]
+                logger.info(f"Workflow limit found in user tags: {workflow_limit}")
+            else:
+                workflow_limit = None
+
+            return billing_id, workflow_limit
+        else:
+            logger.info("User info does not have tags")
+            return None, None
+
+    def check_user_monthly_workflow_cap(self, request_token, billing_id, custom_limit):
+        """
+        Query Argo service to see how many workflow runs user already
+        have in the current calendar month. Return number of workflow runs and limit
+        """
+
+        try:
+            current_month_workflows = self.get_user_workflows_for_current_month(
+                request_token
+            )
+            username = argo_engine_helper.get_username_from_token(request_token)
+            if custom_limit:
+                limit = custom_limit
+            else:
+                if billing_id:
+                    limit = GEN3_NON_VA_WORKFLOW_MONTHLY_CAP
+                else:
+                    limit = GEN3_DEFAULT_WORKFLOW_MONTHLY_CAP
+            return len(current_month_workflows), limit
+        except Exception as e:
+            logger.error(e)
+            traceback.print_exc()
+            raise e

@@ -28,6 +28,40 @@ outcome = 1
 
 VARIABLES_IN_STRING_FORMAT = "[{'variable_type': 'concept', 'concept_id': 2000006886},{'variable_type': 'concept', 'concept_id': 2000006885},{'variable_type': 'custom_dichotomous', 'cohort_ids': [301, 401], 'provided_name': 'My Custom Dichotomous'}]"
 
+parameters = {
+    "pheno_csv_key": "test_replace_value",
+    "n_pcs": 100,
+    "template_version": "test",
+    "gen3_user_name": "test_user",
+    "variables": variables,
+    "outcome": outcome,
+    "team_project": "dummy-team-project",
+}
+
+tag_data = {}
+
+
+def mocked_requests_get(*args, **kwargs):
+    class MockResponse:
+        def __init__(self, json_data, status_code):
+            self.json_data = json_data
+            self.status_code = status_code
+
+        def json(self):
+            return self.json_data
+
+        def raise_for_status(self):
+            if self.status_code != 200:
+                raise Exception()
+
+    if kwargs["url"] == "http://fence-service/user":
+        if tag_data["user_tags"] != 500:
+            return MockResponse(tag_data["user_tags"], 200)
+        else:
+            return MockResponse({}, 500)
+
+    return None
+
 
 def test_argo_engine_submit_succeeded():
     """returns workflow name if workflow submission suceeds"""
@@ -37,16 +71,15 @@ def test_argo_engine_submit_succeeded():
 
     with mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
-    ) as mock_config_dict:
+    ) as mock_config_dict, mock.patch(
+        "argowrapper.engine.argo_engine.ArgoEngine.check_user_info_for_billing_id_and_workflow_limit"
+    ) as mock_id_and_limit, mock.patch(
+        "argowrapper.engine.argo_engine.ArgoEngine.check_user_monthly_workflow_cap"
+    ) as mock_check_workflow_cap:
         mock_config_dict.return_value = config
-        parameters = {
-            "pheno_csv_key": "test_replace_value",
-            "n_pcs": 100,
-            "template_version": "test",
-            "gen3_user_name": "test_user",
-            "variables": variables,
-            "team_project": "dummy-team-project",
-        }
+        mock_id_and_limit.return_value = None, None
+        mock_check_workflow_cap.return_value = 1, 50
+
         result = engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
         assert "gwas" in result
 
@@ -59,17 +92,16 @@ def test_argo_engine_submit_with_billing_id():
 
     with mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
-    ) as mock_config_dict:
+    ) as mock_config_dict, mock.patch(
+        "argowrapper.engine.argo_engine.ArgoEngine.check_user_info_for_billing_id_and_workflow_limit"
+    ) as mock_id_and_limit, mock.patch(
+        "argowrapper.engine.argo_engine.ArgoEngine.check_user_monthly_workflow_cap"
+    ) as mock_check_workflow_cap:
         mock_config_dict.return_value = config
-        parameters = {
-            "pheno_csv_key": "test_replace_value",
-            "n_pcs": 100,
-            "template_version": "test",
-            "gen3_user_name": "test_user",
-            "variables": variables,
-            "team_project": "dummy-team-project",
-        }
-        result = engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER, "1234")
+        mock_id_and_limit.return_value = "1234", None
+        mock_check_workflow_cap.return_value = 1, 50
+
+        result = engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
         workflow_yaml = engine.api_instance.create_workflow.call_args[1][
             "body"
         ]._data_store
@@ -97,11 +129,6 @@ def test_argo_engine_submit_failed():
         "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
     ) as mock_config_dict, pytest.raises(Exception):
         mock_config_dict.return_value = config
-        parameters = {
-            "pheno_csv_key": "test_replace_value",
-            "n_pcs": 100,
-            "template_version": "test",
-        }
         engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
 
 
@@ -596,32 +623,30 @@ def test_argo_engine_submit_yaml_succeeded():
     engine = ArgoEngine()
     engine.api_instance.create_workflow = mock.MagicMock()
     config = {"environment": "default", "scaling_groups": {"default": "group_1"}}
-    input_parameters = {
-        "pheno_csv_key": "test_replace_value",
-        "n_pcs": 100,
-        "template_version": "test",
-        "gen3_user_name": "test_user",
-        "variables": variables,
-        "outcome": outcome,
-        "team_project": "dummy-team-project",
-    }
     with mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
-    ) as mock_config_dict:
+    ) as mock_config_dict, mock.patch(
+        "argowrapper.engine.argo_engine.ArgoEngine.check_user_info_for_billing_id_and_workflow_limit"
+    ) as mock_id_and_limit, mock.patch(
+        "argowrapper.engine.argo_engine.ArgoEngine.check_user_monthly_workflow_cap"
+    ) as mock_check_workflow_cap:
         mock_config_dict.return_value = config
-        engine.workflow_submission(input_parameters, EXAMPLE_AUTH_HEADER)
+        mock_id_and_limit.return_value = None, None
+        mock_check_workflow_cap.return_value = 1, 50
+
+        engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
         args = engine.api_instance.create_workflow.call_args_list
         for parameter in args[0][1]["body"]["workflow"]["spec"]["arguments"][
             "parameters"
         ]:
-            if (
-                param_name := parameter["name"]
-            ) in input_parameters and param_name not in ("variables"):
-                assert parameter["value"] == input_parameters[param_name]
+            if (param_name := parameter["name"]) in parameters and param_name not in (
+                "variables"
+            ):
+                assert parameter["value"] == parameters[param_name]
 
             if param_name == "variables":
                 result = parameter["value"].replace("\n", "")
-                for variable in input_parameters[param_name]:
+                for variable in parameters[param_name]:
                     for key in variable:
                         assert str(key) in result
 
@@ -645,8 +670,15 @@ def test_argo_engine_new_submit_succeeded():
     config = {"environment": "default", "scaling_groups": {"default": "group_1"}}
     with mock.patch(
         "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
-    ) as mock_config_dict:
+    ) as mock_config_dict, mock.patch(
+        "argowrapper.engine.argo_engine.ArgoEngine.check_user_info_for_billing_id_and_workflow_limit"
+    ) as mock_id_and_limit, mock.patch(
+        "argowrapper.engine.argo_engine.ArgoEngine.check_user_monthly_workflow_cap"
+    ) as mock_check_workflow_cap:
         mock_config_dict.return_value = config
+        mock_id_and_limit.return_value = None, None
+        mock_check_workflow_cap.return_value = 1, 50
+
         res = engine.workflow_submission(request_body, EXAMPLE_AUTH_HEADER)
         assert len(res) > 0
 
@@ -840,3 +872,109 @@ def test_get_user_workflows_for_current_month(monkeypatch):
     )
 
     assert user_monthly_workflow == expected_workflow_reponse
+
+
+def test_check_user_monthly_workflow_cap():
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": EXAMPLE_AUTH_HEADER,
+    }
+    engine = ArgoEngine()
+
+    with patch(
+        "argowrapper.engine.argo_engine.ArgoEngine.get_user_workflows_for_current_month"
+    ) as mock_get_workflow:
+        mock_get_workflow.return_value = [
+            {"wf_name": "workflow1"},
+            {"wf_name": "workflow2"},
+        ]
+
+        # Test Under Default Limit
+        assert (
+            engine.check_user_monthly_workflow_cap(headers["Authorization"], None, None)
+            == 2,
+            GEN3_NON_VA_WORKFLOW_MONTHLY_CAP,
+        )
+
+        # Test Custom Limit
+        assert (
+            engine.check_user_monthly_workflow_cap(headers["Authorization"], None, 2)
+            == 2,
+            2,
+        )
+
+        # Test Billing Id User Exceeding Limit
+        workflows = []
+        for index in range(GEN3_NON_VA_WORKFLOW_MONTHLY_CAP + 1):
+            workflows.append({"wf_name": "workflow" + str(index)})
+        mock_get_workflow.return_value = workflows
+
+        assert (
+            engine.check_user_monthly_workflow_cap(
+                headers["Authorization"], "1234", None
+            )
+            == GEN3_NON_VA_WORKFLOW_MONTHLY_CAP + 1,
+            GEN3_NON_VA_WORKFLOW_MONTHLY_CAP,
+        )
+
+        # Test VA User Exceeding Limit
+        workflows = []
+        for index in range(GEN3_DEFAULT_WORKFLOW_MONTHLY_CAP + 1):
+            workflows.append({"wf_name": "workflow" + str(index)})
+        mock_get_workflow.return_value = workflows
+        assert (
+            engine.check_user_monthly_workflow_cap(headers["Authorization"], None, None)
+            == GEN3_DEFAULT_WORKFLOW_MONTHLY_CAP + 1,
+            GEN3_DEFAULT_WORKFLOW_MONTHLY_CAP,
+        )
+
+
+def test_submit_workflow_with_user_billing_id():
+    engine = ArgoEngine()
+    engine.api_instance.create_workflow = mock.MagicMock(return_value=None)
+
+    with patch("requests.get") as mock_requests, mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
+    ) as mock_config_dict, patch(
+        "argowrapper.engine.argo_engine.ArgoEngine.check_user_monthly_workflow_cap"
+    ) as mock_check_workflow_cap:
+        mock_requests.side_effect = mocked_requests_get
+
+        config = {"environment": "default", "scaling_groups": {"default": "group_1"}}
+        mock_config_dict.return_value = config
+        mock_check_workflow_cap.return_value = 2, 50
+
+        # Sets User tags via mocked_requests_get
+        tag_data["user_tags"] = {"tags": {}}
+        result = engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
+
+        # Billing ID is Null
+        assert mock_check_workflow_cap.call_args.args[1] == None
+        # Custom Limit is Null
+        assert mock_check_workflow_cap.call_args.args[2] == None
+
+        tag_data["user_tags"] = {"tags": {"othertag1": "tag1"}}
+        engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
+        assert mock_check_workflow_cap.call_args.args[1] == None
+        assert mock_check_workflow_cap.call_args.args[2] == None
+
+        tag_data["user_tags"] = {"tags": {"othertag1": "tag1", "billing_id": "1234"}}
+        engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
+        assert mock_check_workflow_cap.call_args.args[1] == "1234"
+        assert mock_check_workflow_cap.call_args.args[2] == None
+
+        tag_data["user_tags"] = {
+            "tags": {"othertag1": "tag1", "billing_id": "1234", "workflow_limit": 34}
+        }
+        engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
+        assert mock_check_workflow_cap.call_args.args[1] == "1234"
+        assert mock_check_workflow_cap.call_args.args[2] == 34
+
+        tag_data["user_tags"] = {"tags": {"othertag1": "tag1", "workflow_limit": 34}}
+        engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
+        assert mock_check_workflow_cap.call_args.args[1] == None
+        assert mock_check_workflow_cap.call_args.args[2] == 34
+
+        tag_data["user_tags"] = 500
+        with pytest.raises(Exception):
+            engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
