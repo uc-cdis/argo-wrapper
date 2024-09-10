@@ -142,6 +142,11 @@ class ArgoEngine:
     def _get_log_errors(self, uid: str, status_nodes_dict: Dict) -> List[Dict]:
         errors = []
         first_failed_node = self._find_first_failed_node(uid)
+
+        if first_failed_node is None:
+            logger.warning(f"No failed nodes found for workflow {uid}")
+            return errors
+
         for node_id, step in status_nodes_dict.items():
             if (
                 step.get("phase") in ("Failed", "Error")

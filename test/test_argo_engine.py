@@ -721,11 +721,11 @@ def test_argo_engine_get_archived_workflow_log_succeeded():
             "phase": "Failed",
             "nodes": {
                 "step_one_name": {
-                    "name": "step_one_name",
+                    "name": "step_one_name(0)",
                     "type": "Pod",
-                    "displayName": "run-plots",
+                    "displayName": "generate-attrition-csv",
                     "templateName": "step_one_template",
-                    "message": "Error (exit code 126)",
+                    "message": "ReadTimeout",
                     "phase": "Failed",
                 }
             },
@@ -737,13 +737,14 @@ def test_argo_engine_get_archived_workflow_log_succeeded():
     engine._get_workflow_node_artifact = mock.MagicMock(
         return_value="Problem with mutate()"
     )
+    engine._find_first_failed_node = mock.MagicMock(return_value="step_one_name")
     archived_workflow_errors = engine.get_workflow_logs("archived_wf", "archived_uid")
     assert len(archived_workflow_errors) == 1
     assert archived_workflow_errors[0]["node_type"] == "Pod"
     assert archived_workflow_errors[0]["step_template"] == "step_one_template"
     assert (
         archived_workflow_errors[0]["error_interpreted"]
-        == "Small cohort size or unbalanced cohort sizes."
+        == "A timeout occurred while fetching the attrition table information. Please retry running your workflow."
     )
 
 
@@ -757,11 +758,11 @@ def test_argo_engine_get_workflow_log_succeeded():
             "phase": "Failed",
             "nodes": {
                 "step_one_name": {
-                    "name": "step_one_name",
-                    "type": "Retry",
+                    "name": "step_one_name(0)",
+                    "type": "Pod",
                     "displayName": "generate-attrition-csv",
                     "templateName": "step_one_template",
-                    "message": "Error (exit code 126)",
+                    "message": "ReadTimeout",
                     "phase": "Failed",
                 }
             },
@@ -774,15 +775,16 @@ def test_argo_engine_get_workflow_log_succeeded():
     engine._get_workflow_node_artifact = mock.MagicMock(
         return_value="requests.exceptions.ReadTimeout\nHTTPConnectionPool"
     )
-
+    engine._find_first_failed_node = mock.MagicMock(return_value="step_one_name")
     engine._get_workflow_log_dict = mock.MagicMock(return_value=mock_return_wf)
     workflow_errors = engine.get_workflow_logs("active_wf", "wf_uid")
     assert len(workflow_errors) == 1
-    assert workflow_errors[0]["name"] == "step_one_name"
+    assert workflow_errors[0]["name"] == "step_one_name(0)"
     assert (
         workflow_errors[0]["error_interpreted"]
         == "A timeout occurred while fetching the attrition table information. Please retry running your workflow."
     )
+    # Because we don't want to show detailed error messages to the logs endpoint
     # assert workflow_errors[0]["error_message"] == "Error (exit code 126)"
 
 
