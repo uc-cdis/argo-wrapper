@@ -152,11 +152,7 @@ class ArgoEngine:
                 step.get("phase") in ("Failed", "Error")
                 and step.get("type") == "Pod"
                 and step.get("name") == first_failed_node + "(0)"
-                # and step.get("name") == first_failed_node
             ):
-                # message = (
-                #     step["message"] if step.get("message") else "No message provided"
-                # )
                 message = []
                 if step.get("message"):
                     message.append(step["message"])
@@ -189,12 +185,10 @@ class ArgoEngine:
                 errors.append(
                     {
                         "name": step.get("name"),
-                        #    "node_id": node_id,
                         "node_type": node_type,
                         "node_phase": node_phase,
                         "step_name": node_step,
                         "step_template": node_step_template,
-                        #    "error_message": message,
                         "error_interpreted": node_log_interpreted,
                     }
                 )
@@ -538,11 +532,6 @@ class ArgoEngine:
         Returns:
             Dict[str, any]: returns a list of dictionaries of errors of Retry nodes
         """
-        # try:
-        #     archived_workflow_dict = self._get_archived_workflow_details_dict(uid)
-        #     return archived_workflow_dict
-        # except Exception as exception:
-        #     return []
         try:
             archived_workflow_dict = self._get_archived_workflow_details_dict(uid)
             archived_workflow_phase = archived_workflow_dict["status"].get("phase")

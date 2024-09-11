@@ -195,8 +195,6 @@ class GWAS(WorkflowBase):
         """
         if step_name == "run-null-model" and "system is exactly singular" in step_log:
             show_error = "The error occurred due to small cohort size or unbalanced cohort sizes. Please ensure that the cohorts selected for your analysis are sufficiently large and balanced."
-        # elif step_name == "run-plots" and "mutate" in step_log:
-        #     show_error = "The error occurred due to small cohort size or unbalanced cohort sizes. Please ensure that the cohorts selected for your analysis are sufficiently large and balanced."
         elif (
             step_name == "run-single-assoc"
             and "system is computationally singular" in step_log
