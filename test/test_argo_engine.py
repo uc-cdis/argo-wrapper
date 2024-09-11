@@ -784,8 +784,6 @@ def test_argo_engine_get_workflow_log_succeeded():
         workflow_errors[0]["error_interpreted"]
         == "A timeout occurred while fetching the attrition table information. Please retry running your workflow."
     )
-    # Because we don't want to show detailed error messages to the logs endpoint
-    # assert workflow_errors[0]["error_message"] == "Error (exit code 126)"
 
 
 def test_get_archived_workflow_wf_name_and_team_project():
