@@ -77,7 +77,7 @@ class ArgoEngine:
         return self.api_instance.get_workflow(
             namespace=ARGO_NAMESPACE,
             name=workflow_name,
-            fields="metadata.name,metadata.annotations,metadata.creationTimestamp,metadata.labels,spec.arguments,spec.shutdown,status.phase,status.progress,status.startedAt,status.finishedAt,status.outputs",
+            fields="metadata.name,metadata.annotations,metadata.creationTimestamp,metadata.labels,spec.arguments,spec.shutdown,status.phase,status.progress,status.startedAt,status.finishedAt,status.outputs,status.nodes",
             # Note that _check_return_type=False avoids an existing issue with OpenAPI generator.
             _check_return_type=False,
         ).to_dict()
@@ -122,32 +122,73 @@ class ArgoEngine:
             .decode()
         )
 
+    def _find_first_failed_node(self, uid: str):
+        failed_nodes = []
+        archived_workflow_dict = self._get_archived_workflow_details_dict(uid)
+        archived_workflow_details_nodes = archived_workflow_dict["status"].get("nodes")
+        for node_id, node_info in archived_workflow_details_nodes.items():
+            if node_info.get("phase") == "Failed" and node_info.get("type") == "Retry":
+                start_time = datetime.strptime(
+                    node_info["startedAt"], "%Y-%m-%dT%H:%M:%SZ"
+                )
+                failed_nodes.append((node_id, node_info, start_time))
+        failed_nodes.sort(key=lambda x: x[2])
+        if failed_nodes:
+            first_failed_node = failed_nodes[0][1]
+            return first_failed_node.get("name")
+        else:
+            return None
+
     def _get_log_errors(self, uid: str, status_nodes_dict: Dict) -> List[Dict]:
         errors = []
+        first_failed_node = self._find_first_failed_node(uid)
+
+        if first_failed_node is None:
+            logger.warning(f"No failed nodes found for workflow {uid}")
+            return errors
+
         for node_id, step in status_nodes_dict.items():
-            if step.get("phase") in ("Failed", "Error") and step.get("type") == "Retry":
-                message = (
-                    step["message"] if step.get("message") else "No message provided"
+            if (
+                step.get("phase") in ("Failed", "Error")
+                and step.get("type") == "Pod"
+                and step.get("name") == first_failed_node + "(0)"
+            ):
+                message = []
+                if step.get("message"):
+                    message.append(step["message"])
+
+                node_outputs_mainlog = self._get_workflow_node_artifact(
+                    uid=uid, node_id=node_id
                 )
+                log_lines = node_outputs_mainlog.split("\n")
+                cleaned_log_lines = [line.strip() for line in log_lines]
+                error_line_index = next(
+                    (i for i, line in enumerate(cleaned_log_lines) if "Error" in line),
+                    None,
+                )
+                if error_line_index is not None:
+                    error_message = "\n".join(cleaned_log_lines[error_line_index:])
+                    message.append(error_message)
+                else:
+                    message.append(node_outputs_mainlog)
+
                 node_type = step.get("type")
-                node_step = step.get("displayName")
+                node_step = step.get("displayName").split("(")[0]
                 node_step_template = step.get("templateName")
                 node_phase = step.get("phase")
                 node_outputs_mainlog = self._get_workflow_node_artifact(
                     uid=uid, node_id=node_id
                 )
                 node_log_interpreted = GWAS.interpret_gwas_workflow_error(
-                    step_name=node_step, step_log=node_outputs_mainlog
+                    step_name=node_step, step_log=message
                 )
                 errors.append(
                     {
                         "name": step.get("name"),
-                        "node_id": node_id,
                         "node_type": node_type,
                         "node_phase": node_phase,
                         "step_name": node_step,
                         "step_template": node_step_template,
-                        "error_message": message,
                         "error_interpreted": node_log_interpreted,
                     }
                 )

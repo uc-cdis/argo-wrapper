@@ -193,17 +193,19 @@ class GWAS(WorkflowBase):
         """A static method to interpret the error message in the main-log file
         of Failed Retry node
         """
-        if step_name == "run-null-model" and "solve.default" in step_log:
-            show_error = "Small cohort size or unbalanced cohort sizes. A cohort size of about 700 or below may fail for continuous outcome workflow."
-        elif step_name == "run-plots" and "mutate" in step_log:
-            show_error = "Small cohort size or unbalanced cohort sizes."
+        if step_name == "run-null-model" and "system is exactly singular" in step_log:
+            show_error = "The error occurred due to small cohort size or unbalanced cohort sizes. Please ensure that the cohorts selected for your analysis are sufficiently large and balanced."
         elif (
             step_name == "run-single-assoc"
             and "system is computationally singular" in step_log
         ):
-            show_error = "Unbalanced cohort sizes."
+            show_error = "The error occurred due to unbalanced cohort sizes. Please ensure that the sizes of the cohorts are as balanced as possible."
         elif step_name == "generate-attrition-csv" and "ReadTimeout" in step_log:
-            show_error = "Timeout occurred while fetching attrition table information. Please retry."
+            show_error = "A timeout occurred while fetching the attrition table information. Please retry running your workflow."
+        elif step_name == "create-indexd-record" and "HTTPError" in step_log:
+            show_error = "An HTTP error occurred while creating an index record. Please retry running your workflow."
+        elif step_name == "run-single-assoc" and "where TRUE/FALSE needed" in step_log:
+            show_error = "The error was caused by extreme outliers in the outcome or the covariates. Please try using different outcome/covariates variables."
         else:
             show_error = ""
         return show_error
