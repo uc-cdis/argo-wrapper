@@ -40,6 +40,7 @@ from argowrapper.engine.helpers import argo_engine_helper
 from argowrapper.engine.helpers.workflow_factory import WorkflowFactory
 from argowrapper.workflows.argo_workflows.gwas import GWAS
 import requests
+import time
 
 
 class ArgoEngine:
@@ -610,7 +611,7 @@ class ArgoEngine:
         )
 
         reached_monthly_cap = workflow_run >= workflow_limit
-
+        time.sleep(30)
         # submit workflow:
         if not reached_monthly_cap:
             try:
