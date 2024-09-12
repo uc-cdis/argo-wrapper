@@ -667,7 +667,7 @@ class ArgoEngine:
                 billing_id = None
 
             if "workflow_limit" in user_info["tags"]:
-                workflow_limit = user_info["tags"]["workflow_limit"]
+                workflow_limit = int(user_info["tags"]["workflow_limit"])
                 logger.info(f"Workflow limit found in user tags: {workflow_limit}")
             else:
                 workflow_limit = None
@@ -677,7 +677,9 @@ class ArgoEngine:
             logger.info("User info does not have tags")
             return None, None
 
-    def check_user_monthly_workflow_cap(self, request_token, billing_id, custom_limit):
+    def check_user_monthly_workflow_cap(
+        self, request_token, billing_id, custom_limit: int
+    ):
         """
         Query Argo service to see how many workflow runs user already
         have in the current calendar month. Return number of workflow runs and limit
@@ -688,7 +690,7 @@ class ArgoEngine:
                 request_token
             )
             username = argo_engine_helper.get_username_from_token(request_token)
-            if custom_limit:
+            if custom_limit and custom_limit > 0:
                 limit = custom_limit
             else:
                 if billing_id:
