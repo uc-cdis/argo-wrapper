@@ -621,6 +621,10 @@ class ArgoEngine:
             )
 
             reached_monthly_cap = workflow_run >= workflow_limit
+            if "workflow_name" in request_body.keys():
+                logger.info(
+                    f"For {request_body['workflow_name']}, workflow already run is {workflow_run} and workflow run limit is {workflow_limit} and reached_monthly_cap is {reached_monthly_cap}"
+                )
             # TODO DELETE
             if "workflow_name" in request_body.keys():
                 logger.info(
