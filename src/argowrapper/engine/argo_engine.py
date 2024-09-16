@@ -646,6 +646,7 @@ class ArgoEngine:
                             _check_type=False,
                         ),
                         _check_return_type=False,
+                        async_req=False,
                     )
                     logger.debug(response)
                 except Exception as exception:
