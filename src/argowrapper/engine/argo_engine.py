@@ -41,6 +41,9 @@ from argowrapper.engine.helpers.workflow_factory import WorkflowFactory
 from argowrapper.workflows.argo_workflows.gwas import GWAS
 import requests
 import time
+from threading import Lock
+
+function_lock = Lock()
 
 
 class ArgoEngine:
@@ -583,59 +586,59 @@ class ArgoEngine:
             )
 
     def workflow_submission(self, request_body: Dict, auth_header: str):
+        with function_lock:
+            workflow = WorkflowFactory._get_workflow(
+                ARGO_NAMESPACE, request_body, auth_header, WORKFLOW.GWAS
+            )
+            workflow_yaml = workflow._to_dict()
 
-        workflow = WorkflowFactory._get_workflow(
-            ARGO_NAMESPACE, request_body, auth_header, WORKFLOW.GWAS
-        )
-        workflow_yaml = workflow._to_dict()
+            reached_monthly_cap = False
 
-        reached_monthly_cap = False
+            # check if user has a billing id tag:
+            (
+                billing_id,
+                workflow_limit,
+            ) = self.check_user_info_for_billing_id_and_workflow_limit(auth_header)
 
-        # check if user has a billing id tag:
-        (
-            billing_id,
-            workflow_limit,
-        ) = self.check_user_info_for_billing_id_and_workflow_limit(auth_header)
+            # If billing_id exists for user, add it to workflow label and pod metadata
+            # remove gen3-username from pod metadata
+            if billing_id:
+                workflow_yaml["metadata"]["labels"]["billing_id"] = billing_id
+                pod_labels = workflow_yaml["spec"]["podMetadata"]["labels"]
+                pod_labels["billing_id"] = billing_id
+                pod_labels["gen3username"] = ""
 
-        # If billing_id exists for user, add it to workflow label and pod metadata
-        # remove gen3-username from pod metadata
-        if billing_id:
-            workflow_yaml["metadata"]["labels"]["billing_id"] = billing_id
-            pod_labels = workflow_yaml["spec"]["podMetadata"]["labels"]
-            pod_labels["billing_id"] = billing_id
-            pod_labels["gen3username"] = ""
+            # if user has billing_id (non-VA user), check if they already reached the monthly cap
+            workflow_run, workflow_limit = self.check_user_monthly_workflow_cap(
+                auth_header, billing_id, workflow_limit
+            )
 
-        # if user has billing_id (non-VA user), check if they already reached the monthly cap
-        workflow_run, workflow_limit = self.check_user_monthly_workflow_cap(
-            auth_header, billing_id, workflow_limit
-        )
-
-        reached_monthly_cap = workflow_run >= workflow_limit
-        time.sleep(10)
-        # submit workflow:
-        if not reached_monthly_cap:
-            try:
-                response = self.api_instance.create_workflow(
-                    namespace=ARGO_NAMESPACE,
-                    body=IoArgoprojWorkflowV1alpha1WorkflowCreateRequest(
-                        workflow=workflow_yaml,
+            reached_monthly_cap = workflow_run >= workflow_limit
+            time.sleep(10)
+            # submit workflow:
+            if not reached_monthly_cap:
+                try:
+                    response = self.api_instance.create_workflow(
+                        namespace=ARGO_NAMESPACE,
+                        body=IoArgoprojWorkflowV1alpha1WorkflowCreateRequest(
+                            workflow=workflow_yaml,
+                            _check_return_type=False,
+                            _check_type=False,
+                        ),
                         _check_return_type=False,
-                        _check_type=False,
-                    ),
-                    _check_return_type=False,
-                )
-                logger.debug(response)
-            except Exception as exception:
-                logger.error(traceback.format_exc())
-                logger.error(
-                    f"could not submit workflow, failed with error {exception}"
-                )
-                raise exception
-        else:
-            logger.warning(EXCEED_WORKFLOW_LIMIT_ERROR)
-            raise Exception(EXCEED_WORKFLOW_LIMIT_ERROR)
+                    )
+                    logger.debug(response)
+                except Exception as exception:
+                    logger.error(traceback.format_exc())
+                    logger.error(
+                        f"could not submit workflow, failed with error {exception}"
+                    )
+                    raise exception
+            else:
+                logger.warning(EXCEED_WORKFLOW_LIMIT_ERROR)
+                raise Exception(EXCEED_WORKFLOW_LIMIT_ERROR)
 
-        return workflow.wf_name
+            return workflow.wf_name
 
     def check_user_info_for_billing_id_and_workflow_limit(self, request_token):
         """
