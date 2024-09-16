@@ -43,8 +43,6 @@ import requests
 import time
 from threading import Lock
 
-function_lock = Lock()
-
 
 class ArgoEngine:
     """
@@ -61,6 +59,7 @@ class ArgoEngine:
         return f"dry_run={self.dry_run}"
 
     def __init__(self, dry_run: bool = False):
+        self.lock = Lock()
         self.dry_run = dry_run
         # workflow "given names" by uid cache:
         self.workflow_given_names_cache = {}
@@ -586,7 +585,15 @@ class ArgoEngine:
             )
 
     def workflow_submission(self, request_body: Dict, auth_header: str):
-        with function_lock:
+        # TODO DELETE
+        if "workflow_name" in request_body.keys():
+            logger.info(
+                f"Acquiring Lock for workflow submission {request_body['workflow_name']}"
+            )
+        self.lock.acquire()
+        try:
+            if "workflow_name" in request_body.keys():
+                logger.info(f"lock acquired for {request_body['workflow_name']}")
             workflow = WorkflowFactory._get_workflow(
                 ARGO_NAMESPACE, request_body, auth_header, WORKFLOW.GWAS
             )
@@ -614,7 +621,16 @@ class ArgoEngine:
             )
 
             reached_monthly_cap = workflow_run >= workflow_limit
+            # TODO DELETE
+            if "workflow_name" in request_body.keys():
+                logger.info(
+                    f"Thread sleep for 10 secs for {request_body['workflow_name']}"
+                )
             time.sleep(10)
+            if "workflow_name" in request_body.keys():
+                logger.info(
+                    f"10 sec Thread Sleep completed for {request_body['workflow_name']}"
+                )
             # submit workflow:
             if not reached_monthly_cap:
                 try:
@@ -639,6 +655,12 @@ class ArgoEngine:
                 raise Exception(EXCEED_WORKFLOW_LIMIT_ERROR)
 
             return workflow.wf_name
+        finally:
+            self.lock.release()
+            if "workflow_name" in request_body.keys():
+                logger.info(
+                    f"Lock released for workflow submission {request_body['workflow_name']}"
+                )
 
     def check_user_info_for_billing_id_and_workflow_limit(self, request_token):
         """
