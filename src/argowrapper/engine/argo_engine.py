@@ -585,12 +585,9 @@ class ArgoEngine:
             )
 
     def workflow_submission(self, request_body: Dict, auth_header: str):
-        # TODO DELETE
-        if "workflow_name" in request_body.keys():
-            logger.info(
-                f"Acquiring Lock for workflow submission {request_body['workflow_name']}"
-            )
+        # Lock function so only one can run at a time
         self.lock.acquire()
+
         try:
             if "workflow_name" in request_body.keys():
                 logger.info(f"lock acquired for {request_body['workflow_name']}")
@@ -599,7 +596,7 @@ class ArgoEngine:
             )
             workflow_yaml = workflow._to_dict()
 
-            reached_monthly_cap = False
+            reached_monthly_cap = True
 
             # check if user has a billing id tag:
             (
@@ -621,20 +618,10 @@ class ArgoEngine:
             )
 
             reached_monthly_cap = workflow_run >= workflow_limit
-            if "workflow_name" in request_body.keys():
-                logger.info(
-                    f"For {request_body['workflow_name']}, workflow already run is {workflow_run} and workflow run limit is {workflow_limit} and reached_monthly_cap is {reached_monthly_cap}"
-                )
+
             # TODO DELETE
-            if "workflow_name" in request_body.keys():
-                logger.info(
-                    f"Thread sleep for 10 secs for {request_body['workflow_name']}"
-                )
             time.sleep(10)
-            if "workflow_name" in request_body.keys():
-                logger.info(
-                    f"10 sec Thread Sleep completed for {request_body['workflow_name']}"
-                )
+
             # submit workflow:
             if not reached_monthly_cap:
                 try:
@@ -649,16 +636,6 @@ class ArgoEngine:
                         async_req=False,
                     )
                     logger.debug(response)
-
-                    # TODO DELETE CHECK workflow result again
-                    time.sleep(5)
-                    workflow_run, workflow_limit = self.check_user_monthly_workflow_cap(
-                        auth_header, billing_id, workflow_limit
-                    )
-                    if "workflow_name" in request_body.keys():
-                        logger.info(
-                            f"Checking {request_body['workflow_name']} after submission completed, workflow already run is {workflow_run} and workflow run limit is {workflow_limit} and reached_monthly_cap is {reached_monthly_cap}"
-                        )
                 except Exception as exception:
                     logger.error(traceback.format_exc())
                     logger.error(
@@ -671,11 +648,9 @@ class ArgoEngine:
 
             return workflow.wf_name
         finally:
+            # Make sure submission registers in Argo
+            time.sleep(5)
             self.lock.release()
-            if "workflow_name" in request_body.keys():
-                logger.info(
-                    f"Lock released for workflow submission {request_body['workflow_name']}"
-                )
 
     def check_user_info_for_billing_id_and_workflow_limit(self, request_token):
         """

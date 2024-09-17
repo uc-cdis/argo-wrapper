@@ -929,9 +929,6 @@ def test_check_user_monthly_workflow_cap():
         )
 
 
-"""
-TODO DELETE
-Temporarily remove for temp logging statement
 def test_submit_workflow_with_user_billing_id():
     engine = ArgoEngine()
     engine.api_instance.create_workflow = mock.MagicMock(return_value=None)
@@ -981,4 +978,3 @@ def test_submit_workflow_with_user_billing_id():
         tag_data["user_tags"] = 500
         with pytest.raises(Exception):
             engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
-"""
