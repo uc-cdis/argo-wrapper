@@ -652,6 +652,9 @@ class ArgoEngine:
 
                     # TODO DELETE CHECK workflow result again
                     time.sleep(5)
+                    workflow_run, workflow_limit = self.check_user_monthly_workflow_cap(
+                        auth_header, billing_id, workflow_limit
+                    )
                     if "workflow_name" in request_body.keys():
                         logger.info(
                             f"Checking {request_body['workflow_name']} after submission completed, workflow already run is {workflow_run} and workflow run limit is {workflow_limit} and reached_monthly_cap is {reached_monthly_cap}"
