@@ -59,7 +59,7 @@ class ArgoEngine:
         return f"dry_run={self.dry_run}"
 
     def __init__(self, dry_run: bool = False):
-        self.lock = Lock()
+        self.user_locks = {}
         self.dry_run = dry_run
         # workflow "given names" by uid cache:
         self.workflow_given_names_cache = {}
@@ -198,6 +198,11 @@ class ArgoEngine:
             else:
                 pass
         return errors
+
+    def _get_lock_for_user(self, username: str) -> Lock:
+        if username not in self.user_locks:
+            self.user_locks[username] = Lock()
+        return self.user_locks[username]
 
     def get_workflow_details(
         self, workflow_name: str, uid: str = None
@@ -585,8 +590,10 @@ class ArgoEngine:
             )
 
     def workflow_submission(self, request_body: Dict, auth_header: str):
-        # Lock function so only one can run at a time
-        self.lock.acquire()
+        # Lock function so only one can run at a time per user
+        username = argo_engine_helper.get_username_from_token(auth_header)
+        user_lock = self._get_lock_for_user(username)
+        user_lock.acquire()
 
         try:
             if "workflow_name" in request_body.keys():
@@ -618,6 +625,8 @@ class ArgoEngine:
             )
 
             reached_monthly_cap = workflow_run >= workflow_limit
+            # todo delete after testing
+            time.sleep(10)
 
             # submit workflow:
             if not reached_monthly_cap:
@@ -647,7 +656,7 @@ class ArgoEngine:
         finally:
             # Make sure submission registers in Argo
             time.sleep(5)
-            self.lock.release()
+            user_lock.release()
 
     def check_user_info_for_billing_id_and_workflow_limit(self, request_token):
         """
