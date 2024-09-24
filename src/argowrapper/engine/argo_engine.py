@@ -619,9 +619,6 @@ class ArgoEngine:
 
             reached_monthly_cap = workflow_run >= workflow_limit
 
-            # TODO DELETE
-            time.sleep(10)
-
             # submit workflow:
             if not reached_monthly_cap:
                 try:
