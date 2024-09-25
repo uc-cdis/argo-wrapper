@@ -40,6 +40,8 @@ from argowrapper.engine.helpers import argo_engine_helper
 from argowrapper.engine.helpers.workflow_factory import WorkflowFactory
 from argowrapper.workflows.argo_workflows.gwas import GWAS
 import requests
+import time
+from threading import Lock
 
 
 class ArgoEngine:
@@ -57,6 +59,7 @@ class ArgoEngine:
         return f"dry_run={self.dry_run}"
 
     def __init__(self, dry_run: bool = False):
+        self.user_locks = {}
         self.dry_run = dry_run
         # workflow "given names" by uid cache:
         self.workflow_given_names_cache = {}
@@ -195,6 +198,11 @@ class ArgoEngine:
             else:
                 pass
         return errors
+
+    def _get_lock_for_user(self, username: str) -> Lock:
+        if username not in self.user_locks:
+            self.user_locks[username] = Lock()
+        return self.user_locks[username]
 
     def get_workflow_details(
         self, workflow_name: str, uid: str = None
@@ -582,59 +590,71 @@ class ArgoEngine:
             )
 
     def workflow_submission(self, request_body: Dict, auth_header: str):
+        # Lock function so only one can run at a time per user
+        username = argo_engine_helper.get_username_from_token(auth_header)
+        user_lock = self._get_lock_for_user(username)
+        user_lock.acquire()
 
-        workflow = WorkflowFactory._get_workflow(
-            ARGO_NAMESPACE, request_body, auth_header, WORKFLOW.GWAS
-        )
-        workflow_yaml = workflow._to_dict()
+        try:
+            if "workflow_name" in request_body.keys():
+                logger.info(f"lock acquired for {request_body['workflow_name']}")
+            workflow = WorkflowFactory._get_workflow(
+                ARGO_NAMESPACE, request_body, auth_header, WORKFLOW.GWAS
+            )
+            workflow_yaml = workflow._to_dict()
 
-        reached_monthly_cap = False
+            reached_monthly_cap = True
 
-        # check if user has a billing id tag:
-        (
-            billing_id,
-            workflow_limit,
-        ) = self.check_user_info_for_billing_id_and_workflow_limit(auth_header)
+            # check if user has a billing id tag:
+            (
+                billing_id,
+                workflow_limit,
+            ) = self.check_user_info_for_billing_id_and_workflow_limit(auth_header)
 
-        # If billing_id exists for user, add it to workflow label and pod metadata
-        # remove gen3-username from pod metadata
-        if billing_id:
-            workflow_yaml["metadata"]["labels"]["billing_id"] = billing_id
-            pod_labels = workflow_yaml["spec"]["podMetadata"]["labels"]
-            pod_labels["billing_id"] = billing_id
-            pod_labels["gen3username"] = ""
+            # If billing_id exists for user, add it to workflow label and pod metadata
+            # remove gen3-username from pod metadata
+            if billing_id:
+                workflow_yaml["metadata"]["labels"]["billing_id"] = billing_id
+                pod_labels = workflow_yaml["spec"]["podMetadata"]["labels"]
+                pod_labels["billing_id"] = billing_id
+                pod_labels["gen3username"] = ""
 
-        # if user has billing_id (non-VA user), check if they already reached the monthly cap
-        workflow_run, workflow_limit = self.check_user_monthly_workflow_cap(
-            auth_header, billing_id, workflow_limit
-        )
+            # if user has billing_id (non-VA user), check if they already reached the monthly cap
+            workflow_run, workflow_limit = self.check_user_monthly_workflow_cap(
+                auth_header, billing_id, workflow_limit
+            )
 
-        reached_monthly_cap = workflow_run >= workflow_limit
+            reached_monthly_cap = workflow_run >= workflow_limit
 
-        # submit workflow:
-        if not reached_monthly_cap:
-            try:
-                response = self.api_instance.create_workflow(
-                    namespace=ARGO_NAMESPACE,
-                    body=IoArgoprojWorkflowV1alpha1WorkflowCreateRequest(
-                        workflow=workflow_yaml,
+            # submit workflow:
+            if not reached_monthly_cap:
+                try:
+                    response = self.api_instance.create_workflow(
+                        namespace=ARGO_NAMESPACE,
+                        body=IoArgoprojWorkflowV1alpha1WorkflowCreateRequest(
+                            workflow=workflow_yaml,
+                            _check_return_type=False,
+                            _check_type=False,
+                        ),
                         _check_return_type=False,
-                        _check_type=False,
-                    ),
-                    _check_return_type=False,
-                )
-                logger.debug(response)
-            except Exception as exception:
-                logger.error(traceback.format_exc())
-                logger.error(
-                    f"could not submit workflow, failed with error {exception}"
-                )
-                raise exception
-        else:
-            logger.warning(EXCEED_WORKFLOW_LIMIT_ERROR)
-            raise Exception(EXCEED_WORKFLOW_LIMIT_ERROR)
+                        async_req=False,
+                    )
+                    logger.debug(response)
+                except Exception as exception:
+                    logger.error(traceback.format_exc())
+                    logger.error(
+                        f"could not submit workflow, failed with error {exception}"
+                    )
+                    raise exception
+            else:
+                logger.warning(EXCEED_WORKFLOW_LIMIT_ERROR)
+                raise Exception(EXCEED_WORKFLOW_LIMIT_ERROR)
 
-        return workflow.wf_name
+            return workflow.wf_name
+        finally:
+            # Make sure submission registers in Argo
+            time.sleep(5)
+            user_lock.release()
 
     def check_user_info_for_billing_id_and_workflow_limit(self, request_token):
         """
