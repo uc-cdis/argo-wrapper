@@ -652,7 +652,7 @@ class ArgoEngine:
 
             return workflow.wf_name
         finally:
-            # Make sure submission registers in Argo
+            # Make sure current submission registers in Argo before allowing the next submission
             time.sleep(5)
             user_lock.release()
 

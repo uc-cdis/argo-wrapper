@@ -1,6 +1,7 @@
 import unittest.mock as mock
 
 import pytest
+import asyncio
 from argowrapper import logger
 
 from argo_workflows.exceptions import NotFoundException
@@ -978,3 +979,42 @@ def test_submit_workflow_with_user_billing_id():
         tag_data["user_tags"] = 500
         with pytest.raises(Exception):
             engine.workflow_submission(parameters, EXAMPLE_AUTH_HEADER)
+
+
+@pytest.mark.asyncio
+async def test_argo_engine_simultaneous_submissions_workflow_cap():
+    """
+    Test scenario where 2 submissions are submitted simultaneously when
+    only one workflow count remain in the cap
+    The first one should submit successfully but the second one should fail
+    """
+    engine = ArgoEngine()
+    engine.api_instance.create_workflow = mock.MagicMock(return_value=None)
+    config = {"environment": "default", "scaling_groups": {"default": "group_1"}}
+
+    with mock.patch(
+        "argowrapper.engine.argo_engine.argo_engine_helper._get_argo_config_dict"
+    ) as mock_config_dict, mock.patch(
+        "argowrapper.engine.argo_engine.ArgoEngine.check_user_info_for_billing_id_and_workflow_limit"
+    ) as mock_id_and_limit, mock.patch(
+        "argowrapper.engine.argo_engine.ArgoEngine.check_user_monthly_workflow_cap"
+    ) as mock_check_workflow_cap:
+        mock_config_dict.return_value = config
+        mock_id_and_limit.return_value = None, None
+        mock_check_workflow_cap.return_value = 49, 50
+        loop = asyncio.get_event_loop()
+        # Kick Off both submissions
+        workflow1 = loop.run_in_executor(
+            None, engine.workflow_submission, parameters, EXAMPLE_AUTH_HEADER
+        )
+        workflow2 = loop.run_in_executor(
+            None, engine.workflow_submission, parameters, EXAMPLE_AUTH_HEADER
+        )
+        # Simulate Argo engine taking a couple seconds to register the call and then update the return value
+        time.sleep(2)
+        mock_check_workflow_cap.return_value = 50, 50
+        # Check the result for both calls
+        result1 = await workflow1
+        assert "gwas" in result1
+        with pytest.raises(Exception):
+            result2 = await workflow2
