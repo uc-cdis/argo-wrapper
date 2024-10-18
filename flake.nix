@@ -1,5 +1,5 @@
 {
-  description = "Python application packaged using poetry2nix";
+  description = "argo-wrapper";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
   inputs.poetry2nix.url = "github:nix-community/poetry2nix";
