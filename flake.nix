@@ -1,23 +1,131 @@
 {
   description = "Python application packaged using poetry2nix";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
   inputs.poetry2nix.url = "github:nix-community/poetry2nix";
 
   outputs = { self, nixpkgs, poetry2nix }:
     let
-      system = [ "x86_64-linux" "x86_64-darwin" "aarch64-linux" "aarch64-darwin" ];
-      pkgs = nixpkgs.legacyPackages.${system};
-      # create a custom "mkPoetryApplication" API function that under the hood uses
-      # the packages and versions (python3, poetry etc.) from our pinned nixpkgs above:
-      inherit (poetry2nix.lib.mkPoetry2Nix { inherit pkgs; }) mkPoetryApplication;
-      myPythonApp = mkPoetryApplication { projectDir = ./.; };
+      supportedSystems = [ "x86_64-linux" "x86_64-darwin" "aarch64-linux" "aarch64-darwin" ];
+      forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
+      pkgs = forAllSystems (system: nixpkgs.legacyPackages.${system});
     in
     {
-      apps.${system}.default = {
-        type = "app";
-        # replace <script> with the name in the [tool.poetry.scripts] section of your pyproject.toml
-        program = "${myPythonApp}/bin/<script>";
-      };
+      packages = forAllSystems (system:
+        let
+          inherit (poetry2nix.lib.mkPoetry2Nix { pkgs = pkgs.${system}; }) mkPoetryApplication defaultPoetryOverrides;
+        in
+        {
+          default = mkPoetryApplication {
+            projectDir = self;
+            overrides = defaultPoetryOverrides.extend
+              (final: prev: {
+                cdislogging = prev.cdislogging.overridePythonAttrs
+                  (
+                    old: {
+                      buildInputs = (old.buildInputs or [ ]) ++ [ prev.setuptools ];
+                    }
+                  );
+                cdiserrors = prev.cdiserrors.overridePythonAttrs
+                  (old: {
+                    buildInputs = (old.buildInputs or [ ]) ++ [
+                      prev.poetry-core
+                      prev.setuptools
+                      prev.wheel
+                      prev.pip
+                    ];
+                    nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [
+                      prev.poetry
+                    ];
+                    postPatch = ''
+                      ${old.postPatch or ""}
+                      sed -i 's/poetry.masonry/poetry.core.masonry/' pyproject.toml
+                    '';
+                  });
+                argo-workflows = prev.argo-workflows.overridePythonAttrs
+                  (
+                    old: {
+                      buildInputs = (old.buildInputs or [ ]) ++ [ prev.setuptools ];
+                    }
+                  );
+                gen3authz = prev.gen3authz.overridePythonAttrs
+                  (
+                    old: {
+                      buildInputs = (old.buildInputs or [ ]) ++ [ prev.setuptools ];
+                      nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [
+                        prev.poetry
+                      ];
+                      postPatch = ''
+                        ${old.postPatch or ""}
+                        sed -i 's/poetry.masonry/poetry.core.masonry/' pyproject.toml
+                      '';
+                    }
+                  );
+              });
+          };
+        });
+
+      devShells = forAllSystems (system:
+        let
+          inherit (poetry2nix.lib.mkPoetry2Nix { pkgs = pkgs.${system}; }) mkPoetryEnv defaultPoetryOverrides;
+        in
+        {
+          default = pkgs.${system}.mkShellNoCC {
+            packages = with pkgs.${system}; [
+              (mkPoetryEnv {
+                projectDir = self;
+                overrides = defaultPoetryOverrides.extend
+                  (final: prev: {
+                    cdislogging = prev.cdislogging.overridePythonAttrs
+                      (
+                        old: {
+                          buildInputs = (old.buildInputs or [ ]) ++ [ prev.setuptools ];
+                        }
+                      );
+                    cdiserrors = prev.cdiserrors.overridePythonAttrs
+                      (old: {
+                        buildInputs = (old.buildInputs or [ ]) ++ [
+                          prev.poetry-core
+                          prev.setuptools
+                          prev.wheel
+                          prev.pip
+                        ];
+                        nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [
+                          prev.poetry
+                        ];
+                        postPatch = ''
+                          ${old.postPatch or ""}
+                          sed -i 's/poetry.masonry/poetry.core.masonry/' pyproject.toml
+                        '';
+                      });
+                    argo-workflows = prev.argo-workflows.overridePythonAttrs
+                      (
+                        old: {
+                          buildInputs = (old.buildInputs or [ ]) ++ [ prev.setuptools ];
+                        }
+                      );
+                    gen3authz = prev.gen3authz.overridePythonAttrs
+                      (
+                        old: {
+                          buildInputs = (old.buildInputs or [ ]) ++ [ prev.setuptools ];
+                          nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [
+                            prev.poetry
+                          ];
+                          postPatch = ''
+                            ${old.postPatch or ""}
+                            sed -i 's/poetry.masonry/poetry.core.masonry/' pyproject.toml
+                          '';
+                        }
+                      );
+                  });
+              })
+              poetry
+              postgresql
+            ];
+            shellHook = ''
+              echo "PostgreSQL $(${pkgs.${system}.postgresql}/bin/postgres --version) is available in this shell."
+            '';
+          };
+        });
     };
 }
