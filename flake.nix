@@ -102,6 +102,7 @@
                , config
                , ...
                }: {
+                enterShell = self.checks.${system}.pre-commit-check.shellHook;
                 packages = with nixpkgs.legacyPackages.${system}; [
                   (mkPoetryEnv {
                     projectDir = self;
