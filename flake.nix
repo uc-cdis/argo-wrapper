@@ -3,7 +3,7 @@
 
   inputs =
     {
-      nixpkgs.url = "github:cachix/devenv-nixpkgs/rolling";
+      nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
       systems.url = "github:nix-systems/default";
       devenv.url = "github:cachix/devenv";
       devenv.inputs.nixpkgs.follows = "nixpkgs";
@@ -41,7 +41,7 @@
         in
         {
           default = mkPoetryApplication {
-            projectDir = ./.;
+            projectDir = self;
             overrides = defaultPoetryOverrides.extend
               (final: prev: {
                 cdislogging = prev.cdislogging.overridePythonAttrs
@@ -104,7 +104,7 @@
                }: {
                 packages = with nixpkgs.legacyPackages.${system}; [
                   (mkPoetryEnv {
-                    projectDir = ./.;
+                    projectDir = self;
                     overrides = defaultPoetryOverrides.extend
                       (final: prev: {
                         cdislogging = prev.cdislogging.overridePythonAttrs
