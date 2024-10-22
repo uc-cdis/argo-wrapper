@@ -199,6 +199,7 @@ def convert_pod_label_to_gen3teamproject(pod_label: str) -> str:
     Reverse the conversion gen3teamproject to pod_label.
     """
     if pod_label:
+        logger.info("pod_label is {}".format(pod_label))
         team_project = bytes.fromhex(pod_label).decode("utf-8")
         return team_project
     else:
