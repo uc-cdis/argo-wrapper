@@ -1,6 +1,6 @@
 import traceback
 from functools import wraps
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Any, Optional
 
 from fastapi import APIRouter, Request, Query
 from fastapi.responses import HTMLResponse
@@ -247,7 +247,7 @@ def get_workflow_details(
     workflow_name: str,
     uid: str,
     request: Request,  # pylint: disable=unused-argument
-) -> Dict[str, any]:
+) -> Dict[str, Any]:
     """returns details of a workflow"""
 
     try:
