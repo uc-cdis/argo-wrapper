@@ -39,6 +39,7 @@ class GWAS(WorkflowBase):
         "pca_file": "/commons-data/pcs.RData",
         "relatedness_matrix_file": "/commons-data/KINGmatDeg3.RData",
         "sex_table": "/commons-data/mvp_sex_table.csv",
+        "related_samples": "/commons-data/related_samples.csv",
         "n_segments": 0,
         "segment_length": 2000,
         "variant_block_size": 100,
