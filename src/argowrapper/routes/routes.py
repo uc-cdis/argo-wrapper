@@ -344,7 +344,7 @@ def get_workflow_logs(
     workflow_name: str,
     uid: str,
     request: Request,  # pylint: disable=unused-argument
-) -> List[str]:
+) -> List[Dict]:
     """returns the list of workflows the user has ran"""
 
     try:
