@@ -1,6 +1,6 @@
 import traceback
 from functools import wraps
-from typing import Any, Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Request, Query
 from fastapi.responses import HTMLResponse
@@ -361,7 +361,7 @@ def get_workflow_logs(
 @router.get("/workflows/user-monthly", status_code=HTTP_200_OK)
 def get_user_monthly_workflow(
     request: Request,
-) -> Dict[str, any]:
+) -> Dict[str, Any]:
     """
     Query Argo service to see how many successful run user already
     have in the current calendar month. Return workflow numbers and workflow cap

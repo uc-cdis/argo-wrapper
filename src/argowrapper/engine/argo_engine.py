@@ -1,7 +1,7 @@
 import string
 import traceback
 from datetime import datetime
-from typing import Dict, List, Literal
+from typing import Any, Dict, List, Literal
 
 import argo_workflows
 from argo_workflows.api import (
@@ -206,7 +206,7 @@ class ArgoEngine:
 
     def get_workflow_details(
         self, workflow_name: str, uid: str = None
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """
         Gets the workflow status
 
@@ -215,7 +215,7 @@ class ArgoEngine:
             uid (str): uid of an archived workflow to get status of
 
         Returns:
-            Dict[str, any]: returns a dict that looks like the below
+            Dict[str, Any]: returns a dict that looks like the below
                             {
                                 "name": {workflow_name},
                                 "arguments": {workflow_arguments},
@@ -538,7 +538,7 @@ class ArgoEngine:
             uid (str): uid of an archived workflow to get status of
 
         Returns:
-            Dict[str, any]: returns a list of dictionaries of errors of Retry nodes
+            Dict[str, Any]: returns a list of dictionaries of errors of Retry nodes
         """
         try:
             archived_workflow_dict = self._get_archived_workflow_details_dict(uid)
