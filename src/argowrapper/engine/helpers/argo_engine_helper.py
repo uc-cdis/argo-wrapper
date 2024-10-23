@@ -2,7 +2,7 @@ import json
 import random
 import re
 import string
-from typing import Callable, Dict, List
+from typing import Any, Callable, Dict, List
 
 import jwt
 
@@ -38,8 +38,8 @@ def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
 
 
 def parse_common_details(
-    workflow_details: Dict[str, any], workflow_type: str
-) -> Dict[str, any]:
+    workflow_details: Dict[str, Any], workflow_type: str
+) -> Dict[str, Any]:
     phase = workflow_details["status"].get("phase")
     if workflow_type == "active_workflow":
         shutdown = workflow_details["spec"].get("shutdown")
@@ -68,8 +68,8 @@ def parse_common_details(
 
 
 def parse_details(
-    workflow_details: Dict[str, any], workflow_type: str
-) -> Dict[str, any]:
+    workflow_details: Dict[str, Any], workflow_type: str
+) -> Dict[str, Any]:
     result = parse_common_details(
         workflow_details=workflow_details, workflow_type=workflow_type
     )
@@ -95,10 +95,10 @@ def parse_details(
 
 
 def parse_list_item(
-    workflow_details: Dict[str, any],
+    workflow_details: Dict[str, Any],
     workflow_type: str,
     get_archived_workflow_wf_name_and_team_project: Callable = None,
-) -> Dict[str, any]:
+) -> Dict[str, Any]:
     """Parse the return of workflow list view"""
     result = parse_common_details(
         workflow_details=workflow_details, workflow_type=workflow_type
