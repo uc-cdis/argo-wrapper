@@ -182,8 +182,9 @@ class ArgoEngine:
                 node_outputs_mainlog = self._get_workflow_node_artifact(
                     uid=uid, node_id=node_id
                 )
+                step_log = "\n".join(message)
                 node_log_interpreted = GWAS.interpret_gwas_workflow_error(
-                    step_name=node_step, step_log=message
+                    step_name=node_step, step_log=step_log
                 )
                 errors.append(
                     {
