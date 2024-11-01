@@ -1,7 +1,6 @@
-import string
 import traceback
 from datetime import datetime
-from typing import Any, Dict, List, Literal
+from typing import Any, Dict, List
 
 import argo_workflows
 from argo_workflows.api import (
@@ -142,7 +141,9 @@ class ArgoEngine:
         else:
             return None
 
-    def _get_log_errors(self, uid: str, status_nodes_dict: Dict) -> List[Dict]:
+    def _get_log_errors(
+        self, uid: str, status_nodes_dict: Dict
+    ) -> List[Dict[str, Any]]:
         errors = []
         first_failed_node = self._find_first_failed_node(uid)
 
@@ -529,7 +530,7 @@ class ArgoEngine:
             )
             raise exception
 
-    def get_workflow_logs(self, workflow_name: str, uid: str) -> List[Dict]:
+    def get_workflow_logs(self, workflow_name: str, uid: str) -> List[Dict[str, Any]]:
         """
         Gets the workflow errors from failed workflow
 
@@ -538,7 +539,7 @@ class ArgoEngine:
             uid (str): uid of an archived workflow to get status of
 
         Returns:
-            Dict[str, Any]: returns a list of dictionaries of errors of Retry nodes
+            List[Dict[str, Any]]: returns a list of dictionaries of errors of Retry nodes
         """
         try:
             archived_workflow_dict = self._get_archived_workflow_details_dict(uid)
