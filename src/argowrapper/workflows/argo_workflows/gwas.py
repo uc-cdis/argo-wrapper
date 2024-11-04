@@ -207,8 +207,6 @@ class GWAS(WorkflowBase):
             show_error = "An HTTP error occurred while creating an index record. Please retry running your workflow."
         elif step_name == "run-single-assoc" and "where TRUE/FALSE needed" in step_log:
             show_error = "The error was caused by extreme outliers in the outcome or the covariates. Please try using different outcome/covariates variables."
-        elif step_name == "get-gwas-metadata" and "NoneType" in step_log:
-            show_error = "test message"
         else:
             show_error = ""
         return show_error
