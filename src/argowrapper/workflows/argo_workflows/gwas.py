@@ -1,4 +1,4 @@
-from typing import Dict, List, Union
+from typing import Dict, List, Optional
 
 import argowrapper.engine.helpers.argo_engine_helper as argo_engine_helper
 from argowrapper import logger
@@ -73,7 +73,7 @@ class GWAS(WorkflowBase):
         self,
         namespace: str,
         request_body: Dict,
-        auth_header: Union[str, None],
+        auth_header: Optional[str],
         dry_run=False,
     ):
         self.username = argo_engine_helper.get_username_from_token(auth_header)

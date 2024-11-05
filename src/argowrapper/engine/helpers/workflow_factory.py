@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional
 
 from argowrapper.constants import WORKFLOW
 from argowrapper.workflows.argo_workflows.gwas import GWAS
@@ -9,7 +9,7 @@ class WorkflowFactory:
     def _get_workflow(
         namespace: str,
         request_body: Dict[str, Any],
-        auth_header: Union[str, None],
+        auth_header: Optional[str],
         workflow_type: WORKFLOW,
     ):
         workflows = {WORKFLOW.GWAS: GWAS}

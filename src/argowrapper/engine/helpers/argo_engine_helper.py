@@ -2,7 +2,7 @@ import json
 import random
 import re
 import string
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional
 
 import jwt
 
@@ -216,7 +216,7 @@ def convert_string_to_pod_label(value: str) -> str:
     return label
 
 
-def get_username_from_token(header_and_or_token: Union[str, None]) -> str:
+def get_username_from_token(header_and_or_token: Optional[str]) -> str:
     """
 
     Args:
