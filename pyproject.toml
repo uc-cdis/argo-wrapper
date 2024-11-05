@@ -3,7 +3,6 @@ name = "argowrapper"
 version = "2.2.0"
 description = "argo wrapper for va workflow"
 authors = ["UchicagoZchen138 <zchen138@uchicago.edu>"]
-readme = "README.md"
 repository = "https://github.com/uc-cdis/argo-wrapper"
 
 [tool.poetry.dependencies]

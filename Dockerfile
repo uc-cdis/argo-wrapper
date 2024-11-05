@@ -1,16 +1,16 @@
 ARG AZLINUX_BASE_VERSION=master
 
-FROM 707767160287.dkr.ecr.us-east-1.amazonaws.com/gen3/python-build-base:${AZLINUX_BASE_VERSION} as base
-# FROM quay.io/cdis/python-build-base:${AZLINUX_BASE_VERSION} as base
+FROM 707767160287.dkr.ecr.us-east-1.amazonaws.com/gen3/python-build-base:${AZLINUX_BASE_VERSION} AS base
+# FROM quay.io/cdis/python-build-base:${AZLINUX_BASE_VERSION} AS base
 
 ENV appname=argowrapper
 
-FROM base as builder
+FROM base AS builder
 
 WORKDIR /$appname
 
 COPY poetry.lock pyproject.toml /$appname/
-RUN pip install --upgrade poetry \
+RUN pip install --upgrade pip poetry \
     && poetry install --without dev --no-interaction
 
 COPY src /$appname/src
