@@ -1,4 +1,4 @@
-import re
+from typing import Optional
 
 from gen3authz.client.arborist.client import ArboristClient
 from gen3authz.client.arborist.errors import ArboristError
@@ -27,7 +27,7 @@ class Auth:
         else:
             self.arborist_client = ArboristClient(logger=logger)
 
-    def _parse_jwt(self, token: str) -> str:
+    def _parse_jwt(self, token: Optional[str]) -> str:
 
         parsed_token = TOKEN_REGEX.sub("", token)
         parsed_token = parsed_token.replace(" ", "")
@@ -37,7 +37,7 @@ class Auth:
 
         return parsed_token
 
-    def authenticate(self, token: str, team_project=None) -> bool:
+    def authenticate(self, token, team_project=None):
         """
 
         jwt token authentication for mariner access

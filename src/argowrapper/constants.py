@@ -47,14 +47,14 @@ EXCEED_WORKFLOW_LIMIT_ERROR: Final = "User has reached monthly workflow limit."
 
 
 class POD_COMPLETION_STRATEGY(Enum):
-    ONWORKFLOWSUCCESS: Final = "OnWorkflowSuccess"
-    ONPODSUCESS: Final = "OnPodSuccess"
-    ONPODCOMPLETION: Final = "OnPodCompletion"
+    ONWORKFLOWSUCCESS = "OnWorkflowSuccess"
+    ONPODSUCESS = "OnPodSuccess"
+    ONPODCOMPLETION = "OnPodCompletion"
 
 
 class WORKFLOW_ENTRYPOINT(Enum):
-    GWAS_ENTRYPOINT: Final = "gwas-workflow"
+    GWAS_ENTRYPOINT = "gwas-workflow"
 
 
 class WORKFLOW(Enum):
-    GWAS: Final = "GWAS"
+    GWAS = "GWAS"

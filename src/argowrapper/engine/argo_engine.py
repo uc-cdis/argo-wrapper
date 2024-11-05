@@ -1,6 +1,6 @@
 import traceback
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple, Union
 
 import argo_workflows
 from argo_workflows.api import (
@@ -75,7 +75,7 @@ class ArgoEngine:
         )
         self.artifact_api_instance = artifact_service_api.ArtifactServiceApi(api_client)
 
-    def _get_workflow_details_dict(self, workflow_name: str) -> Dict:
+    def _get_workflow_details_dict(self, workflow_name: Union[str, None]) -> Dict:
         return self.api_instance.get_workflow(
             namespace=ARGO_NAMESPACE,
             name=workflow_name,
@@ -84,7 +84,7 @@ class ArgoEngine:
             _check_return_type=False,
         ).to_dict()
 
-    def _get_archived_workflow_details_dict(self, uid: str) -> Dict:
+    def _get_archived_workflow_details_dict(self, uid: Union[str, None]) -> Dict:
         """
         Queries the archived workflows api.
         Raises a argo_workflows.exceptions.NotFoundException if the workflow uid cannot be found
@@ -206,8 +206,8 @@ class ArgoEngine:
         return self.user_locks[username]
 
     def get_workflow_details(
-        self, workflow_name: str, uid: str = None
-    ) -> Dict[str, Any]:
+        self, workflow_name: Union[str, None], uid: Union[str, None] = None
+    ) -> Union[Dict[str, Any], str]:
         """
         Gets the workflow status
 
@@ -216,7 +216,7 @@ class ArgoEngine:
             uid (str): uid of an archived workflow to get status of
 
         Returns:
-            Dict[str, Any]: returns a dict that looks like the below
+            Union[Dict[str, Any], str]: returns a dict that looks like the below
                             {
                                 "name": {workflow_name},
                                 "arguments": {workflow_arguments},
@@ -335,7 +335,7 @@ class ArgoEngine:
 
     def _get_archived_workflow_wf_name_and_team_project(
         self, archived_workflow_uid
-    ) -> (str, str, str):
+    ) -> Tuple[str, str, str]:
         """
         Gets the name and team project details for the given archived workflow
 
@@ -358,9 +358,21 @@ class ArgoEngine:
         # call workflow details endpoint:
         workflow_details = self.get_workflow_details(None, archived_workflow_uid)
         #  get the workflow given name from the parsed details:
-        given_name = workflow_details["wf_name"]
-        team_project = workflow_details[GEN3_TEAM_PROJECT_METADATA_LABEL]
-        gen3username = workflow_details[GEN3_USER_METADATA_LABEL]
+        given_name = (
+            workflow_details.get("wf_name", "")
+            if isinstance(workflow_details, dict)
+            else ""
+        )
+        team_project = (
+            workflow_details.get(GEN3_TEAM_PROJECT_METADATA_LABEL, "")
+            if isinstance(workflow_details, dict)
+            else ""
+        )
+        gen3username = (
+            workflow_details.get(GEN3_USER_METADATA_LABEL, "")
+            if isinstance(workflow_details, dict)
+            else ""
+        )
         self.workflow_given_names_cache[archived_workflow_uid] = (
             given_name,
             team_project,
@@ -369,7 +381,7 @@ class ArgoEngine:
         return given_name, team_project, gen3username
 
     def get_workflows_for_team_projects_and_user(
-        self, team_projects: List[str], auth_header: str
+        self, team_projects: List[str], auth_header: Union[str, None]
     ) -> List[Dict]:
         team_project_workflows = self.get_workflows_for_team_projects(team_projects)
         user_workflows = self.get_workflows_for_user(auth_header)
@@ -406,7 +418,7 @@ class ArgoEngine:
         workflows = self.get_workflows_for_label_selector(label_selector=label_selector)
         return workflows
 
-    def get_workflows_for_user(self, auth_header: str) -> List[Dict]:
+    def get_workflows_for_user(self, auth_header: Union[str, None]) -> List[Dict]:
         """
         Get the list of all workflows for the current user. Each item in the list
         contains the workflow name, its status, start and end time.
@@ -590,7 +602,7 @@ class ArgoEngine:
                 f"could not get status of {workflow_name}, workflow does not exist"
             )
 
-    def workflow_submission(self, request_body: Dict, auth_header: str):
+    def workflow_submission(self, request_body: Dict, auth_header: Union[str, None]):
         # Lock function so only one can run at a time per user
         username = argo_engine_helper.get_username_from_token(auth_header)
         user_lock = self._get_lock_for_user(username)
@@ -699,7 +711,7 @@ class ArgoEngine:
             return None, None
 
     def check_user_monthly_workflow_cap(
-        self, request_token, billing_id, custom_limit: int
+        self, request_token, billing_id, custom_limit: Union[int, None]
     ):
         """
         Query Argo service to see how many workflow runs user already
