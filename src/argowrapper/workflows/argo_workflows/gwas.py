@@ -15,7 +15,7 @@ from argowrapper.constants import (
 )
 
 
-def __create_gds_files() -> str:
+def create_gds_files() -> str:
     gds_files = [
         f'"/commons-data/gds/chr{chrom_num}.merged.vcf.gz.gds"'
         for chrom_num in range(1, 23)
@@ -45,7 +45,7 @@ class GWAS(WorkflowBase):
         "segment_length": 2000,
         "variant_block_size": 100,
         "mac_threshold": 0,
-        "gds_files": __create_gds_files(),
+        "gds_files": create_gds_files(),
     }
 
     PARAMETER_TO_DEFAULT_VALS = {
