@@ -711,7 +711,10 @@ class ArgoEngine:
             return None, None
 
     def check_user_monthly_workflow_cap(
-        self, request_token, billing_id, custom_limit: Optional[int]
+        self,
+        request_token: str,
+        billing_id: Optional[int] = None,
+        custom_limit: Optional[int] = None
     ):
         """
         Query Argo service to see how many workflow runs user already
