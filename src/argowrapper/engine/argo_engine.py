@@ -358,21 +358,9 @@ class ArgoEngine:
         # call workflow details endpoint:
         workflow_details = self.get_workflow_details(None, archived_workflow_uid)
         #  get the workflow given name from the parsed details:
-        given_name = (
-            workflow_details.get("wf_name", "")
-            if isinstance(workflow_details, dict)
-            else ""
-        )
-        team_project = (
-            workflow_details.get(GEN3_TEAM_PROJECT_METADATA_LABEL, "")
-            if isinstance(workflow_details, dict)
-            else ""
-        )
-        gen3username = (
-            workflow_details.get(GEN3_USER_METADATA_LABEL, "")
-            if isinstance(workflow_details, dict)
-            else ""
-        )
+        given_name = workflow_details["wf_name"]
+        team_project = workflow_details[GEN3_TEAM_PROJECT_METADATA_LABEL]
+        gen3username = workflow_details[GEN3_USER_METADATA_LABEL]
         self.workflow_given_names_cache[archived_workflow_uid] = (
             given_name,
             team_project,
@@ -714,7 +702,7 @@ class ArgoEngine:
         self,
         request_token: str,
         billing_id: Optional[int] = None,
-        custom_limit: Optional[int] = None
+        custom_limit: Optional[int] = None,
     ):
         """
         Query Argo service to see how many workflow runs user already
