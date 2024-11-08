@@ -195,7 +195,7 @@ class GWAS(WorkflowBase):
         return super()._to_dict()
 
     @staticmethod
-    def interpret_gwas_workflow_error(step_name: str, step_log: List) -> str:
+    def interpret_gwas_workflow_error(step_name: str, step_log: str) -> str:
         """A static method to interpret the error message in the main-log file
         of Failed Retry node
         """
