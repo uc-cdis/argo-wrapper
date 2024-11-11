@@ -7,27 +7,24 @@ repository = "https://github.com/uc-cdis/argo-wrapper"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-fastapi = "^0.71.0"
-uvicorn = "^0.16.0"
-gunicorn = "^20.0.4"
-importlib-metadata = "^4.10.0"
-PyYAML = "6.0.1"
-pytest = "^6.2.5"
-pytest-mock = "^3.6.1"
-pytest-asyncio = "^0.20"
+argo-workflows = "^6.5"
 cdislogging = "^1.1.1"
-argo-workflows = "6.4.7"
+fastapi = "^0.115"
 gen3authz = "^1.5.0"
-importlib-resources = "^5.4.0"
-requests = "^2.27.1"
-PyJWT = "^2.4.0"
-pytest-cov = "^3.0.0"
-freezegun = "^1.2.2"
+gunicorn = "^23.0"
+PyJWT = "^2.9"
+PyYAML = "^6.0"
+requests = "^2.32"
+uvicorn = "^0.32"
 
-[tool.poetry.dev-dependencies]
-pytest = "^6.2.5"
-
+[tool.poetry.group.dev.dependencies]
+freezegun = "^1.5"
+pylint = "^3.3"
+pytest = "^6.2"
+pytest-asyncio = "^0"
+pytest-cov = "^5.0"
+pytest-mock = "^3.6"
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List, Optional
 
 import argowrapper.engine.helpers.argo_engine_helper as argo_engine_helper
 from argowrapper import logger
@@ -15,6 +15,16 @@ from argowrapper.constants import (
 )
 
 
+def create_gds_files() -> str:
+    gds_files = [
+        f'"/commons-data/gds/chr{chrom_num}.merged.vcf.gz.gds"'
+        for chrom_num in range(1, 23)
+    ]
+    # add chrX VCF
+    gds_files.append('"/commons-data/gds/chrX.merged.vcf.gz.gds"')
+    return f'[{", ".join(gds_files)}]'
+
+
 class GWAS(WorkflowBase):
     """A class to represent the gwas workflow
 
@@ -24,15 +34,6 @@ class GWAS(WorkflowBase):
         gen3username_label (string): k8 label converted from username
         _request_body (Dict): a dictionary of request parameters from the user
     """
-
-    def __create_gds_files() -> str:
-        gds_files = [
-            f'"/commons-data/gds/chr{chrom_num}.merged.vcf.gz.gds"'
-            for chrom_num in range(1, 23)
-        ]
-        # add chrX VCF
-        gds_files.append('"/commons-data/gds/chrX.merged.vcf.gz.gds"')
-        return f'[{", ".join(gds_files)}]'
 
     HARD_CODED_PARAMETERS = {
         "genome_build": "hg19",
@@ -44,7 +45,7 @@ class GWAS(WorkflowBase):
         "segment_length": 2000,
         "variant_block_size": 100,
         "mac_threshold": 0,
-        "gds_files": __create_gds_files(),
+        "gds_files": create_gds_files(),
     }
 
     PARAMETER_TO_DEFAULT_VALS = {
@@ -69,7 +70,11 @@ class GWAS(WorkflowBase):
     METADATA_LABELS = {"workflows.argoproj.io/archive-strategy": "true"}
 
     def __init__(
-        self, namespace: str, request_body: Dict, auth_header: str, dry_run=False
+        self,
+        namespace: str,
+        request_body: Dict,
+        auth_header: Optional[str],
+        dry_run=False,
     ):
         self.username = argo_engine_helper.get_username_from_token(auth_header)
         self.gen3username_label = argo_engine_helper.convert_gen3username_to_pod_label(

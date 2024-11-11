@@ -1,7 +1,6 @@
-import string
 import traceback
 from datetime import datetime
-from typing import Dict, List, Literal
+from typing import Any, Dict, List, Tuple, Union, Optional
 
 import argo_workflows
 from argo_workflows.api import (
@@ -76,7 +75,7 @@ class ArgoEngine:
         )
         self.artifact_api_instance = artifact_service_api.ArtifactServiceApi(api_client)
 
-    def _get_workflow_details_dict(self, workflow_name: str) -> Dict:
+    def _get_workflow_details_dict(self, workflow_name: Optional[str]) -> Dict:
         return self.api_instance.get_workflow(
             namespace=ARGO_NAMESPACE,
             name=workflow_name,
@@ -85,7 +84,7 @@ class ArgoEngine:
             _check_return_type=False,
         ).to_dict()
 
-    def _get_archived_workflow_details_dict(self, uid: str) -> Dict:
+    def _get_archived_workflow_details_dict(self, uid: Optional[str]) -> Dict:
         """
         Queries the archived workflows api.
         Raises a argo_workflows.exceptions.NotFoundException if the workflow uid cannot be found
@@ -142,7 +141,9 @@ class ArgoEngine:
         else:
             return None
 
-    def _get_log_errors(self, uid: str, status_nodes_dict: Dict) -> List[Dict]:
+    def _get_log_errors(
+        self, uid: str, status_nodes_dict: Dict
+    ) -> List[Dict[str, Any]]:
         errors = []
         first_failed_node = self._find_first_failed_node(uid)
 
@@ -206,8 +207,8 @@ class ArgoEngine:
         return self.user_locks[username]
 
     def get_workflow_details(
-        self, workflow_name: str, uid: str = None
-    ) -> Dict[str, any]:
+        self, workflow_name: Optional[str], uid: Optional[str] = None
+    ) -> Union[Dict[str, Any], str]:
         """
         Gets the workflow status
 
@@ -216,7 +217,7 @@ class ArgoEngine:
             uid (str): uid of an archived workflow to get status of
 
         Returns:
-            Dict[str, any]: returns a dict that looks like the below
+            Union[Dict[str, Any], str]: returns a dict that looks like the below
                             {
                                 "name": {workflow_name},
                                 "arguments": {workflow_arguments},
@@ -335,7 +336,7 @@ class ArgoEngine:
 
     def _get_archived_workflow_wf_name_and_team_project(
         self, archived_workflow_uid
-    ) -> (str, str, str):
+    ) -> Tuple[str, str, str]:
         """
         Gets the name and team project details for the given archived workflow
 
@@ -369,7 +370,7 @@ class ArgoEngine:
         return given_name, team_project, gen3username
 
     def get_workflows_for_team_projects_and_user(
-        self, team_projects: List[str], auth_header: str
+        self, team_projects: List[str], auth_header: Optional[str]
     ) -> List[Dict]:
         team_project_workflows = self.get_workflows_for_team_projects(team_projects)
         user_workflows = self.get_workflows_for_user(auth_header)
@@ -406,7 +407,7 @@ class ArgoEngine:
         workflows = self.get_workflows_for_label_selector(label_selector=label_selector)
         return workflows
 
-    def get_workflows_for_user(self, auth_header: str) -> List[Dict]:
+    def get_workflows_for_user(self, auth_header: Optional[str]) -> List[Dict]:
         """
         Get the list of all workflows for the current user. Each item in the list
         contains the workflow name, its status, start and end time.
@@ -530,7 +531,7 @@ class ArgoEngine:
             )
             raise exception
 
-    def get_workflow_logs(self, workflow_name: str, uid: str) -> List[Dict]:
+    def get_workflow_logs(self, workflow_name: str, uid: str) -> List[Dict[str, Any]]:
         """
         Gets the workflow errors from failed workflow
 
@@ -539,7 +540,7 @@ class ArgoEngine:
             uid (str): uid of an archived workflow to get status of
 
         Returns:
-            Dict[str, any]: returns a list of dictionaries of errors of Retry nodes
+            List[Dict[str, Any]]: returns a list of dictionaries of errors of Retry nodes
         """
         try:
             archived_workflow_dict = self._get_archived_workflow_details_dict(uid)
@@ -590,7 +591,7 @@ class ArgoEngine:
                 f"could not get status of {workflow_name}, workflow does not exist"
             )
 
-    def workflow_submission(self, request_body: Dict, auth_header: str):
+    def workflow_submission(self, request_body: Dict, auth_header: Optional[str]):
         # Lock function so only one can run at a time per user
         username = argo_engine_helper.get_username_from_token(auth_header)
         user_lock = self._get_lock_for_user(username)
@@ -699,7 +700,10 @@ class ArgoEngine:
             return None, None
 
     def check_user_monthly_workflow_cap(
-        self, request_token, billing_id, custom_limit: int
+        self,
+        request_token: str,
+        billing_id: Optional[int] = None,
+        custom_limit: Optional[int] = None,
     ):
         """
         Query Argo service to see how many workflow runs user already

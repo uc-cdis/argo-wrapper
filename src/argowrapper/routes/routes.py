@@ -1,6 +1,6 @@
 import traceback
 from functools import wraps
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from fastapi import APIRouter, Request, Query
 from fastapi.responses import HTMLResponse
@@ -220,7 +220,7 @@ def test():
 def submit_workflow(
     request_body: Dict[Any, Any],
     request: Request,  # pylint: disable=unused-argument
-) -> str:
+) -> Union[str, Any]:
     """route to submit workflow"""
     try:
         return argo_engine.workflow_submission(
@@ -247,7 +247,7 @@ def get_workflow_details(
     workflow_name: str,
     uid: str,
     request: Request,  # pylint: disable=unused-argument
-) -> Dict[str, any]:
+) -> Union[Dict[str, Any], str, Any]:
     """returns details of a workflow"""
 
     try:
@@ -268,7 +268,7 @@ def retry_workflow(
     workflow_name: str,
     uid: str,
     request: Request,  # pylint: disable=unused-argument
-) -> str:
+) -> Union[str, Any]:
     """retries a currently failed workflow"""
     workflow_details = argo_engine.get_workflow_details(workflow_name, uid)
     try:
@@ -295,7 +295,7 @@ def retry_workflow(
 def cancel_workflow(
     workflow_name: str,
     request: Request,  # pylint: disable=unused-argument
-) -> str:
+) -> Union[str, Any]:
     """cancels a currently running workflow"""
 
     try:
@@ -315,7 +315,7 @@ def cancel_workflow(
 def get_workflows(
     request: Request,  # pylint: disable=unused-argument
     team_projects: Optional[List[str]] = Query(default=None),
-) -> List[str]:
+) -> Union[List[Dict], Any]:
     """returns the list of workflows the user has ran"""
 
     try:
@@ -344,7 +344,7 @@ def get_workflow_logs(
     workflow_name: str,
     uid: str,
     request: Request,  # pylint: disable=unused-argument
-) -> List[str]:
+) -> Union[List[Dict], Any]:
     """returns the list of workflows the user has ran"""
 
     try:
@@ -361,7 +361,7 @@ def get_workflow_logs(
 @router.get("/workflows/user-monthly", status_code=HTTP_200_OK)
 def get_user_monthly_workflow(
     request: Request,
-) -> Dict[str, any]:
+) -> Dict[str, Any]:
     """
     Query Argo service to see how many successful run user already
     have in the current calendar month. Return workflow numbers and workflow cap

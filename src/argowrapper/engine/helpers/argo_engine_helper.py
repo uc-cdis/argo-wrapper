@@ -2,7 +2,7 @@ import json
 import random
 import re
 import string
-from typing import Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 import jwt
 
@@ -38,8 +38,8 @@ def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
 
 
 def parse_common_details(
-    workflow_details: Dict[str, any], workflow_type: str
-) -> Dict[str, any]:
+    workflow_details: Dict[str, Any], workflow_type: str
+) -> Dict[str, Any]:
     phase = workflow_details["status"].get("phase")
     if workflow_type == "active_workflow":
         shutdown = workflow_details["spec"].get("shutdown")
@@ -68,8 +68,8 @@ def parse_common_details(
 
 
 def parse_details(
-    workflow_details: Dict[str, any], workflow_type: str
-) -> Dict[str, any]:
+    workflow_details: Dict[str, Any], workflow_type: str
+) -> Dict[str, Any]:
     result = parse_common_details(
         workflow_details=workflow_details, workflow_type=workflow_type
     )
@@ -95,10 +95,10 @@ def parse_details(
 
 
 def parse_list_item(
-    workflow_details: Dict[str, any],
+    workflow_details: Dict[str, Any],
     workflow_type: str,
-    get_archived_workflow_wf_name_and_team_project: Callable = None,
-) -> Dict[str, any]:
+    get_archived_workflow_wf_name_and_team_project: Optional[Callable] = None,
+) -> Dict[str, Any]:
     """Parse the return of workflow list view"""
     result = parse_common_details(
         workflow_details=workflow_details, workflow_type=workflow_type
@@ -163,7 +163,7 @@ def _get_argo_config_dict() -> Dict:
         return data
 
 
-def _convert_to_hex(special_character_match: str) -> str:
+def _convert_to_hex(special_character_match: str) -> Optional[str]:
     if match := special_character_match.group():
         hex_val = match.encode("utf-8").hex()
         return f"-{hex_val}"
@@ -194,7 +194,7 @@ def convert_gen3teamproject_to_pod_label(team_project: str) -> str:
     return label
 
 
-def convert_pod_label_to_gen3teamproject(pod_label: str) -> str:
+def convert_pod_label_to_gen3teamproject(pod_label: str) -> Optional[str]:
     """
     Reverse the conversion gen3teamproject to pod_label.
     """
@@ -216,7 +216,7 @@ def convert_string_to_pod_label(value: str) -> str:
     return label
 
 
-def get_username_from_token(header_and_or_token: str) -> str:
+def get_username_from_token(header_and_or_token: Optional[str]) -> str:
     """
 
     Args:
@@ -250,7 +250,7 @@ def convert_username_label_to_gen3username(label: str) -> str:
         return ""
 
 
-def _convert_to_label(special_character_match: str) -> str:
+def _convert_to_label(special_character_match: str) -> Optional[str]:
     if match := special_character_match.group():
         match = match.strip("-")
         try:
