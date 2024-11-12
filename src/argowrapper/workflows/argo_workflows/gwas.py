@@ -199,10 +199,10 @@ class GWAS(WorkflowBase):
         """A static method to interpret the error message in the main-log file
         of Failed Retry node
         """
-        if step_name == "run-null-model" and "system is exactly singular" in step_log:
+        if step_name in ["run-null-model", "run-single-assoc"] and "system is exactly singular" in step_log:
             show_error = "The error occurred due to small cohort size or unbalanced cohort sizes. Please ensure that the cohorts selected for your analysis are sufficiently large and balanced."
         elif (
-            step_name == "run-single-assoc"
+            step_name in ["run-null-model", "run-single-assoc"]
             and "system is computationally singular" in step_log
         ):
             show_error = "The error occurred due to unbalanced cohort sizes. Please ensure that the sizes of the cohorts are as balanced as possible."
