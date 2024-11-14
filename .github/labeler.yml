@@ -1,5 +1,0 @@
-# we have disabled GWASUI tests in CI due to ongoing change in the app
-# '@requires-argo-wrapper':
-#   - '**/*'
-'test-portal-homepageTest':
-  - '**/*'
