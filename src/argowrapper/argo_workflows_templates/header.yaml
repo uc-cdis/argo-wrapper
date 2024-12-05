@@ -104,6 +104,6 @@ spec:
   volumes:
     - name: workdir
       emptyDir:
-        sizeLimit: "3Gi"
+        sizeLimit: "20Gi"
   workflowTemplateRef:
     name: gwas-template-integration-test
