@@ -101,6 +101,6 @@ spec:
         claimName: va-input-nfs-pvc
     - name: workdir
       emptyDir:
-        sizeLimit: "10Gi"
+        sizeLimit: "20Gi"
   workflowTemplateRef:
     name: gwas-template

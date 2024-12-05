@@ -173,7 +173,7 @@ class GWAS(WorkflowBase):
         )
         logger.info(f"pvc {pvc_name} is used as storage gateway pvc")
         self.spec.add_persistent_volume_claim("gateway", pvc_name)
-        self.spec.add_empty_dir("workdir", "10Gi")
+        self.spec.add_empty_dir("workdir", "20Gi")
 
     def _add_spec_podMetadata_annotations(self):
         self.spec.add_pod_metadata_annotation("gen3username", self.username)
@@ -199,7 +199,10 @@ class GWAS(WorkflowBase):
         """A static method to interpret the error message in the main-log file
         of Failed Retry node
         """
-        if step_name in ["run-null-model", "run-single-assoc"] and "system is exactly singular" in step_log:
+        if (
+            step_name in ["run-null-model", "run-single-assoc"]
+            and "system is exactly singular" in step_log
+        ):
             show_error = "The error occurred due to small cohort size or unbalanced cohort sizes. Please ensure that the cohorts selected for your analysis are sufficiently large and balanced."
         elif (
             step_name in ["run-null-model", "run-single-assoc"]
