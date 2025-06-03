@@ -5,7 +5,7 @@ on: push
 jobs:
   ci:
     name: Build Image and Push to Quay
-    uses: uc-cdis/.github/.github/workflows/image_build_push_native.yaml@master
+    uses: uc-cdis/.github/.github/workflows/image_build_push.yaml@master
     with:
       BUILD_PLATFORMS: "linux/arm64, linux/amd64"
     secrets:
