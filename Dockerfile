@@ -9,16 +9,21 @@ FROM base AS builder
 
 WORKDIR /$appname
 
+# Use virtualenvs.in-project to remove ambiguity about where Poetry creates the virtual environment,
+# i.e. the virtualenv will be created under the `.venv` directory in the project folder:
 COPY poetry.lock pyproject.toml /$appname/
 RUN pip install --upgrade pip poetry \
-    && poetry install --without dev --no-interaction
+    && poetry config virtualenvs.in-project true \
+    && poetry install --without dev --no-interaction --no-root
 
+# Copy source code and perform dependency installation
 COPY src /$appname/src
 RUN poetry install --without dev --no-interaction
 
 FROM base
 
-COPY --from=builder /venv /venv
+# Copy the virtual environment and project files
+COPY --from=builder /$appname/.venv /venv
 COPY --from=builder /$appname /$appname
 
 WORKDIR /$appname
