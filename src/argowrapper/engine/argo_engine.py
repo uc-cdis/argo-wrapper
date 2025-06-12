@@ -601,7 +601,7 @@ class ArgoEngine:
             if "workflow_name" in request_body.keys():
                 logger.info(f"lock acquired for {request_body['workflow_name']}")
             workflow = WorkflowFactory._get_workflow(
-                ARGO_NAMESPACE, request_body, auth_header, WORKFLOW.GWAS
+                ARGO_NAMESPACE, request_body, auth_header
             )
             workflow_yaml = workflow._to_dict()
 

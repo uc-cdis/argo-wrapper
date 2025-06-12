@@ -17,9 +17,9 @@ from argowrapper.constants import (
 auth = Auth()
 
 
-def generate_workflow_name() -> str:
+def generate_workflow_name(prefix_name: str) -> str:
     ending_id = "".join(random.choices(string.digits, k=10))
-    return "gwas-workflow-" + ending_id
+    return prefix_name + "-" + ending_id
 
 
 def _get_internal_api_env() -> str:
