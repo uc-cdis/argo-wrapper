@@ -54,7 +54,7 @@ class POD_COMPLETION_STRATEGY(Enum):
 
 class WORKFLOW_ENTRYPOINT(Enum):
     GWAS_ENTRYPOINT = "gwas-workflow"
-    PLP_ENTRYPOINT = "plp-workflow"
+    PLP_ENTRYPOINT = "plp"
 
 
 class WORKFLOW(Enum):
