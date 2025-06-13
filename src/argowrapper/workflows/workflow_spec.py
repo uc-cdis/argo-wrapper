@@ -53,7 +53,7 @@ class WorkflowSpec:
         self,
         parameter_name: str,
         parameter_value: str,
-        enum: List[str] | None,
+        enum: List[str],
         default: str = "",
     ) -> None:
         self._add_parameter(parameter_name, parameter_value, enum=enum, default=default)
