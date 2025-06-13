@@ -2,6 +2,7 @@ from typing import Any, Dict, Optional
 
 from argowrapper.constants import WORKFLOW
 from argowrapper.workflows.argo_workflows.gwas import GWAS
+from argowrapper.workflows.argo_workflows.plp import PLP
 
 
 class WorkflowFactory:
@@ -10,8 +11,10 @@ class WorkflowFactory:
         namespace: str,
         request_body: Dict[str, Any],
         auth_header: Optional[str],
-        workflow_type: WORKFLOW,
     ):
-        workflows = {WORKFLOW.GWAS: GWAS}
+        if request_body["template_version"].startswith("plp-template"):
+            workflow = PLP
+        elif request_body["template_version"].startswith("gwas-template"):
+            workflow = GWAS
 
-        return workflows[workflow_type](namespace, request_body, auth_header)
+        return workflow(namespace, request_body, auth_header)

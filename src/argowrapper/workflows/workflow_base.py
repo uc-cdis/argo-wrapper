@@ -16,7 +16,9 @@ class WorkflowBase:
     METADATA_LABELS = {}
 
     def __init__(self, namespace: str, entrypoint: WORKFLOW_ENTRYPOINT, dry_run=False):
-        self.wf_name = argo_engine_helper.generate_workflow_name()
+        self.wf_name = argo_engine_helper.generate_workflow_name(
+            prefix_name=entrypoint.value
+        )
         self.api_version = API_VERSION
         self.kind = WORKFLOW_KIND
         self.metadata = WorkflowMetadata(namespace)
