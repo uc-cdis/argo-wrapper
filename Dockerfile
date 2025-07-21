@@ -11,7 +11,7 @@ WORKDIR /$appname
 
 COPY poetry.lock pyproject.toml /$appname/
 RUN pip install --upgrade pip poetry \
-    && poetry install --without dev --no-interaction
+    && poetry install -vv --no-root --only main --no-interaction
 
 COPY src /$appname/src
 RUN poetry install --without dev --no-interaction
