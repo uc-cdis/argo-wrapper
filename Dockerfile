@@ -15,7 +15,7 @@ COPY poetry.lock pyproject.toml /$appname/
 RUN pip install --upgrade pip poetry \
     && poetry config virtualenvs.create true \
     && poetry config virtualenvs.path /venv \
-    && poetry install --without dev --no-interaction --no-root
+    && poetry install -vv --no-root --only main --no-interaction
 
 # Copy source code and perform dependency installation
 COPY src /$appname/src
