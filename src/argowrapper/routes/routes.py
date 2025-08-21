@@ -158,16 +158,22 @@ def check_team_projects_and_cohorts(fn):
 
         # Construct set with all cohort ids requested
         cohort_ids = []
-        if "cohort_ids" in request_body["outcome"]:
-            cohort_ids.extend(request_body["outcome"]["cohort_ids"])
+        if request_body["template_version"].startswith("plp-template"):
+            if "dataset_id" in request_body:
+                cohort_ids.append(request_body["dataset_id"]) # TODO - prefer dataset_cohort_id as name
+            if "outcome_id" in request_body:
+                cohort_ids.append(request_body["outcome_id"]) # TODO - prefer outcome_cohort_id as name
+        else:
+            if "cohort_ids" in request_body["outcome"]:
+                cohort_ids.extend(request_body["outcome"]["cohort_ids"])
 
-        variables = request_body["variables"]
-        for v in variables:
-            if "cohort_ids" in v:
-                cohort_ids.extend(v["cohort_ids"])
+            variables = request_body["variables"]
+            for v in variables:
+                if "cohort_ids" in v:
+                    cohort_ids.extend(v["cohort_ids"])
 
-        if "source_population_cohort" in request_body:
-            cohort_ids.append(request_body["source_population_cohort"])
+            if "source_population_cohort" in request_body:
+                cohort_ids.append(request_body["source_population_cohort"])
 
         cohort_id_set = set(cohort_ids)
 
