@@ -339,7 +339,7 @@ def test_get_username_from_token():
     assert argo_engine_helper.get_username_from_token(EXAMPLE_JUST_TOKEN) == "test user"
 
 
-def test__convert_request_body_to_parameter_dict():
+def test_validate_and_convert_request_body_to_parameter_dict():
     request_body = {
         "source_id": 1,
         "study_population_cohort": 123,
@@ -363,7 +363,7 @@ def test__convert_request_body_to_parameter_dict():
         "maf_threshold": 0.5,
         "imputation_score_cutoff": 0.3,
     }
-    result = argo_engine_helper._convert_request_body_to_parameter_dict(
+    result = argo_engine_helper.validate_and_convert_request_body_to_parameter_dict(
         request_body=request_body
     )
     # expect the same as above, but with complex values stringified:

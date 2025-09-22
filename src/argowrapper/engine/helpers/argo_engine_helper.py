@@ -26,14 +26,22 @@ def _get_internal_api_env() -> str:
     return _get_argo_config_dict().get("environment", "default")
 
 
-def _convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
-    """Basically returns a copy of the given dict, but with complex values stringified"""
+def validate_and_convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
+    """Basically validates and returns a copy of the given dict, but with complex values stringified"""
     dict_with_stringified_items = {}
+    SAFE_PATTERN = re.compile(r'^[\w\s.-]+$')  # letters, numbers, space, dot, dash, underscore
+
     for key, value in request_body.items():
-        if isinstance(value, (float, str, int)):
+        if isinstance(value, (float, int)):
             dict_with_stringified_items[key] = value
+        elif isinstance(value, str):
+            if SAFE_PATTERN.match(value) and len(value) <= 100:
+                dict_with_stringified_items[key] = value
+            else:
+                raise Exception(f"Invalid value or value too long for field {key}") 
         else:
-            dict_with_stringified_items[key] = json.dumps(value, indent=0)
+            dict_with_stringified_items[key] = json.dumps(value, indent=0) # still allows e.g. [ { "'; ls -la; name": "test" } ]
+                                                                           # TODO - This one does not result in classic code injection, but it is syntax injection, enabling an attacker to break the workflow and possibly exploit error handling or further code.
     return dict_with_stringified_items
 
 

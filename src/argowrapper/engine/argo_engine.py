@@ -591,17 +591,23 @@ class ArgoEngine:
                 f"could not get status of {workflow_name}, workflow does not exist"
             )
 
-    def workflow_submission(self, request_body: Dict, auth_header: Optional[str]):
+    def workflow_submission(self, workflow_parameters: Dict, auth_header: Optional[str]):
+        """
+        Submits a workflow to argo with the given workflow_parameters as input parameters.
+        """
         # Lock function so only one can run at a time per user
         username = argo_engine_helper.get_username_from_token(auth_header)
         user_lock = self._get_lock_for_user(username)
         user_lock.acquire()
 
         try:
-            if "workflow_name" in request_body.keys():
-                logger.info(f"lock acquired for {request_body['workflow_name']}")
+            sanitized_workflow_parameters = argo_engine_helper.validate_and_convert_request_body_to_parameter_dict(
+                workflow_parameters
+            )
+            if "workflow_name" in sanitized_workflow_parameters.keys():
+                logger.info(f"lock acquired for {sanitized_workflow_parameters['workflow_name']}")
             workflow = WorkflowFactory._get_workflow(
-                ARGO_NAMESPACE, request_body, auth_header
+                ARGO_NAMESPACE, sanitized_workflow_parameters, auth_header
             )
             workflow_yaml = workflow._to_dict()
 

@@ -32,7 +32,7 @@ class GWAS(WorkflowBase):
         dry_run (bool): is dry run
         username (string): username of person who submitted workflow
         gen3username_label (string): k8 label converted from username
-        _request_body (Dict): a dictionary of request parameters from the user
+        workflow_parameters (Dict): a dictionary of request parameters from the user
     """
 
     HARD_CODED_PARAMETERS = {
@@ -90,14 +90,14 @@ class GWAS(WorkflowBase):
         self.gen3teamproject_label = (
             argo_engine_helper.convert_gen3teamproject_to_pod_label(team_project)
         )
-        self._request_body = request_body
+        self.workflow_parameters = request_body
 
         super().__init__(namespace, WORKFLOW_ENTRYPOINT.GWAS_ENTRYPOINT, dry_run)
 
     def _add_metadata_annotations(self):
         super()._add_metadata_annotations()
         self.metadata.add_metadata_annotation(
-            "workflow_name", self._request_body.get("workflow_name")
+            "workflow_name", self.workflow_parameters.get("workflow_name")
         )
 
     def _add_metadata_labels(self):
@@ -145,10 +145,7 @@ class GWAS(WorkflowBase):
                 )
 
     def _add_user_defined_spec_parameters(self):
-        spec_parameters = argo_engine_helper._convert_request_body_to_parameter_dict(
-            self._request_body
-        )
-        self._add_param_helper(spec_parameters)
+        self._add_param_helper(self.workflow_parameters)
 
     def _add_hard_coded_spec_parameters(self):
         self._add_param_helper(self.HARD_CODED_PARAMETERS)
@@ -189,7 +186,7 @@ class GWAS(WorkflowBase):
         self._add_spec_podMetadata_labels()
         self._add_spec_parameters()
         self._add_spec_volumes()
-        self.spec.set_workflow_template_ref(self._request_body.get("template_version"))
+        self.spec.set_workflow_template_ref(self.workflow_parameters.get("template_version"))
 
     def generate_argo_workflow(self):
         return super()._to_dict()
