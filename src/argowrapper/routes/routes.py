@@ -25,6 +25,7 @@ from argowrapper.engine.argo_engine import ArgoEngine
 from argowrapper.auth.utils import get_cohort_ids_for_team_project
 
 import argowrapper.engine.helpers.argo_engine_helper as argo_engine_helper
+import json
 
 router = APIRouter()
 argo_engine = ArgoEngine()
@@ -213,6 +214,26 @@ def check_team_projects_and_cohorts(fn):
     return wrapper
 
 
+def check_payload_size(fn):
+    """custom annotation to make sure payloads are not too large"""
+
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        max_total_size = 4096
+        request_body = kwargs["request_body"]
+
+        # Check total serialized size
+        total_size = len(json.dumps(request_body))
+        if total_size > max_total_size:
+            # size too large, return bad request:
+            return HTMLResponse(
+                content=f"Serialized size ({total_size}) exceeds limit ({max_total_size} bytes).",
+                status_code=HTTP_400_BAD_REQUEST,
+            )
+
+    return wrapper
+
+
 @router.get("/test")
 def test():
     """route to test that the argo-workflow is correctly running"""
@@ -223,6 +244,7 @@ def test():
 @router.post("/submit", status_code=HTTP_200_OK)
 @check_auth_and_team_project
 @check_team_projects_and_cohorts
+@check_payload_size
 def submit_workflow(
     request_body: Dict[Any, Any],
     request: Request,  # pylint: disable=unused-argument

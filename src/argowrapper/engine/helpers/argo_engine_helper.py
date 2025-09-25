@@ -40,8 +40,9 @@ def validate_and_convert_request_body_to_parameter_dict(request_body: Dict) -> D
             else:
                 raise Exception(f"Invalid value or value too long for field {key}") 
         else:
-            dict_with_stringified_items[key] = json.dumps(value, indent=0) # still allows e.g. [ { "'; ls -la; name": "test" } ]
-                                                                           # TODO - This one does not result in classic code injection, but it is syntax injection, enabling an attacker to break the workflow and possibly exploit error handling or further code.
+            validate_and_convert_request_body_to_parameter_dict(value), # recursion to make sure all substructures get the same validation
+            dict_with_stringified_items[key] = json.dumps(value, indent=0)
+
     return dict_with_stringified_items
 
 
