@@ -26,21 +26,28 @@ def _get_internal_api_env() -> str:
     return _get_argo_config_dict().get("environment", "default")
 
 
-def validate_and_convert_request_body_to_parameter_dict(request_body: Dict) -> Dict:
+def validate_and_convert_request_body_to_parameter_dict(request_body: Dict, team_project_field_name = None) -> Dict:
     """Basically validates and returns a copy of the given dict, but with complex values stringified"""
     dict_with_stringified_items = {}
-    SAFE_PATTERN = re.compile(r'^[\w\s.-]+$')  # letters, numbers, space, dot, dash, underscore
+    SAFE_PATTERN = re.compile(r'^[\w\s.-]+$')  # generally allow letters, numbers, space, dot, dash, underscore
+    TEAM_PROJECT_PATTERN = re.compile(r'^[\w./-]+$') # team project can have slash, but cannot have spaces
 
     for key, value in request_body.items():
         if isinstance(value, (float, int)):
             dict_with_stringified_items[key] = value
         elif isinstance(value, str):
-            if SAFE_PATTERN.match(value) and len(value) <= 100:
+            pattern_to_use = TEAM_PROJECT_PATTERN if team_project_field_name and key == team_project_field_name else SAFE_PATTERN
+
+            if len(value) <= 100:
                 dict_with_stringified_items[key] = value
             else:
-                raise Exception(f"Invalid value or value too long for field {key}") 
+                raise Exception(f"Value too long for field {key}, length: {len(value)}")
+            if pattern_to_use.match(value):
+                dict_with_stringified_items[key] = value
+            else:
+                raise Exception(f"Invalid value for field {key}") 
         else:
-            validate_and_convert_request_body_to_parameter_dict(value), # recursion to make sure all substructures get the same validation
+            validate_and_convert_request_body_to_parameter_dict(value, team_project_field_name), # recursion to make sure all substructures get the same validation
             dict_with_stringified_items[key] = json.dumps(value, indent=0)
 
     return dict_with_stringified_items
