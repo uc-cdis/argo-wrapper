@@ -29,14 +29,14 @@ def _get_internal_api_env() -> str:
 def validate_and_convert_request_body_to_parameter_dict(request_body: Dict, team_project_field_name = None) -> Dict:
     """Basically validates and returns a copy of the given dict, but with complex values stringified"""
     dict_with_stringified_items = {}
-    SAFE_PATTERN = re.compile(r'^[\w\s.-]+$')  # generally allow letters, numbers, space, dot, dash, underscore
+    GENERAL_SAFE_PATTERN = re.compile(r'^[\w\s.-]+$')  # generally allow letters, numbers, space, dot, dash, underscore
     TEAM_PROJECT_PATTERN = re.compile(r'^[\w./-]+$') # team project can have slash, but cannot have spaces
 
     for key, value in request_body.items():
         if isinstance(value, (float, int)):
             dict_with_stringified_items[key] = value
         elif isinstance(value, str):
-            pattern_to_use = TEAM_PROJECT_PATTERN if team_project_field_name and key == team_project_field_name else SAFE_PATTERN
+            pattern_to_use = TEAM_PROJECT_PATTERN if team_project_field_name and key == team_project_field_name else GENERAL_SAFE_PATTERN
 
             if len(value) <= 100:
                 dict_with_stringified_items[key] = value
