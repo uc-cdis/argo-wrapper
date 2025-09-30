@@ -130,17 +130,14 @@ def test_gwas_yaml_spec_arguments():
         "n_pcs": 3,
         "variables": variables,
         "out_prefix": "vadc_genesis",
-        "variables": variables,
         "maf_threshold": 0.01,
         "imputation_score_cutoff": 0.3,
     }
 
     for param_name, param_val in user_params.items():
         if param_name == "variables":
-            for _, variable in enumerate(param_val):
-                result = parameters[param_name].replace("\n", "")
-                for key in variable:
-                    assert str(key) in result
+            result = parameters[param_name]
+            assert result == param_val
 
         elif param_name == "outcome":
             assert json.dumps(param_val, indent=0) == parameters[param_name]

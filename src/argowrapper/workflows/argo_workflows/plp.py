@@ -22,7 +22,7 @@ class PLP(WorkflowBase):
         dry_run (bool): is dry run
         username (string): username of person who submitted workflow
         gen3username_label (string): k8 label converted from username
-        workflow_parameters (Dict): a dictionary of request parameters from the user
+        workflow_parameters (Dict): a dictionary of request parameters from the user, with complex parameters flattened as a string
     """
 
     HARD_CODED_PARAMETERS = {
