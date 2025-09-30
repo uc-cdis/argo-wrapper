@@ -11,6 +11,7 @@ from test.constants import EXAMPLE_AUTH_HEADER
 from argowrapper.routes.routes import (
     router,
 )
+from argowrapper.routes.routes import argo_engine
 from argowrapper.constants import (
     GEN3_NON_VA_WORKFLOW_MONTHLY_CAP,
     GEN3_DEFAULT_WORKFLOW_MONTHLY_CAP,
@@ -106,8 +107,8 @@ def mocked_requests_get(*args, **kwargs):
 
 
 def test_submit_workflow(client):
-    with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
-        "argowrapper.routes.routes.argo_engine.workflow_submission"
+    with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch.object(
+        argo_engine, "workflow_submission"
     ) as mock_engine, patch(
         "argowrapper.routes.routes.log_auth_check_type"
     ) as mock_log, patch(
