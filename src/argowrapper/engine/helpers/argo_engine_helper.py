@@ -12,6 +12,7 @@ from argowrapper.constants import (
     ARGO_CONFIG_PATH,
     GEN3_USER_METADATA_LABEL,
     GEN3_TEAM_PROJECT_METADATA_LABEL,
+    TEAM_PROJECT_FIELD_NAME,
 )
 
 auth = Auth()
@@ -47,7 +48,7 @@ def validate_value(field_name_or_description: str, value: Union[float, int, str,
         raise Exception(f"Invalid list item in list {field_name_or_description}. Only some types are allowed.")
 
 
-def validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict(parameter_dict: Dict, team_project_field_name = None) -> Dict:
+def validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict(parameter_dict: Dict, team_project_field_name = TEAM_PROJECT_FIELD_NAME) -> Dict:
     """Basically validates and returns a copy of the given dict, but with complex values stringified"""
     dict_with_stringified_items = {}
     GENERAL_SAFE_PATTERN = re.compile(r'^[\w\s.-]+$')  # generally allow letters, numbers, space, dot, dash, underscore

@@ -96,7 +96,7 @@ def check_auth_and_team_project(fn):
         request = kwargs["request"]
         token = request.headers.get("Authorization")
         request_body = argo_engine_helper.validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict(
-            kwargs["request_body"], TEAM_PROJECT_FIELD_NAME
+            kwargs["request_body"]
         )
         team_project = request_body.get(TEAM_PROJECT_FIELD_NAME)
         if not team_project:
