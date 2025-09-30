@@ -26,7 +26,7 @@ def _get_internal_api_env() -> str:
     return _get_argo_config_dict().get("environment", "default")
 
 
-def validate_value(field_name_or_description: str, value: Union[float, int, str, list, bool], pattern_to_use: str):
+def validate_value(field_name_or_description: str, value: Union[float, int, str, list, bool, None], pattern_to_use: str):
     """Validations for simple types """
 
     # specific validations for str:
@@ -39,10 +39,12 @@ def validate_value(field_name_or_description: str, value: Union[float, int, str,
     elif isinstance(value, list):
         for item in value:
             validate_value(f"(list item in {field_name_or_description})", item, pattern_to_use)
-    elif isinstance(value, (float, int, bool)):
+    elif isinstance(value, (float, int, bool, type(None))):
         pass
+    elif isinstance(value, dict):
+        validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict(value)
     else:
-        raise Exception(f"Invalid list item in list {field_name_or_description}. Only simple items, or lists allowed inside parameter lists")
+        raise Exception(f"Invalid list item in list {field_name_or_description}. Only some types are allowed.")
 
 
 def validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict(parameter_dict: Dict, team_project_field_name = None) -> Dict:
@@ -53,6 +55,8 @@ def validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict(parame
 
     for key, value in parameter_dict.items():
         pattern_to_use = TEAM_PROJECT_PATTERN if team_project_field_name and key == team_project_field_name else GENERAL_SAFE_PATTERN
+        if value is None:
+            continue
         if isinstance(value, (float, int, str, list, bool)):
             validate_value(key, value, pattern_to_use)
             dict_with_stringified_items[key] = json.dumps(value, indent=0) if isinstance(value, list) else value

@@ -362,6 +362,7 @@ def test_validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict()
         "n_pcs": 3,
         "maf_threshold": 0.5,
         "imputation_score_cutoff": 0.3,
+        "user_tags": None,  # For testing purpose
     }
     result = argo_engine_helper.validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict(
         parameter_dict=parameter_dict
@@ -429,7 +430,7 @@ def test_errors_for_validate_and_convert_complex_parameter_dict_to_flatter_param
         "source_id": 1,
         "dummy_field": 'avaluewith/slash', # slash allowed for team project field
         "complex_structure_with_invalid_items":
-            ["validvalue", {"some/invalid/value"}] # dict not allowed inside lists...we allow only simple lists
+            ["validvalue", lambda x: x+1] # function not allowed inside lists...we allow only some types in lists
     }
     with pytest.raises(Exception, match="Invalid list item in list \(list item in complex_structure_with_invalid_items\)"):
         argo_engine_helper.validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict(
