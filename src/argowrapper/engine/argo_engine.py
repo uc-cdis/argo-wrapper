@@ -601,7 +601,7 @@ class ArgoEngine:
         user_lock.acquire()
 
         try:
-            sanitized_workflow_parameters = argo_engine_helper.validate_and_convert_request_body_to_parameter_dict(
+            sanitized_workflow_parameters = argo_engine_helper.validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict(
                 workflow_parameters
             )
             if "workflow_name" in sanitized_workflow_parameters.keys():
