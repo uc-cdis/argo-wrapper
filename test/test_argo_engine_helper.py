@@ -340,7 +340,7 @@ def test_get_username_from_token():
 
 
 def test_validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict():
-    request_body = {
+    parameter_dict = {
         "source_id": 1,
         "study_population_cohort": 123,
         "case_cohort_definition_id": 456,
@@ -364,7 +364,7 @@ def test_validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict()
         "imputation_score_cutoff": 0.3,
     }
     result = argo_engine_helper.validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict(
-        request_body=request_body
+        parameter_dict=parameter_dict
     )
     # expect the same as above, but with complex values stringified:
     expected_result = {
@@ -384,3 +384,83 @@ def test_validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict()
     assert len(expected_result.items()) == len(result.items())
     for key, value in expected_result.items():
         assert value == result[key]
+
+
+def test_errors_for_validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict():
+    parameter_dict = {
+        "source_id": 1,
+        "study_population_cohort": "abc!", # ! not allowed
+    }
+    with pytest.raises(Exception, match="Invalid value for field study_population_cohort"):
+        argo_engine_helper.validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict(
+            parameter_dict=parameter_dict
+        )
+
+    parameter_dict = {
+        "source_id": 1,
+        "dummy_field": 'a value with spaces', # spaces allowed
+        "study_population_cohort": 'a' * 101, # too long 
+    }
+    with pytest.raises(Exception, match="Value too long for field study_population_cohort"):
+        argo_engine_helper.validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict(
+            parameter_dict=parameter_dict
+        )
+
+    parameter_dict = {
+        "source_id": 1,
+        "dummy_field": 'a value with spaces', # spaces not allowed as this is now team project field
+    }
+    with pytest.raises(Exception, match="Invalid value for field dummy_field"):
+        argo_engine_helper.validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict(
+            parameter_dict=parameter_dict, team_project_field_name="dummy_field"
+        )
+
+    parameter_dict = {
+        "source_id": 1,
+        "dummy_field": 'avaluewith/slash', # slash allowed for team project field
+        "list_with_invalid_items": ["validvalue", "some/invalid/stringvalue"] # slashes not allowed for normal strings
+    }
+    with pytest.raises(Exception, match="Invalid value for field \(list item in list_with_invalid_items\)"):
+        argo_engine_helper.validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict(
+            parameter_dict=parameter_dict, team_project_field_name="dummy_field"
+        )
+
+    parameter_dict = {
+        "source_id": 1,
+        "dummy_field": 'avaluewith/slash', # slash allowed for team project field
+        "complex_structure_with_invalid_items":
+            ["validvalue", {"some/invalid/value"}] # dict not allowed inside lists...we allow only simple lists
+    }
+    with pytest.raises(Exception, match="Invalid list item in list \(list item in complex_structure_with_invalid_items\)"):
+        argo_engine_helper.validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict(
+            parameter_dict=parameter_dict, team_project_field_name="dummy_field"
+        )
+
+    parameter_dict = {
+        "source_id": 1,
+        "dummy_field": lambda x: x+1, # function type not allowed
+    }
+    with pytest.raises(Exception, match="Unrecognized parameter type for dummy_field"):
+        argo_engine_helper.validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict(
+            parameter_dict=parameter_dict
+        )
+
+    parameter_dict = {
+        "source_id": 1,
+        "dummy_field": "dummy",
+        "some_dict": {
+            "value1": 1,
+            "value2": "two",
+            "value3": True,
+            "value4": 0.01,
+            "value5": [1,2,3],
+            "value6": {
+                "v6value1": 1,
+                "v6value2": "some!Invalid value :(" # invalid value deep inside
+            }
+        }
+    }
+    with pytest.raises(Exception, match="Invalid value for field v6value2"):
+        argo_engine_helper.validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict(
+            parameter_dict=parameter_dict
+        )

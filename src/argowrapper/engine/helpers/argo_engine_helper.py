@@ -26,30 +26,32 @@ def _get_internal_api_env() -> str:
     return _get_argo_config_dict().get("environment", "default")
 
 
-def validate_value(key: str, value: Union[float, int, str, list, bool], pattern_to_use: str):
+def validate_value(field_name_or_description: str, value: Union[float, int, str, list, bool], pattern_to_use: str):
     """Validations for simple types """
 
     # specific validations for str:
     if isinstance(value, str):
         if len(value) > 100:
-            raise Exception(f"Value too long for field {key}, length: {len(value)}")
+            raise Exception(f"Value too long for field {field_name_or_description}, length: {len(value)}")
         if not pattern_to_use.match(value):
-            raise Exception(f"Invalid value for field {key}")
+            raise Exception(f"Invalid value for field {field_name_or_description}")
     # validation when list:
     elif isinstance(value, list):
         for item in value:
-            validate_value('list_item', item, pattern_to_use)
-    else:
+            validate_value(f"(list item in {field_name_or_description})", item, pattern_to_use)
+    elif isinstance(value, (float, int, bool)):
         pass
+    else:
+        raise Exception(f"Invalid list item in list {field_name_or_description}. Only simple items, or lists allowed inside parameter lists")
 
 
-def validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict(request_body: Dict, team_project_field_name = None) -> Dict:
+def validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict(parameter_dict: Dict, team_project_field_name = None) -> Dict:
     """Basically validates and returns a copy of the given dict, but with complex values stringified"""
     dict_with_stringified_items = {}
     GENERAL_SAFE_PATTERN = re.compile(r'^[\w\s.-]+$')  # generally allow letters, numbers, space, dot, dash, underscore
     TEAM_PROJECT_PATTERN = re.compile(r'^[\w./-]+$') # team project can have slash, but cannot have spaces
 
-    for key, value in request_body.items():
+    for key, value in parameter_dict.items():
         pattern_to_use = TEAM_PROJECT_PATTERN if team_project_field_name and key == team_project_field_name else GENERAL_SAFE_PATTERN
         if isinstance(value, (float, int, str, list, bool)):
             validate_value(key, value, pattern_to_use)
@@ -58,7 +60,7 @@ def validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict(reques
             validate_and_convert_complex_parameter_dict_to_flatter_parameter_dict(value, team_project_field_name), # recursion to make sure all substructures get the same validation
             dict_with_stringified_items[key] = json.dumps(value, indent=0)
         else:
-            raise Exception(f"Unrecognized parameter type")
+            raise Exception(f"Unrecognized parameter type for {key}")
     return dict_with_stringified_items
 
 
