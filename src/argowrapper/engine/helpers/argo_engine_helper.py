@@ -27,7 +27,7 @@ def _get_internal_api_env() -> str:
     return _get_argo_config_dict().get("environment", "default")
 
 
-def validate_value(field_name_or_description: str, value: Union[float, int, str, list, bool, None], pattern_to_use: str):
+def validate_value(field_name_or_description: str, value: Union[float, int, str, list, bool, dict, None], pattern_to_use: str):
     """Validations for simple types """
 
     # specific validations for str:
