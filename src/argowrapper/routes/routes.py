@@ -231,6 +231,8 @@ def check_payload_size(fn):
                 status_code=HTTP_400_BAD_REQUEST,
             )
 
+        return fn(*args, **kwargs)
+
     return wrapper
 
 
