@@ -139,6 +139,26 @@ def test_submit_workflow(client):
         )
         mock_log.assert_called_with("check_auth_and_team_project")
 
+        # reuse the mock context above to test another scenario - test below 
+        # should return error because payload is too large:
+        too_large_data = {
+            **data,
+            "field": ['a'] *4097,
+        }
+        response = client.post(
+            "/submit",
+            data=json.dumps(too_large_data),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": "bearer 1234",
+            },
+        )
+        assert response.status_code == 400
+        assert (
+            "exceeds limit (4096 bytes)"
+            in response.content.decode("utf-8")
+        )
+
 
 def test_submit_workflow_missing_team_project(client):
 
