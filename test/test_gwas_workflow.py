@@ -14,7 +14,7 @@ variables = [
 
 request_body = {
     "n_pcs": 3,
-    "variables": variables,
+    "variables": variables, # TODO - flatten these complex structures, like the main code also does?
     "hare_population": "hare",
     "out_prefix": "vadc_genesis",
     "outcome": 1,
@@ -135,14 +135,7 @@ def test_gwas_yaml_spec_arguments():
     }
 
     for param_name, param_val in user_params.items():
-        if param_name == "variables":
-            result = parameters[param_name]
-            assert result == param_val
-
-        elif param_name == "outcome":
-            assert json.dumps(param_val, indent=0) == parameters[param_name]
-        else:
-            assert param_val == parameters[param_name]
+        assert param_val == parameters[param_name]
 
     hardcoded_params = {
         "pca_file": "/commons-data/pcs.RData",
