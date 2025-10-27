@@ -6,7 +6,7 @@ authors = ["CTDS at UChicago"]
 repository = "https://github.com/uc-cdis/argo-wrapper"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.13"
 argo-workflows = "^6.5"
 cdislogging = "^1.1.1"
 fastapi = "^0.115"
@@ -16,6 +16,8 @@ PyJWT = "^2.9"
 PyYAML = "^6.0"
 requests = "^2.32"
 uvicorn = "^0.32"
+packaging = "^25.0"
+pydantic = "^2.0"
 
 [tool.poetry.group.dev.dependencies]
 freezegun = "^1.5"
