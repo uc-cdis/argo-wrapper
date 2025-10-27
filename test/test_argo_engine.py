@@ -32,7 +32,7 @@ VARIABLES_IN_STRING_FORMAT = "[{'variable_type': 'concept', 'concept_id': 200000
 parameters = {
     "pheno_csv_key": "test_replace_value",
     "n_pcs": 100,
-    "template_version": "test",
+    "template_version": "gwas-template-test",
     "gen3_user_name": "test_user",
     "variables": variables,
     "outcome": outcome,

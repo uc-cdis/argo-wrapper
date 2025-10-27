@@ -11,6 +11,7 @@ from test.constants import EXAMPLE_AUTH_HEADER
 from argowrapper.routes.routes import (
     router,
 )
+from argowrapper.routes.routes import argo_engine
 from argowrapper.constants import (
     GEN3_NON_VA_WORKFLOW_MONTHLY_CAP,
     GEN3_DEFAULT_WORKFLOW_MONTHLY_CAP,
@@ -106,8 +107,8 @@ def mocked_requests_get(*args, **kwargs):
 
 
 def test_submit_workflow(client):
-    with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch(
-        "argowrapper.routes.routes.argo_engine.workflow_submission"
+    with patch("argowrapper.routes.routes.auth.authenticate") as mock_auth, patch.object(
+        argo_engine, "workflow_submission"
     ) as mock_engine, patch(
         "argowrapper.routes.routes.log_auth_check_type"
     ) as mock_log, patch(
@@ -137,6 +138,26 @@ def test_submit_workflow(client):
             token=EXAMPLE_AUTH_HEADER, team_project="dummy-team-project"
         )
         mock_log.assert_called_with("check_auth_and_team_project")
+
+        # reuse the mock context above to test another scenario - test below 
+        # should return error because payload is too large:
+        too_large_data = {
+            **data,
+            "field": ['a'] *4097,
+        }
+        response = client.post(
+            "/submit",
+            data=json.dumps(too_large_data),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": "bearer 1234",
+            },
+        )
+        assert response.status_code == 400
+        assert (
+            "exceeds limit (4096 bytes)"
+            in response.content.decode("utf-8")
+        )
 
 
 def test_submit_workflow_missing_team_project(client):

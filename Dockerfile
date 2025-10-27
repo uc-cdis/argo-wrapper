@@ -1,7 +1,5 @@
-ARG AZLINUX_BASE_VERSION=master
-
-FROM 707767160287.dkr.ecr.us-east-1.amazonaws.com/gen3/python-build-base:${AZLINUX_BASE_VERSION} AS base
-# FROM quay.io/cdis/python-build-base:${AZLINUX_BASE_VERSION} AS base
+# Start from the buildbase image (which itself starts from Hardened)
+FROM quay.io/cdis/amazonlinux-base:3.13-buildbase AS base
 
 ENV appname=argowrapper
 
@@ -26,6 +24,10 @@ FROM base
 # Copy the virtual environment and project files
 COPY --from=builder /venv /venv
 COPY --from=builder /$appname /$appname
+
+# Switch to the mandatory non-root user 
+# (user 'gen3' with UID 1000 is created in the base image)
+USER gen3
 
 WORKDIR /$appname
 

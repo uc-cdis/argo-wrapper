@@ -18,9 +18,9 @@ spec:
     parameters:
     - name: test_argument
       value: test-agument-value
-  entrypoint: whalesay
+  entrypoint: saysomething
   templates:
-  - name: whalesay
+  - name: saysomething
     steps:
     - - name: wait-5s
         template: wait-seconds
@@ -38,20 +38,22 @@ spec:
 #=======================
 # the step definitions:
 #=======================
+# Use a lightweight image like `busybox` or `alpine` for basic commands like `sleep`.
   - name: wait-seconds
     inputs:
       parameters:
       - name: seconds
     container:
-      image: docker/whalesay:latest
+      image: busybox:latest
       command: [sleep]
       args: ["{{inputs.parameters.seconds}}"]
 
+  # Use a standard image like `alpine`.
   - name: print-message
     inputs:
       parameters:
       - name: message
     container:
-      image: docker/whalesay:latest
-      command: [cowsay]
-      args: ["message: {{inputs.parameters.message}}"]
+      image: alpine:latest
+      command: [sh, -c]
+      args: ["echo {{inputs.parameters.message}}"]
