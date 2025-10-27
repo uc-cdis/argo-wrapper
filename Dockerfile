@@ -25,6 +25,10 @@ FROM base
 COPY --from=builder /venv /venv
 COPY --from=builder /$appname /$appname
 
+# Switch to the mandatory non-root user 
+# (user 'gen3' with UID 1000 is created in the base image)
+USER gen3
+
 WORKDIR /$appname
 
 COPY config.ini .
