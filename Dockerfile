@@ -1,7 +1,5 @@
-ARG AZLINUX_BASE_VERSION=master
-
-FROM 707767160287.dkr.ecr.us-east-1.amazonaws.com/gen3/python-build-base:${AZLINUX_BASE_VERSION} AS base
-# FROM quay.io/cdis/python-build-base:${AZLINUX_BASE_VERSION} AS base
+# Start from the buildbase image (which itself starts from Hardened)
+FROM quay.io/cdis/amazonlinux-base:3.13-buildbase AS base
 
 ENV appname=argowrapper
 
