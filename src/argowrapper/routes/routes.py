@@ -258,6 +258,7 @@ def submit_workflow(
         )
     except Exception as exception:
         logger.error(str(exception))
+        traceback.print_exc()
         if str(exception) == EXCEED_WORKFLOW_LIMIT_ERROR:
             return HTMLResponse(
                 content="You have reached the monthly workflow cap.",
