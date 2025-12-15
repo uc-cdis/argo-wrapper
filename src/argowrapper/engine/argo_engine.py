@@ -597,6 +597,7 @@ class ArgoEngine:
         """
         # Lock function so only one can run at a time per user
         username = argo_engine_helper.get_username_from_token(auth_header)
+        logger.info(f"{username} is submitting a workflow")
         user_lock = self._get_lock_for_user(username)
         user_lock.acquire()
 
@@ -685,24 +686,24 @@ class ArgoEngine:
             logger.error(exception)
             traceback.print_exc()
             raise exception
-        logger.info("Got user info successfully. Checking for billing id..")
+        logger.debug("Got user info successfully. Checking for billing id..")
 
         if "tags" in user_info:
             if "billing_id" in user_info["tags"]:
                 billing_id = user_info["tags"]["billing_id"]
-                logger.info("billing id found in user tags: " + billing_id)
+                logger.debug("billing id found in user tags: " + billing_id)
             else:
                 billing_id = None
 
             if "workflow_limit" in user_info["tags"]:
                 workflow_limit = int(user_info["tags"]["workflow_limit"])
-                logger.info(f"Workflow limit found in user tags: {workflow_limit}")
+                logger.debug(f"Workflow limit found in user tags: {workflow_limit}")
             else:
                 workflow_limit = None
 
             return billing_id, workflow_limit
         else:
-            logger.info("User info does not have tags")
+            logger.debug("User info does not have tags")
             return None, None
 
     def check_user_monthly_workflow_cap(
