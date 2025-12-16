@@ -169,28 +169,16 @@ class PLP(WorkflowBase):
 
     @staticmethod
     def interpret_plp_workflow_error(step_name: str, step_log: str) -> str:
-        """A static method to interpret the error message in the main-log file
-        of Failed Retry node
-
-        TODO - REPLACE GWAS messages with PLP ones
-
+        """Returns a clean error message without potentially sensitive log information. 
         """
-        if (
-            step_name in ["run-null-model", "run-single-assoc"]
-            and "system is exactly singular" in step_log
-        ):
-            show_error = "The error occurred due to small cohort size or unbalanced cohort sizes. Please ensure that the cohorts selected for your analysis are sufficiently large and balanced."
-        elif (
-            step_name in ["run-null-model", "run-single-assoc"]
-            and "system is computationally singular" in step_log
-        ):
-            show_error = "The error occurred due to unbalanced cohort sizes. Please ensure that the sizes of the cohorts are as balanced as possible."
-        elif step_name == "generate-attrition-csv" and "ReadTimeout" in step_log:
-            show_error = "A timeout occurred while fetching the attrition table information. Please retry running your workflow."
-        elif step_name == "create-indexd-record" and "HTTPError" in step_log:
+        if step_name == "extract-data":
+            show_error = "Error while retrieving data from DB. The DB is possibly down, or DB connection details are incorrect."
+        elif step_name == "extract-data" and ("Timeout" in step_log or "timeout" in step_log):
+            show_error = "A timeout occurred while fetching data. Please retry running your workflow."
+        elif step_name == "downloadable-output":
+            show_error = "An error occurred while trying to generate the workflow results. Please retry running your workflow."
+        elif "indexd-record" in step_name and "HTTPError" in step_log:
             show_error = "An HTTP error occurred while creating an index record. Please retry running your workflow."
-        elif step_name == "run-single-assoc" and "where TRUE/FALSE needed" in step_log:
-            show_error = "The error was caused by extreme outliers in the outcome or the covariates. Please try using different outcome/covariates variables."
         else:
-            show_error = ""
+            show_error = "Error at step " + step_name + ". Please contact system admin for further troubleshooting."
         return show_error
