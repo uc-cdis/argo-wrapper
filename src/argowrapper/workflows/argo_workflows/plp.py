@@ -171,10 +171,10 @@ class PLP(WorkflowBase):
     def interpret_plp_workflow_error(step_name: str, step_log: str) -> str:
         """Returns a clean error message without potentially sensitive log information. 
         """
-        if step_name == "extract-data":
-            show_error = "Error while retrieving data from DB. The DB is possibly down, or DB connection details are incorrect."
-        elif step_name == "extract-data" and ("Timeout" in step_log or "timeout" in step_log):
+        if step_name == "extract-data" and ("Timeout" in step_log or "timeout" in step_log):
             show_error = "A timeout occurred while fetching data. Please retry running your workflow."
+        elif step_name == "extract-data": # ...and any other error in this "extract-data" step:
+            show_error = "Error while retrieving data from DB. The DB is possibly down, or DB connection details are incorrect."
         elif step_name == "downloadable-output":
             show_error = "An error occurred while trying to generate the workflow results. Please retry running your workflow."
         elif "indexd-record" in step_name and "HTTPError" in step_log:

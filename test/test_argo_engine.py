@@ -710,23 +710,32 @@ def test_argo_engine_new_submit_failed():
         res = engine.workflow_submission(request_body, EXAMPLE_AUTH_HEADER)
 
 
-def test_argo_engine_get_archived_workflow_log_succeeded():
+def test_argo_engine_get_archived_gwas_workflow_log():
     """
     Fetch workflow error logs at archived workflow endpoint
     """
     engine = ArgoEngine()
     mock_return_archived_wf = {
         "metadata": {"name": "archived_wf"},
-        "spec": {"arguments": "test_args"},
+        "spec": {"arguments": "test_args", "entrypoint": "gwas-workflow"},
         "status": {
             "phase": "Failed",
             "nodes": {
-                "step_one_name": {
-                    "name": "step_one_name(0)",
+                "somerandom-id-123-step_one_name-123": {
+                    "name": "somerandom-id-123.generate-attrition-csv(0)",
                     "type": "Pod",
                     "displayName": "generate-attrition-csv",
                     "templateName": "step_one_template",
                     "message": "ReadTimeout",
+                    "phase": "Failed",
+                },
+                "somerandom-id-123-step_one_name-456": {
+                    "name": "somerandom-id-123.generate-attrition-csv",
+                    "type": "Retry",
+                    "startedAt": "2025-12-15T21:06:30Z",
+                    "displayName": "generate-attrition-csv",
+                    "templateName": "step_one_template",
+                    "message": "No more retries left",
                     "phase": "Failed",
                 }
             },
@@ -738,7 +747,6 @@ def test_argo_engine_get_archived_workflow_log_succeeded():
     engine._get_workflow_node_artifact = mock.MagicMock(
         return_value="Problem with mutate()"
     )
-    engine._find_first_failed_node = mock.MagicMock(return_value="step_one_name")
     archived_workflow_errors = engine.get_workflow_logs("archived_wf", "archived_uid")
     assert len(archived_workflow_errors) == 1
     assert archived_workflow_errors[0]["node_type"] == "Pod"
@@ -749,41 +757,85 @@ def test_argo_engine_get_archived_workflow_log_succeeded():
     )
 
 
-def test_argo_engine_get_workflow_log_succeeded():
+def test_argo_engine_get_archived_plp_workflow_log():
+    """
+    Fetch workflow error logs for archived PLP workflow and
+    check if these are as expected.
+    """
+    engine = ArgoEngine()
+    mock_return_archived_wf = {
+        "metadata": {"name": "archived_wf"},
+        "spec": {"arguments": "test_args", "entrypoint": "plp"},
+        "status": {
+            "phase": "Failed",
+            "nodes": {
+                "somerandom-id-123-78910": {
+                    "name": "somerandom-id-123.extract-data(0)",
+                    "type": "Pod",
+                    "displayName": "extract-data(0)",
+                    "templateName": "extract-data-template-name",
+                    "message": "ReadTimeout",
+                    "phase": "Failed",
+                },
+                "somerandom-id-123-98765": {
+                    "name": "somerandom-id-123.extract-data",
+                    "type": "Retry",
+                    "startedAt": "2025-12-15T21:06:30Z",
+                    "displayName": "extract-data",
+                    "templateName": "extract-data-template-name",
+                    "message": "No more retries left",
+                    "phase": "Failed",
+                }
+            },
+        },
+    }
+    engine._get_archived_workflow_details_dict = mock.MagicMock(
+        return_value=mock_return_archived_wf
+    )
+    engine._get_workflow_node_artifact = mock.MagicMock(
+        return_value="something / not relevant..."
+    )
+
+    archived_workflow_errors = engine.get_workflow_logs("archived_wf", "archived_uid")
+    assert len(archived_workflow_errors) == 1
+    assert archived_workflow_errors[0]["node_type"] == "Pod"
+    assert archived_workflow_errors[0]["step_template"] == "extract-data-template-name"
+    assert (
+        archived_workflow_errors[0]["error_interpreted"]
+        == "A timeout occurred while fetching data. Please retry running your workflow."
+    )
+
+    # change to a different step name:
+    step_name = "some-unknown-step"
+    mock_return_archived_wf["status"]["nodes"]["somerandom-id-123-78910"]["name"] = "random123-" + step_name + "(0)"
+    mock_return_archived_wf["status"]["nodes"]["somerandom-id-123-78910"]["displayName"] = step_name + "(0)"
+    mock_return_archived_wf["status"]["nodes"]["somerandom-id-123-98765"]["name"] =  "random123-" + step_name
+    # reset mock:
+    engine._get_archived_workflow_details_dict = mock.MagicMock(
+        return_value=mock_return_archived_wf
+    )
+    archived_workflow_errors = engine.get_workflow_logs("archived_wf", "archived_uid")
+    assert (
+        archived_workflow_errors[0]["error_interpreted"]
+        == "Error at step " + step_name + ". Please contact system admin for further troubleshooting."
+    )
+
+
+def test_argo_engine_get_workflow_log():
     """
     Fetch workflow error logs at workflow endpoint, but failed to fetch at archived workflow endpoint
     """
     engine = ArgoEngine()
-    mock_return_wf = {
-        "status": {
-            "phase": "Failed",
-            "nodes": {
-                "step_one_name": {
-                    "name": "step_one_name(0)",
-                    "type": "Pod",
-                    "displayName": "generate-attrition-csv",
-                    "templateName": "step_one_template",
-                    "message": "ReadTimeout",
-                    "phase": "Failed",
-                }
-            },
-        }
-    }
     engine._get_archived_workflow_details_dict = mock.MagicMock(
         side_effect=NotFoundException("Not found")
     )
-    engine._get_workflow_phase = mock.MagicMock(return_value="Failed")
-    engine._get_workflow_node_artifact = mock.MagicMock(
-        return_value="requests.exceptions.ReadTimeout\nHTTPConnectionPool"
-    )
-    engine._find_first_failed_node = mock.MagicMock(return_value="step_one_name")
-    engine._get_workflow_log_dict = mock.MagicMock(return_value=mock_return_wf)
+
     workflow_errors = engine.get_workflow_logs("active_wf", "wf_uid")
     assert len(workflow_errors) == 1
-    assert workflow_errors[0]["name"] == "step_one_name(0)"
+    assert workflow_errors[0]["name"] == ""
     assert (
         workflow_errors[0]["error_interpreted"]
-        == "A timeout occurred while fetching the attrition table information. Please retry running your workflow."
+        == "workflow logs not yet available...please try later" # logs are only available for archived workflows (a limitation of our own _get_log_errors method...)
     )
 
 

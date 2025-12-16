@@ -126,12 +126,15 @@ class ArgoEngine:
             .decode()
         )
 
-    def _find_first_failed_node(self, uid: str):
+    def _find_first_failed_node(self, uid_archived_workflow: str):
+        """Looks for the first failed node. Assumes the workflow is
+        already in 'archived' state. Returns error if the workflow is not
+        found or not yet archived."""
         failed_nodes = []
-        archived_workflow_dict = self._get_archived_workflow_details_dict(uid)
+        archived_workflow_dict = self._get_archived_workflow_details_dict(uid_archived_workflow)
         archived_workflow_details_nodes = archived_workflow_dict["status"].get("nodes")
         for node_id, node_info in archived_workflow_details_nodes.items():
-            if node_info.get("phase") == "Failed" and node_info.get("type") == "Retry":
+            if node_info.get("phase") == "Failed" and node_info.get("type") == "Retry":  # reasoning: the retry node will fail when no more retries are left...and so that is when we should consider the step to have definitely failed...
                 start_time = datetime.strptime(
                     node_info["startedAt"], "%Y-%m-%dT%H:%M:%SZ"
                 )
@@ -146,6 +149,9 @@ class ArgoEngine:
     def _get_log_errors(
         self, workflow_type: WORKFLOW_ENTRYPOINT, uid: str, status_nodes_dict: Dict
     ) -> List[Dict[str, Any]]:
+        """Looks for errors in failed workflow. Assumes the workflow is
+        already in 'archived' state. Returns error if the workflow is not
+        found or not yet archived."""
         errors = []
         first_failed_node = self._find_first_failed_node(uid)
 
@@ -569,28 +575,17 @@ class ArgoEngine:
                 return []
 
         except (KeyError, NotFoundException):
-            logger.info(
-                f"Can't find the log of {workflow_name} workflow at archived workflow endpoint"
+            logger.warning(
+                f"Workflow {workflow_name} not found or not yet archived"
             )
-            logger.info(
-                f"Look up the log of {workflow_name} workflow at workflow endpoint"
-            )
-            active_workflow_phase = self._get_workflow_phase(workflow_name)
-            if active_workflow_phase in ("Failed", "Error"):
-                workflow_dict = self._get_workflow_log_dict(workflow_name)
-                workflow_type = WORKFLOW_ENTRYPOINT(workflow_dict["spec"].get("entrypoint"))
-                active_workflow_details_nodes = workflow_dict[
-                    "status"
-                ].get("nodes")
-                active_workflow_errors = self._get_log_errors(workflow_type=workflow_type,
-                    uid=uid, status_nodes_dict=active_workflow_details_nodes
-                )
-                return active_workflow_errors
-            else:
-                logger.info(
-                    f"Workflow {workflow_name} with uid {uid} doesn't have a Failed or Error phase"
-                )
-                return []
+            return [{
+                        "name": "",
+                        "node_type": "",
+                        "node_phase": "",
+                        "step_name": "",
+                        "step_template": "",
+                        "error_interpreted": "workflow logs not yet available...please try later",
+                    }]
 
         except Exception as exception:
             logger.error(traceback.format_exc())
