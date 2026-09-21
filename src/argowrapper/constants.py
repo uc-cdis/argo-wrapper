@@ -20,7 +20,7 @@ else:
 logger.info(f"Argo host: {config['DEFAULT']['ARGO_HOST']}")
 logger.info(f"Access method: {config['DEFAULT']['ARGO_ACCESS_METHOD']}")
 
-ARGO_HOST: Final = config["DEFAULT"]["ARGO_HOST"]
+ARGO_HOST: Final = os.environ.get("ARGO_HOST") or config["DEFAULT"]["ARGO_HOST"]
 COHORT_MIDDLEWARE_URL: Final = config["DEFAULT"]["COHORT_MIDDLEWARE_URL"]
 TEST_WF: Final = "test.yaml"
 WF_HEADER: Final = "header.yaml"
