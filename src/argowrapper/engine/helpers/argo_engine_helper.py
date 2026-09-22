@@ -260,7 +260,6 @@ def get_username_from_token(header_and_or_token: Optional[str]) -> str:
     jwt_token = auth._parse_jwt(header_and_or_token)
     decoded = jwt.decode(jwt_token, options={"verify_signature": False})
     username = decoded.get("context", {}).get("user", {}).get("name")
-    logger.info(f"{username} is submitting a workflow")
     return username
 
 

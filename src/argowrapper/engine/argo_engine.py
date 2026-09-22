@@ -34,10 +34,12 @@ from argowrapper.constants import (
     GEN3_NON_VA_WORKFLOW_MONTHLY_CAP,
     GEN3_DEFAULT_WORKFLOW_MONTHLY_CAP,
     EXCEED_WORKFLOW_LIMIT_ERROR,
+    WORKFLOW_ENTRYPOINT
 )
 from argowrapper.engine.helpers import argo_engine_helper
 from argowrapper.engine.helpers.workflow_factory import WorkflowFactory
 from argowrapper.workflows.argo_workflows.gwas import GWAS
+from argowrapper.workflows.argo_workflows.plp import PLP
 import requests
 import time
 from threading import Lock
@@ -124,12 +126,15 @@ class ArgoEngine:
             .decode()
         )
 
-    def _find_first_failed_node(self, uid: str):
+    def _find_first_failed_node(self, uid_archived_workflow: str):
+        """Looks for the first failed node. Assumes the workflow is
+        already in 'archived' state. Returns error if the workflow is not
+        found or not yet archived."""
         failed_nodes = []
-        archived_workflow_dict = self._get_archived_workflow_details_dict(uid)
+        archived_workflow_dict = self._get_archived_workflow_details_dict(uid_archived_workflow)
         archived_workflow_details_nodes = archived_workflow_dict["status"].get("nodes")
         for node_id, node_info in archived_workflow_details_nodes.items():
-            if node_info.get("phase") == "Failed" and node_info.get("type") == "Retry":
+            if node_info.get("phase") == "Failed" and node_info.get("type") == "Retry":  # reasoning: the retry node will fail when no more retries are left...and so that is when we should consider the step to have definitely failed...
                 start_time = datetime.strptime(
                     node_info["startedAt"], "%Y-%m-%dT%H:%M:%SZ"
                 )
@@ -142,8 +147,11 @@ class ArgoEngine:
             return None
 
     def _get_log_errors(
-        self, uid: str, status_nodes_dict: Dict
+        self, workflow_type: WORKFLOW_ENTRYPOINT, uid: str, status_nodes_dict: Dict
     ) -> List[Dict[str, Any]]:
+        """Looks for errors in failed workflow. Assumes the workflow is
+        already in 'archived' state. Returns error if the workflow is not
+        found or not yet archived."""
         errors = []
         first_failed_node = self._find_first_failed_node(uid)
 
@@ -184,9 +192,15 @@ class ArgoEngine:
                     uid=uid, node_id=node_id
                 )
                 step_log = "\n".join(message)
-                node_log_interpreted = GWAS.interpret_gwas_workflow_error(
-                    step_name=node_step, step_log=step_log
-                )
+                node_log_interpreted = None
+                if workflow_type == WORKFLOW_ENTRYPOINT.GWAS_ENTRYPOINT:
+                    node_log_interpreted = GWAS.interpret_gwas_workflow_error(
+                        step_name=node_step, step_log=step_log
+                    )
+                elif workflow_type == WORKFLOW_ENTRYPOINT.PLP_ENTRYPOINT:
+                    node_log_interpreted = PLP.interpret_plp_workflow_error(
+                        step_name=node_step, step_log=step_log
+                    )
                 errors.append(
                     {
                         "name": step.get("name"),
@@ -543,13 +557,14 @@ class ArgoEngine:
             List[Dict[str, Any]]: returns a list of dictionaries of errors of Retry nodes
         """
         try:
-            archived_workflow_dict = self._get_archived_workflow_details_dict(uid)
-            archived_workflow_phase = archived_workflow_dict["status"].get("phase")
+            workflow_dict = self._get_archived_workflow_details_dict(uid)
+            workflow_type = WORKFLOW_ENTRYPOINT(workflow_dict["spec"].get("entrypoint"))
+            archived_workflow_phase = workflow_dict["status"].get("phase")
             if archived_workflow_phase in ("Failed", "Error"):
-                archived_workflow_details_nodes = archived_workflow_dict["status"].get(
+                archived_workflow_details_nodes = workflow_dict["status"].get(
                     "nodes"
                 )
-                archived_workflow_errors = self._get_log_errors(
+                archived_workflow_errors = self._get_log_errors(workflow_type=workflow_type,
                     uid=uid, status_nodes_dict=archived_workflow_details_nodes
                 )
                 return archived_workflow_errors
@@ -560,27 +575,17 @@ class ArgoEngine:
                 return []
 
         except (KeyError, NotFoundException):
-            logger.info(
-                f"Can't find the log of {workflow_name} workflow at archived workflow endpoint"
+            logger.warning(
+                f"Workflow {workflow_name} not found or not yet archived"
             )
-            logger.info(
-                f"Look up the log of {workflow_name} workflow at workflow endpoint"
-            )
-            active_workflow_phase = self._get_workflow_phase(workflow_name)
-            if active_workflow_phase in ("Failed", "Error"):
-                active_workflow_log_return = self._get_workflow_log_dict(workflow_name)
-                active_workflow_details_nodes = active_workflow_log_return[
-                    "status"
-                ].get("nodes")
-                active_workflow_errors = self._get_log_errors(
-                    uid=uid, status_nodes_dict=active_workflow_details_nodes
-                )
-                return active_workflow_errors
-            else:
-                logger.info(
-                    f"Workflow {workflow_name} with uid {uid} doesn't have a Failed or Error phase"
-                )
-                return []
+            return [{
+                        "name": "",
+                        "node_type": "",
+                        "node_phase": "",
+                        "step_name": "",
+                        "step_template": "",
+                        "error_interpreted": "workflow logs not yet available...please try later",
+                    }]
 
         except Exception as exception:
             logger.error(traceback.format_exc())
@@ -597,6 +602,7 @@ class ArgoEngine:
         """
         # Lock function so only one can run at a time per user
         username = argo_engine_helper.get_username_from_token(auth_header)
+        logger.info(f"{username} is submitting a workflow")
         user_lock = self._get_lock_for_user(username)
         user_lock.acquire()
 
@@ -685,24 +691,24 @@ class ArgoEngine:
             logger.error(exception)
             traceback.print_exc()
             raise exception
-        logger.info("Got user info successfully. Checking for billing id..")
+        logger.debug("Got user info successfully. Checking for billing id..")
 
         if "tags" in user_info:
             if "billing_id" in user_info["tags"]:
                 billing_id = user_info["tags"]["billing_id"]
-                logger.info("billing id found in user tags: " + billing_id)
+                logger.debug("billing id found in user tags: " + billing_id)
             else:
                 billing_id = None
 
             if "workflow_limit" in user_info["tags"]:
                 workflow_limit = int(user_info["tags"]["workflow_limit"])
-                logger.info(f"Workflow limit found in user tags: {workflow_limit}")
+                logger.debug(f"Workflow limit found in user tags: {workflow_limit}")
             else:
                 workflow_limit = None
 
             return billing_id, workflow_limit
         else:
-            logger.info("User info does not have tags")
+            logger.debug("User info does not have tags")
             return None, None
 
     def check_user_monthly_workflow_cap(
